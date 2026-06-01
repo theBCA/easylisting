@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='security.js') }}"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EasyListing — Connect your shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root { --primary:#5B47E0; --primary-dark:#4A37C9; --primary-light:#F0EEFF; --bg:#F6F7FB; --border:#E5E7F0; --text:#111827; --muted:#6B7280; --green:#059669; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; }
+
+nav { background:white; border-bottom:1px solid var(--border); padding:0 24px; height:58px; display:flex; align-items:center; justify-content:space-between; }
+.nav-logo { font-size:17px; font-weight:800; color:var(--primary); cursor:default; }
+.nav-logo span { color:var(--text); }
+.lang-switcher { display:flex; gap:4px; }
+.lang-btn { background:none; border:1px solid var(--border); border-radius:6px; font-size:11px; font-weight:700; padding:4px 9px; cursor:pointer; color:var(--muted); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--primary); color:white; border-color:var(--primary); }
+.lang-btn:not(.active):hover { border-color:var(--primary); color:var(--primary); }
+
+.hero { flex:1; display:flex; align-items:center; justify-content:center; padding:40px 24px;
+  background:radial-gradient(ellipse 80% 60% at 50% -10%, #EDE9FF 0%, transparent 70%); }
+.card { background:white; border-radius:22px; padding:44px 44px 40px; max-width:500px; width:100%;
+  box-shadow:0 4px 40px rgba(91,71,224,.13), 0 1px 3px rgba(0,0,0,.06); border:1px solid #EDE9FF; }
+
+/* Logo mark */
+.logo-mark { width:52px; height:52px; background:linear-gradient(135deg,#6B5AED,var(--primary)); border-radius:14px;
+  margin:0 auto 20px; display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-weight:900; color:white; letter-spacing:-.5px; }
+
+h1 { font-size:26px; font-weight:900; letter-spacing:-.5px; margin-bottom:8px; line-height:1.2; text-align:center; }
+.subtitle { font-size:14px; color:var(--muted); line-height:1.65; margin-bottom:28px; text-align:center; }
+
+/* Platform picker */
+.platform-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; margin-bottom:10px; }
+.platforms { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:24px; }
+.platform-btn { position:relative; display:flex; align-items:center; gap:10px; padding:12px 14px;
+  border:2px solid var(--border); border-radius:12px; background:white; cursor:pointer;
+  font-family:inherit; font-size:13px; font-weight:700; color:var(--text); transition:all .15s; text-align:left; }
+.platform-btn:hover:not(.soon) { border-color:var(--primary); background:var(--primary-light); }
+.platform-btn.selected { border-color:var(--primary); background:var(--primary-light); }
+.platform-btn.soon { cursor:default; opacity:.55; }
+.platform-icon { width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.platform-name { flex:1; }
+.soon-badge { position:absolute; top:6px; right:8px; font-size:9px; font-weight:800; background:#F3F4F6; color:var(--muted); border-radius:4px; padding:2px 5px; text-transform:uppercase; letter-spacing:.4px; }
+.platform-check { width:18px; height:18px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.platform-check svg { display:block; }
+
+/* Steps */
+.steps { display:flex; flex-direction:column; gap:12px; margin-bottom:24px; }
+.step { display:flex; gap:12px; align-items:flex-start; }
+.step-num { width:26px; height:26px; border-radius:50%; background:var(--primary-light); color:var(--primary); font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.step-text { font-size:13px; line-height:1.55; color:var(--muted); }
+.step-text strong { display:block; font-weight:700; color:var(--text); margin-bottom:1px; }
+
+/* CTA */
+.btn-connect { display:block; width:100%; padding:14px; background:linear-gradient(135deg,#6B5AED,var(--primary));
+  color:white; border:none; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer;
+  text-decoration:none; transition:opacity .15s; text-align:center;
+  box-shadow:0 4px 14px rgba(91,71,224,.35); }
+.btn-connect:hover { opacity:.9; }
+
+.trust { margin-top:14px; font-size:12px; color:var(--muted); display:flex; align-items:center; justify-content:center; gap:6px; }
+.trust svg { opacity:.45; flex-shrink:0; }
+
+.error { background:#FEE2E2; color:#991B1B; border-radius:10px; padding:12px 16px; font-size:14px; margin-bottom:18px; text-align:left; }
+
+footer { text-align:center; padding:18px; font-size:11px; color:var(--muted); }
+
+@media (max-width:520px) {
+  .card { padding:32px 20px; }
+  h1 { font-size:22px; }
+  .platforms { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo" id="navLogo">Easy<span>Listing</span></div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
+    <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="card">
+    <div class="logo-mark" id="t-logomark">EL</div>
+
+    <h1 id="t-headline">Sell more,<br>type less.</h1>
+    <p class="subtitle" id="t-sub">Upload a product photo and AI writes your entire listing — title, description, tags, and more.</p>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <!-- Platform picker -->
+    <div class="platform-label" id="t-platform-label">Choose your marketplace</div>
+    <div class="platforms">
+      <button class="platform-btn selected" id="btn-etsy" onclick="selectPlatform('etsy')">
+        <div class="platform-icon" style="background:#FFF0E9;">🛍</div>
+        <span class="platform-name">Etsy</span>
+        <div class="platform-check">
+          <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </button>
+      <button class="platform-btn soon">
+        <div class="platform-icon" style="background:#F0FDF4;">🟢</div>
+        <span class="platform-name">Shopify</span>
+        <span class="soon-badge" id="t-soon">Soon</span>
+      </button>
+      <button class="platform-btn soon">
+        <div class="platform-icon" style="background:#FFF3CD;">🧡</div>
+        <span class="platform-name">Trendyol</span>
+        <span class="soon-badge">Soon</span>
+      </button>
+      <button class="platform-btn soon">
+        <div class="platform-icon" style="background:#EFF6FF;">📦</div>
+        <span class="platform-name">Amazon</span>
+        <span class="soon-badge">Soon</span>
+      </button>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong id="t-s1h">Connect your shop</strong><span id="t-s1b">You'll be redirected to approve access. No passwords shared with us.</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong id="t-s2h">Upload a product photo</strong><span id="t-s2b">Drag in any photo from your phone or computer.</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong id="t-s3h">AI generates everything</strong><span id="t-s3b">Title, description, 13 tags, materials, price suggestion — in seconds.</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text"><strong id="t-s4h">Review and publish</strong><span id="t-s4b">Edit anything, then send directly to your shop drafts.</span></div>
+      </div>
+    </div>
+
+    <a href="/auth/start" class="btn-connect" id="t-btn">Connect Shop →</a>
+
+    <div class="trust">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span id="t-trust">We only request listing permissions — we can never see your orders or payment info</span>
+    </div>
+  </div>
+</div>
+
+<footer id="t-footer">EasyListing is not affiliated with Etsy, Shopify, Trendyol, or any marketplace platform.</footer>
+
+<script nonce="{{ csp_nonce }}">
+const BRAND = {
+  en: 'Easy<span style="color:var(--text)">Listing</span>',
+  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  tr: '<span style="color:var(--text)">kolay</span>listele',
+};
+
+const T = {
+  en: {
+    title:        'EasyListing — Connect your shop',
+    logomark:     'EL',
+    headline:     'Sell more,<br>type less.',
+    sub:          'Upload a product photo and AI writes your entire listing — title, description, tags, and more.',
+    platformLabel:'Choose your marketplace',
+    soon:         'Soon',
+    s1h:'Connect your shop',       s1b:"You'll be redirected to approve access. No passwords shared with us.",
+    s2h:'Upload a product photo',  s2b:'Drag in any photo from your phone or computer.',
+    s3h:'AI generates everything', s3b:'Title, description, 13 tags, materials, price suggestion — in seconds.',
+    s4h:'Review and publish',      s4b:'Edit anything, then send directly to your shop drafts.',
+    btn:   'Connect Shop →',
+    trust: 'We only request listing permissions — we can never see your orders or payment info',
+    footer:'EasyListing is not affiliated with Etsy, Shopify, Trendyol, or any marketplace platform.',
+  },
+  de: {
+    title:        'EasyListing — Shop verbinden',
+    logomark:     'EL',
+    headline:     'Mehr verkaufen,<br>weniger tippen.',
+    sub:          'Produktfoto hochladen und die KI schreibt dein gesamtes Listing — Titel, Beschreibung, Tags und mehr.',
+    platformLabel:'Marktplatz auswählen',
+    soon:         'Bald',
+    s1h:'Shop verbinden',          s1b:'Du wirst zur Genehmigung weitergeleitet. Kein Passwort wird geteilt.',
+    s2h:'Produktfoto hochladen',   s2b:'Ziehe ein beliebiges Foto von deinem Handy oder Computer.',
+    s3h:'KI generiert alles',      s3b:'Titel, Beschreibung, 13 Tags, Materialien, Preisvorschlag — in Sekunden.',
+    s4h:'Prüfen und veröffentlichen', s4b:'Alles bearbeitbar — dann direkt als Entwurf senden.',
+    btn:   'Shop verbinden →',
+    trust: 'Wir fordern nur Listing-Berechtigungen — wir sehen niemals Bestellungen oder Zahlungsdaten',
+    footer:'EasyListing ist nicht mit Etsy, Shopify, Trendyol oder anderen Marktplätzen verbunden.',
+  },
+  tr: {
+    title:        'kolaylistele — Mağazanı bağla',
+    logomark:     'KL',
+    headline:     'Daha çok sat,<br>daha az yaz.',
+    sub:          'Ürün fotoğrafını yükle, yapay zeka tüm ilanı yazar — başlık, açıklama, etiketler ve daha fazlası.',
+    platformLabel:'Pazaryerini seç',
+    soon:         'Yakında',
+    s1h:'Mağazanı bağla',          s1b:'Erişim onayı için yönlendirileceksiniz. Şifreniz paylaşılmaz.',
+    s2h:'Ürün fotoğrafı yükle',    s2b:'Telefon veya bilgisayarından herhangi bir fotoğraf sürükleyebilirsin.',
+    s3h:'YZ her şeyi üretir',      s3b:'Başlık, açıklama, 13 etiket, malzemeler, fiyat önerisi — saniyeler içinde.',
+    s4h:'İncele ve yayınla',       s4b:'Her şeyi düzenleyebilirsin — ardından doğrudan mağaza taslaklarına gönder.',
+    btn:   'Mağazanı Bağla →',
+    trust: 'Yalnızca ilan izinleri istiyoruz — siparişlerinizi veya ödeme bilgilerinizi asla göremeyiz',
+    footer:'kolaylistele; Etsy, Shopify, Trendyol veya diğer platformlarla bağlantılı değildir.',
+  },
+};
+
+function setLang(lang) {
+  if (!T[lang]) return;
+  const s = T[lang];
+  document.title = s.title;
+  document.getElementById('navLogo').innerHTML        = BRAND[lang];
+  document.getElementById('t-logomark').textContent   = s.logomark;
+  document.getElementById('t-headline').innerHTML     = s.headline;
+  document.getElementById('t-sub').textContent        = s.sub;
+  document.getElementById('t-platform-label').textContent = s.platformLabel;
+  document.querySelectorAll('.soon-badge').forEach(el => el.textContent = s.soon);
+  document.getElementById('t-s1h').textContent = s.s1h;
+  document.getElementById('t-s1b').textContent = s.s1b;
+  document.getElementById('t-s2h').textContent = s.s2h;
+  document.getElementById('t-s2b').textContent = s.s2b;
+  document.getElementById('t-s3h').textContent = s.s3h;
+  document.getElementById('t-s3b').textContent = s.s3b;
+  document.getElementById('t-s4h').textContent = s.s4h;
+  document.getElementById('t-s4b').textContent = s.s4b;
+  document.getElementById('t-btn').textContent  = s.btn;
+  document.getElementById('t-trust').textContent  = s.trust;
+  document.getElementById('t-footer').textContent = s.footer;
+  document.querySelectorAll('.lang-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.lang === lang));
+  document.querySelector('html').lang = lang;
+  localStorage.setItem('easylisting_lang', lang);
+}
+
+function selectPlatform(p) {
+  document.querySelectorAll('.platform-btn:not(.soon)').forEach(b => {
+    b.classList.remove('selected');
+    const chk = b.querySelector('.platform-check');
+    if (chk) chk.style.display = 'none';
+  });
+  const el = document.getElementById('btn-' + p);
+  if (!el) return;
+  el.classList.add('selected');
+  const chk = el.querySelector('.platform-check');
+  if (chk) chk.style.display = 'flex';
+}
+
+// Init
+const saved = localStorage.getItem('easylisting_lang') ||
+  (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
+setLang(saved);
+// ensure Etsy check is visible on load
+document.querySelector('#btn-etsy .platform-check').style.display = 'flex';
+</script>
+</body>
+</html>
