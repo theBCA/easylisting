@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='security.js') }}"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulk Upload — EasyListing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
+  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
+  --text: #111827; --muted: #6B7280; --green: #059669;
+  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.09);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
+.nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; text-decoration: none; }
+.nav-logo span { color: var(--text); }
+.nav-links { display: flex; align-items: center; gap: 16px; }
+.nav-links a { text-decoration: none; font-size: 14px; font-weight: 600; color: var(--muted); }
+.nav-links a:hover { color: var(--text); }
+.btn-outline { border: 1.5px solid var(--border); background: white; color: var(--text); padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.lang-switcher { display: flex; gap: 2px; }
+.lang-btn { background: none; border: 1px solid var(--border); border-radius: 5px; font-size: 11px; font-weight: 700; padding: 3px 7px; cursor: pointer; color: var(--muted); }
+.lang-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+.container { max-width: 960px; margin: 0 auto; padding: 36px 24px; }
+h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+.sub { font-size: 15px; color: var(--muted); margin-bottom: 32px; }
+
+/* Upload area */
+.upload-zone { border: 2px dashed var(--border); border-radius: var(--radius); background: white; padding: 52px 24px; text-align: center; cursor: pointer; transition: all .2s; }
+.upload-zone.drag { border-color: var(--primary); background: #FFF7F4; }
+.upload-zone h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.upload-zone p { font-size: 14px; color: var(--muted); }
+.upload-zone .icon { font-size: 38px; margin-bottom: 12px; }
+
+/* Thumbnails */
+.thumbs { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.thumb-wrap { position: relative; width: 90px; height: 90px; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); flex-shrink: 0; }
+.thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-wrap .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.thumb-wrap .status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); color: white; font-size: 13px; font-weight: 700; }
+
+/* Controls row */
+.controls { background: white; border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow); margin-top: 24px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+.ctrl-group { display: flex; flex-direction: column; gap: 6px; }
+.ctrl-group label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.ctrl-group input, .ctrl-group select { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: white; min-width: 180px; }
+.ctrl-group input:focus, .ctrl-group select:focus { outline: none; border-color: var(--primary); }
+.btn-gen { background: var(--primary); color: white; border: none; padding: 10px 26px; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.btn-gen:disabled { opacity: .5; cursor: not-allowed; }
+.btn-gen:not(:disabled):hover { background: var(--primary-dark); }
+
+/* Progress */
+.progress-row { display: flex; align-items: center; gap: 14px; background: white; border-radius: 10px; padding: 14px 18px; box-shadow: var(--shadow); margin-top: 18px; display: none; }
+.progress-row.show { display: flex; }
+.progress-bar-wrap { flex: 1; background: var(--bg); border-radius: 6px; height: 8px; overflow: hidden; }
+.progress-bar { height: 100%; background: var(--primary); border-radius: 6px; transition: width .4s ease; }
+.progress-label { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+
+/* Results grid */
+.results { margin-top: 32px; display: none; }
+.results.show { display: block; }
+.results h2 { font-size: 20px; font-weight: 800; margin-bottom: 20px; }
+.result-grid { display: grid; gap: 20px; }
+.result-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.result-card.error { border: 2px solid #f44; }
+.rc-top { display: flex; gap: 16px; padding: 16px; }
+.rc-img { width: 90px; height: 90px; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+.rc-img img { width: 100%; height: 100%; object-fit: cover; }
+.rc-main { flex: 1; min-width: 0; }
+.rc-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.rc-title input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 14px; font-weight: 600; }
+.rc-title input:focus { outline: none; border-color: var(--primary); }
+.rc-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.rc-field { display: flex; flex-direction: column; gap: 4px; }
+.rc-field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.rc-field input { border: 1.5px solid var(--border); border-radius: 7px; padding: 6px 10px; font-size: 13px; width: 120px; }
+.rc-field input:focus { outline: none; border-color: var(--primary); }
+.rc-error { padding: 16px; color: #c00; font-size: 14px; font-weight: 600; }
+.rc-actions { border-top: 1px solid var(--border); padding: 12px 16px; display: flex; gap: 10px; align-items: center; }
+.btn-pub { background: var(--primary); color: white; border: none; padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.btn-pub:disabled { opacity: .5; cursor: not-allowed; }
+.btn-pub:not(:disabled):hover { background: var(--primary-dark); }
+.pub-status { font-size: 13px; font-weight: 600; color: var(--muted); }
+.pub-status.ok  { color: var(--green); }
+.pub-status.err { color: #c00; }
+.btn-pub-all { background: var(--green); color: white; border: none; padding: 10px 28px; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 18px; }
+.btn-pub-all:disabled { opacity: .5; cursor: not-allowed; }
+.btn-pub-all:not(:disabled):hover { background: #1f6038; }
+
+/* Tags display */
+.tag-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tag-pill { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 12px; color: var(--muted); }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A1A; color: white; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; transition: transform .3s; z-index: 9999; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 600px) {
+  .rc-top { flex-direction: column; }
+  .controls { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-logo" id="navLogo">Easy<span>Listing</span></a>
+  <div class="nav-links">
+    <span style="font-size:13px;font-weight:600;color:var(--muted);">🛍 {{ shop_name }}</span>
+    <a href="/listings" style="font-size:13px;" data-i18n="nav_listings">My Listings</a>
+    <div class="lang-switcher">
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
+      <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+    </div>
+    <a href="/" class="btn-outline" data-i18n="nav_single">Single Listing</a>
+  </div>
+</nav>
+
+<div class="container">
+  <h1 data-i18n="title">Bulk Upload</h1>
+  <p class="sub" data-i18n="sub">Upload multiple product photos — each gets its own AI-generated listing.</p>
+
+  <!-- Drop zone -->
+  <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="icon">📦</div>
+    <h3 data-i18n="drop_title">Drop product photos here</h3>
+    <p data-i18n="drop_sub">Up to 20 photos — one listing generated per photo</p>
+    <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+  </div>
+  <div class="thumbs" id="thumbs"></div>
+
+  <!-- Controls -->
+  <div class="controls" id="controls" style="display:none">
+    <div class="ctrl-group" style="flex:1;min-width:200px">
+      <label data-i18n="hint_label">Hint (optional, applies to all)</label>
+      <input type="text" id="hint" data-i18n-placeholder="hint_placeholder" placeholder="e.g. handmade ceramic mugs" maxlength="200">
+    </div>
+    <div class="ctrl-group">
+      <label data-i18n="provider_label">AI Provider</label>
+      <select id="provider">
+        <option value="gemini" data-i18n="provider_gemini">Gemini (free)</option>
+        <option value="nvidia" data-i18n="provider_nvidia">NVIDIA (free)</option>
+        <option value="openai">OpenAI</option>
+      </select>
+    </div>
+    <button class="btn-gen" id="btnGen" onclick="startBulk()" data-i18n="generate_all">Generate All</button>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-row" id="progressRow">
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+    <div class="progress-label" id="progressLabel">0 / 0</div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 id="resultsHeading" data-i18n="results_heading">Generated Listings</h2>
+      <button class="btn-pub-all" id="btnPubAll" onclick="publishAll()" data-i18n="publish_all">Publish All as Draft</button>
+    </div>
+    <div class="result-grid" id="resultGrid"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script nonce="{{ csp_nonce }}">
+const STRINGS = {
+  en: {
+    page_title:'Bulk Upload — EasyListing', nav_listings:'My Listings', nav_single:'Single Listing',
+    title:'Bulk Upload', sub:'Upload multiple product photos — each gets its own AI-generated listing.',
+    drop_title:'Drop product photos here', drop_sub:'Up to 20 photos — one listing generated per photo',
+    hint_label:'Hint (optional, applies to all)', hint_placeholder:'e.g. handmade ceramic mugs',
+    provider_label:'AI Provider', provider_gemini:'Gemini (free)', provider_nvidia:'NVIDIA (free)',
+    generate_all:'Generate All', results_heading:'Generated Listings', publish_all:'Publish All as Draft',
+    only_images:'Only JPEG/PNG/WebP/GIF allowed', max_photos:'Max 20 photos at a time',
+    free_limit:'Free limit reached. Upgrade for more.', skipped:'Free limit reached — remaining listings skipped.',
+    quota:'Quota reached', failed:'Failed', network:'Network error', price:'Price (€)', category:'Category',
+    save_draft:'Save as Draft', title_price_required:'Title and price are required',
+    category_missing:'Category not found — edit manually then retry', publishing:'Publishing…',
+    published:'Published ✓', draft_saved:'✓ Draft saved', retry:'Retry', done:(ok, fail) => `Done: ${ok} published${fail ? ', ' + fail + ' failed' : ''}`
+  },
+  de: {
+    page_title:'Bulk-Upload — EasyListing', nav_listings:'Meine Listings', nav_single:'Einzelnes Listing',
+    title:'Bulk-Upload', sub:'Lade mehrere Produktfotos hoch — jedes erhält ein eigenes KI-generiertes Listing.',
+    drop_title:'Produktfotos hier ablegen', drop_sub:'Bis zu 20 Fotos — ein Listing pro Foto',
+    hint_label:'Hinweis (optional, gilt für alle)', hint_placeholder:'z.B. handgemachte Keramiktassen',
+    provider_label:'KI-Anbieter', provider_gemini:'Gemini (kostenlos)', provider_nvidia:'NVIDIA (kostenlos)',
+    generate_all:'Alle generieren', results_heading:'Generierte Listings', publish_all:'Alle als Entwurf veröffentlichen',
+    only_images:'Nur JPEG/PNG/WebP/GIF erlaubt', max_photos:'Maximal 20 Fotos auf einmal',
+    free_limit:'Kostenloses Limit erreicht. Upgrade für mehr.', skipped:'Kostenloses Limit erreicht — übrige Listings übersprungen.',
+    quota:'Kontingent erreicht', failed:'Fehlgeschlagen', network:'Netzwerkfehler', price:'Preis (€)', category:'Kategorie',
+    save_draft:'Als Entwurf speichern', title_price_required:'Titel und Preis sind erforderlich',
+    category_missing:'Kategorie nicht gefunden — bitte manuell bearbeiten und erneut versuchen', publishing:'Wird veröffentlicht…',
+    published:'Veröffentlicht ✓', draft_saved:'✓ Entwurf gespeichert', retry:'Erneut versuchen', done:(ok, fail) => `Fertig: ${ok} veröffentlicht${fail ? ', ' + fail + ' fehlgeschlagen' : ''}`
+  },
+  tr: {
+    page_title:'Toplu Yükleme — kolaylistele', nav_listings:'Listelerim', nav_single:'Tek İlan',
+    title:'Toplu Yükleme', sub:'Birden fazla ürün fotoğrafı yükleyin — her fotoğraf için ayrı bir yapay zeka ilanı oluşturulur.',
+    drop_title:'Ürün fotoğraflarını buraya bırakın', drop_sub:'20 fotoğrafa kadar — her fotoğraf için bir ilan',
+    hint_label:'İpucu (opsiyonel, tümüne uygulanır)', hint_placeholder:'örn. el yapımı seramik kupalar',
+    provider_label:'YZ Sağlayıcısı', provider_gemini:'Gemini (ücretsiz)', provider_nvidia:'NVIDIA (ücretsiz)',
+    generate_all:'Tümünü Oluştur', results_heading:'Oluşturulan İlanlar', publish_all:'Tümünü Taslak Olarak Yayınla',
+    only_images:'Yalnızca JPEG/PNG/WebP/GIF kabul edilir', max_photos:'Tek seferde en fazla 20 fotoğraf',
+    free_limit:'Ücretsiz limit doldu. Daha fazlası için yükseltin.', skipped:'Ücretsiz limit doldu — kalan ilanlar atlandı.',
+    quota:'Kota doldu', failed:'Başarısız', network:'Ağ hatası', price:'Fiyat (€)', category:'Kategori',
+    save_draft:'Taslak Olarak Kaydet', title_price_required:'Başlık ve fiyat gerekli',
+    category_missing:'Kategori bulunamadı — elle düzenleyip tekrar deneyin', publishing:'Yayınlanıyor…',
+    published:'Yayınlandı ✓', draft_saved:'✓ Taslak kaydedildi', retry:'Tekrar dene', done:(ok, fail) => `Bitti: ${ok} yayınlandı${fail ? ', ' + fail + ' başarısız' : ''}`
+  }
+};
+const BRAND = {
+  en: 'Easy<span style="color:var(--text)">Listing</span>',
+  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  tr: '<span style="color:var(--text)">kolay</span>listele',
+};
+let currentLang = localStorage.getItem('easylisting_lang') ||
+  (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
+function tr(key, ...args) {
+  const value = STRINGS[currentLang]?.[key] ?? STRINGS.en[key] ?? key;
+  return typeof value === 'function' ? value(...args) : value;
+}
+function setLang(lang) {
+  if (!STRINGS[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('easylisting_lang', lang);
+  document.documentElement.lang = lang;
+  document.title = STRINGS[lang].page_title;
+  document.getElementById('navLogo').innerHTML = BRAND[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (STRINGS[lang][key] !== undefined) el.textContent = STRINGS[lang][key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.dataset.i18nPlaceholder;
+    if (STRINGS[lang][key] !== undefined) el.placeholder = STRINGS[lang][key];
+  });
+  document.querySelectorAll('.lang-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.lang === lang));
+  if (results.length) renderResults();
+}
+
+const files = [];
+
+function showToast(msg, ms = 2600) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ── File handling ──────────────────────────────────────────────────────────────
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const thumbsEl  = document.getElementById('thumbs');
+const controls  = document.getElementById('controls');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag');
+  addFiles(Array.from(e.dataTransfer.files));
+});
+fileInput.addEventListener('change', () => addFiles(Array.from(fileInput.files)));
+
+function addFiles(newFiles) {
+  const allowed = new Set(['image/jpeg','image/png','image/webp','image/gif']);
+  for (const f of newFiles) {
+    if (!allowed.has(f.type)) { showToast(tr('only_images')); continue; }
+    if (files.length >= 20) { showToast(tr('max_photos')); break; }
+    files.push({ file: f, result: null, status: 'pending' });
+    renderThumb(f, files.length - 1);
+  }
+  controls.style.display = files.length ? 'flex' : 'none';
+}
+
+function renderThumb(f, idx) {
+  const wrap = document.createElement('div');
+  wrap.className = 'thumb-wrap';
+  wrap.id = 'thumb-' + idx;
+  const img = document.createElement('img');
+  img.src = URL.createObjectURL(f);
+  img.alt = '';
+  const rem = document.createElement('button');
+  rem.className = 'remove';
+  rem.textContent = '×';
+  rem.onclick = (e) => { e.stopPropagation(); removeFile(idx); };
+  wrap.appendChild(img);
+  wrap.appendChild(rem);
+  thumbsEl.appendChild(wrap);
+}
+
+function removeFile(idx) {
+  files.splice(idx, 1);
+  thumbsEl.innerHTML = '';
+  files.forEach((item, i) => renderThumb(item.file, i));
+  controls.style.display = files.length ? 'flex' : 'none';
+}
+
+function setThumbStatus(idx, icon) {
+  const wrap = document.getElementById('thumb-' + idx);
+  if (!wrap) return;
+  let st = wrap.querySelector('.status');
+  if (!st) { st = document.createElement('div'); st.className = 'status'; wrap.appendChild(st); }
+  st.textContent = icon;
+  st.style.display = icon ? '' : 'none';
+}
+
+// ── Generation ─────────────────────────────────────────────────────────────────
+let results = [];
+
+async function startBulk() {
+  if (!files.length) return;
+  const btn = document.getElementById('btnGen');
+  btn.disabled = true;
+  document.getElementById('progressRow').classList.add('show');
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('resultGrid').innerHTML = '';
+  results = [];
+
+  const hint     = document.getElementById('hint').value.trim();
+  const provider = document.getElementById('provider').value;
+
+  for (let i = 0; i < files.length; i++) {
+    setProgress(i, files.length);
+    setThumbStatus(i, '⏳');
+    const item = files[i];
+    const fd   = new FormData();
+    fd.append('images', item.file);
+    fd.append('hint', hint);
+    fd.append('provider', provider);
+    fd.append('lang', currentLang);
+
+    try {
+      const resp = await fetch('/api/bulk-generate', { method: 'POST', body: fd });
+      const data = await resp.json();
+      if (!resp.ok || data.error) {
+        if (data.error === 'free_limit_reached') {
+          setThumbStatus(i, '🚫');
+          results.push({ error: tr('free_limit'), file: item.file, idx: i });
+          showToast(tr('skipped'), 4000);
+          // fill remaining with quota errors
+          for (let j = i + 1; j < files.length; j++) {
+            results.push({ error: tr('quota'), file: files[j].file, idx: j });
+          }
+          break;
+        }
+        setThumbStatus(i, '❌');
+        results.push({ error: data.error || tr('failed'), file: item.file, idx: i });
+      } else {
+        setThumbStatus(i, '✅');
+        results.push({ data, file: item.file, idx: i });
+      }
+    } catch (e) {
+      setThumbStatus(i, '❌');
+      results.push({ error: tr('network'), file: item.file, idx: i });
+    }
+  }
+
+  setProgress(files.length, files.length);
+  btn.disabled = false;
+  renderResults();
+}
+
+function setProgress(done, total) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = done + ' / ' + total;
+}
+
+// ── Render results ─────────────────────────────────────────────────────────────
+function renderResults() {
+  const grid = document.getElementById('resultGrid');
+  grid.innerHTML = '';
+  document.getElementById('results').classList.add('show');
+  document.getElementById('resultsHeading').textContent = `${tr('results_heading')} (${results.length})`;
+
+  results.forEach((r, ri) => {
+    const card = document.createElement('div');
+    card.className = 'result-card' + (r.error ? ' error' : '');
+    card.id = 'rc-' + ri;
+
+    if (r.error) {
+      const err = document.createElement('div');
+      err.className = 'rc-error';
+      err.textContent = '⚠ ' + r.error;
+      card.appendChild(err);
+      grid.appendChild(card);
+      return;
+    }
+
+    const d = r.data;
+    const previews = d.image_previews || [];
+    const imgSrc   = previews[0] || URL.createObjectURL(r.file);
+
+    card.innerHTML = `
+      <div class="rc-top">
+        <div class="rc-img"><img src="${imgSrc}" alt=""></div>
+        <div class="rc-main">
+          <div class="rc-title">
+            <input type="text" value="${esc(d.title || '')}" id="rc-title-${ri}" maxlength="140">
+          </div>
+          <div class="rc-row">
+            <div class="rc-field">
+              <label>${tr('price')}</label>
+              <input type="number" step="0.01" min="0.20" value="${d.suggested_price_eur || ''}" id="rc-price-${ri}">
+            </div>
+            <div class="rc-field" style="flex:1;min-width:160px">
+              <label>${tr('category')}</label>
+              <input type="text" value="${esc(d.taxonomy_path || d.taxonomy_query || '')}" id="rc-cat-${ri}" readonly>
+            </div>
+          </div>
+          <div class="tag-pills" id="rc-tags-${ri}">
+            ${(d.tags || []).map(t => `<span class="tag-pill">${esc(t)}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="rc-actions">
+        <button class="btn-pub" id="rc-pub-${ri}" onclick="publishOne(${ri})">${tr('save_draft')}</button>
+        <span class="pub-status" id="rc-status-${ri}"></span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Publish ────────────────────────────────────────────────────────────────────
+async function publishOne(ri) {
+  const r = results[ri];
+  if (!r || r.error) return;
+  const d = r.data;
+
+  const title = document.getElementById('rc-title-' + ri).value.trim();
+  const price = parseFloat(document.getElementById('rc-price-' + ri).value) || 0;
+  const btn   = document.getElementById('rc-pub-' + ri);
+  const st    = document.getElementById('rc-status-' + ri);
+
+  if (!title || !price) { showToast(tr('title_price_required')); return; }
+  if (!d.taxonomy_id)   { showToast(tr('category_missing')); return; }
+
+  btn.disabled = true;
+  btn.textContent = tr('publishing');
+  st.textContent  = '';
+  st.className    = 'pub-status';
+
+  const payload = {
+    title,
+    description:    d.description || '',
+    price,
+    taxonomy_id:    d.taxonomy_id,
+    tags:           d.tags || [],
+    materials:      d.materials || [],
+    image_previews: d.image_previews || [],
+    personalization_instructions: d.personalization_instructions || '',
+  };
+
+  try {
+    const resp = await fetch('/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (resp.ok && data.success) {
+      btn.textContent = tr('published');
+      st.textContent  = tr('draft_saved');
+      st.className    = 'pub-status ok';
+      r.published = true;
+    } else {
+      throw new Error(data.error || 'Unknown error');
+    }
+  } catch (e) {
+    btn.disabled    = false;
+    btn.textContent = tr('retry');
+    st.textContent  = '✗ ' + e.message;
+    st.className    = 'pub-status err';
+  }
+}
+
+async function publishAll() {
+  const btn = document.getElementById('btnPubAll');
+  btn.disabled = true;
+  btn.textContent = tr('publishing');
+  let ok = 0, fail = 0;
+  for (let ri = 0; ri < results.length; ri++) {
+    if (results[ri].error || results[ri].published) continue;
+    await publishOne(ri);
+    if (results[ri].published) ok++; else fail++;
+    await new Promise(r => setTimeout(r, 300));
+  }
+  btn.disabled = false;
+  btn.textContent = tr('publish_all');
+  showToast(tr('done', ok, fail));
+}
+setLang(currentLang);
+</script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='security.js') }}"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Listings — EasyListing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
+  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
+  --text: #111827; --muted: #6B7280; --green: #059669;
+  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.09);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
+.nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; text-decoration: none; }
+.nav-logo span { color: var(--text); }
+.nav-links { display: flex; align-items: center; gap: 16px; }
+.nav-links a { text-decoration: none; font-size: 14px; font-weight: 600; color: var(--muted); }
+.nav-links a:hover { color: var(--text); }
+.btn-new { background: var(--primary); color: white !important; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; }
+.btn-new:hover { background: var(--primary-dark) !important; }
+.lang-switcher { display: flex; gap: 2px; }
+.lang-btn { background: none; border: 1px solid var(--border); border-radius: 5px; font-size: 11px; font-weight: 700; padding: 3px 7px; cursor: pointer; color: var(--muted); }
+.lang-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 36px 24px; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+.page-header h1 { font-size: 24px; font-weight: 800; }
+
+.tabs { display: flex; gap: 4px; background: white; border: 1px solid var(--border); border-radius: 10px; padding: 4px; display: inline-flex; margin-bottom: 28px; }
+.tab { padding: 7px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; color: var(--muted); transition: all .15s; }
+.tab.active { background: var(--primary); color: white; }
+.tab:hover:not(.active) { background: var(--bg); color: var(--text); }
+
+.stats-row { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
+.stat-card { background: white; border-radius: 12px; padding: 18px 22px; box-shadow: var(--shadow); flex: 1; min-width: 140px; }
+.stat-card .num { font-size: 28px; font-weight: 800; color: var(--primary); }
+.stat-card .label { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+.card { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s; display: flex; flex-direction: column; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+.card-img { width: 100%; height: 190px; background: var(--bg); overflow: hidden; position: relative; }
+.card-img img { width: 100%; height: 100%; object-fit: cover; }
+.card-img .no-img { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
+.card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.card-title { font-size: 13px; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+.card-price { font-size: 16px; font-weight: 800; color: var(--primary); }
+.badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+.badge-draft  { background: #FFF3CD; color: #856404; }
+.badge-active { background: #D4EDDA; color: #155724; }
+
+.card-analytics { display: flex; gap: 12px; }
+.analytics-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.analytics-item svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+.card-actions { display: flex; gap: 6px; border-top: 1px solid var(--border); padding: 10px 14px; }
+.card-action { flex: 1; padding: 6px 0; font-size: 12px; font-weight: 600; border: 1px solid var(--border); border-radius: 7px; background: white; cursor: pointer; color: var(--muted); transition: all .15s; text-align: center; text-decoration: none; }
+.card-action:hover { background: var(--bg); color: var(--text); border-color: var(--text); }
+.card-action.primary { background: var(--primary); color: white; border-color: var(--primary); }
+.card-action.primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+
+.empty { text-align: center; padding: 80px 24px; color: var(--muted); }
+.empty h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+.empty p { font-size: 14px; margin-bottom: 24px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A1A; color: white; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; transition: transform .3s; z-index: 9999; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-logo" id="navLogo">Easy<span>Listing</span></a>
+  <div class="nav-links">
+    <span style="font-size:13px;font-weight:600;color:var(--muted);">🛍 {{ shop_name }}</span>
+    <div class="lang-switcher">
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
+      <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+    </div>
+    <a href="/disconnect" style="font-size:13px;color:var(--muted);" data-i18n="disconnect">Disconnect</a>
+    <a href="/" class="btn-new" data-i18n="new_listing">+ New Listing</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1 data-i18n="title">My Listings</h1>
+  </div>
+
+  <div class="tabs">
+    <a href="/listings?state=draft"  class="tab {{ 'active' if state=='draft'  else '' }}" data-i18n="drafts">Drafts</a>
+    <a href="/listings?state=active" class="tab {{ 'active' if state=='active' else '' }}" data-i18n="active">Active</a>
+  </div>
+
+  {% if items %}
+  <!-- Summary stats -->
+  {% set total_views    = items | map(attribute='num_views',    default=0) | sum %}
+  {% set total_favs     = items | map(attribute='num_favorers', default=0) | sum %}
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="num">{{ items | length }}</div>
+      <div class="label" data-state-count="{{ state }}">{{ state | capitalize }} Listings</div>
+    </div>
+    <div class="stat-card">
+      <div class="num">{{ total_views }}</div>
+      <div class="label" data-i18n="total_views">Total Views</div>
+    </div>
+    <div class="stat-card">
+      <div class="num">{{ total_favs }}</div>
+      <div class="label" data-i18n="total_favorites">Total Favorites</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    {% for item in items %}
+    {% set imgs  = item.get('images') or [] %}
+    {% set price = item.get('price', {}) %}
+    <div class="card">
+      <div class="card-img">
+        {% if imgs %}
+          <img src="{{ imgs[0].get('url_570xN') or imgs[0].get('url_fullxfull','') }}" alt="" loading="lazy">
+        {% else %}
+          <span class="no-img" data-i18n="no_image">No image</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <div class="card-title">{{ item['title'] }}</div>
+        <div class="card-analytics">
+          <span class="analytics-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            {{ item.get('num_views', 0) }}
+          </span>
+          <span class="analytics-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            {{ item.get('num_favorers', 0) }}
+          </span>
+        </div>
+        <div class="card-footer">
+          {% if price %}
+            <span class="card-price">€{{ "%.2f"|format(price.get('amount',0) / price.get('divisor',100)) }}</span>
+          {% else %}
+            <span class="card-price">—</span>
+          {% endif %}
+          <span class="badge {{ 'badge-active' if item['state']=='active' else 'badge-draft' }}">
+            <span data-state-badge="{{ item['state'] }}">{{ item['state'] | capitalize }}</span>
+          </span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <a href="{{ item.get('url') or 'https://www.etsy.com/listing/' ~ item['listing_id'] }}"
+           target="_blank" rel="noopener noreferrer" class="card-action" data-i18n="view">View</a>
+        <button class="card-action primary"
+                onclick="regenerate('{{ item['listing_id'] }}')"
+                data-i18n="regenerate">
+          Re-generate
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3 id="emptyTitle"></h3>
+    <p data-i18n="empty_body">Create your first listing using AI — just upload a photo.</p>
+    <a href="/" class="btn-new" style="display:inline-block;padding:12px 24px;font-size:15px;" data-i18n="empty_cta">Create a listing →</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script nonce="{{ csp_nonce }}">
+const LISTINGS_DATA = {{ items | tojson | safe }};
+
+const STRINGS = {
+  en: {
+    page_title:'My Listings — EasyListing', disconnect:'Disconnect', new_listing:'+ New Listing',
+    title:'My Listings', drafts:'Drafts', active:'Active', draft:'Draft', total_views:'Total Views', total_favorites:'Total Favorites',
+    no_image:'No image', view:'View', regenerate:'Re-generate', empty_body:'Create your first listing using AI — just upload a photo.',
+    empty_cta:'Create a listing →', empty_title:state => `No ${state} listings yet`, count_label:state => `${state} Listings`, opening:'Opening editor…'
+  },
+  de: {
+    page_title:'Meine Listings — EasyListing', disconnect:'Trennen', new_listing:'+ Neues Listing',
+    title:'Meine Listings', drafts:'Entwürfe', active:'Aktiv', draft:'Entwurf', total_views:'Aufrufe gesamt', total_favorites:'Favoriten gesamt',
+    no_image:'Kein Bild', view:'Ansehen', regenerate:'Neu generieren', empty_body:'Erstelle dein erstes Listing mit KI — lade einfach ein Foto hoch.',
+    empty_cta:'Listing erstellen →', empty_title:state => `Noch keine ${state === 'draft' ? 'Entwürfe' : 'aktiven Listings'}`, count_label:state => `${state === 'draft' ? 'Entwürfe' : 'Aktive Listings'}`, opening:'Editor wird geöffnet…'
+  },
+  tr: {
+    page_title:'Listelerim — kolaylistele', disconnect:'Bağlantıyı Kes', new_listing:'+ Yeni İlan',
+    title:'Listelerim', drafts:'Taslaklar', active:'Aktif', draft:'Taslak', total_views:'Toplam Görüntülenme', total_favorites:'Toplam Favori',
+    no_image:'Görsel yok', view:'Görüntüle', regenerate:'Yeniden oluştur', empty_body:'Yapay zeka ile ilk ilanınızı oluşturun — sadece bir fotoğraf yükleyin.',
+    empty_cta:'İlan oluştur →', empty_title:state => `Henüz ${state === 'draft' ? 'taslak' : 'aktif'} ilan yok`, count_label:state => `${state === 'draft' ? 'Taslak' : 'Aktif'} İlanlar`, opening:'Editör açılıyor…'
+  }
+};
+const BRAND = {
+  en: 'Easy<span style="color:var(--text)">Listing</span>',
+  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  tr: '<span style="color:var(--text)">kolay</span>listele',
+};
+const CURRENT_STATE = '{{ state }}';
+let currentLang = localStorage.getItem('easylisting_lang') || 'en';
+
+function setLang(lang) {
+  if (!STRINGS[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('easylisting_lang', lang);
+  const s = STRINGS[lang];
+  document.documentElement.lang = lang;
+  document.title = s.page_title;
+  document.getElementById('navLogo').innerHTML = BRAND[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (s[key] !== undefined) el.textContent = s[key];
+  });
+  document.querySelectorAll('[data-state-count]').forEach(el => {
+    el.textContent = s.count_label(el.dataset.stateCount);
+  });
+  document.querySelectorAll('[data-state-badge]').forEach(el => {
+    el.textContent = s[el.dataset.stateBadge] || el.dataset.stateBadge;
+  });
+  const emptyTitle = document.getElementById('emptyTitle');
+  if (emptyTitle) emptyTitle.textContent = s.empty_title(CURRENT_STATE);
+  document.querySelectorAll('.lang-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.lang === lang));
+}
+
+function showToast(msg, ms = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function regenerate(lid) {
+  const item = LISTINGS_DATA.find(i => String(i.listing_id) === String(lid));
+  if (!item) { window.location.href = '/'; return; }
+  const prefill = {
+    listing_id: lid,
+    title:      item.title || '',
+    tags:       (item.tags || []).map(t => typeof t === 'string' ? t : (t.name || '')),
+    materials:  item.materials || [],
+    price:      item.price ? (item.price.amount / item.price.divisor) : '',
+  };
+  try {
+    sessionStorage.setItem('sd_regenerate', JSON.stringify(prefill));
+    showToast(STRINGS[currentLang].opening);
+    setTimeout(() => { window.location.href = '/'; }, 700);
+  } catch(e) {
+    window.location.href = '/';
+  }
+}
+setLang(currentLang);
+</script>
+</body>
+</html>
