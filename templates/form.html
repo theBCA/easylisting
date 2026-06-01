@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <script src="{{ url_for('static', filename='security.js') }}"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New Listing — ZArt Etsy Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f6f2ee; color: #222; }
+    header { background: #f1641e; color: white; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 20px; font-weight: 700; }
+    a.back { color: white; font-size: 14px; text-decoration: none; }
+    .container { max-width: 720px; margin: 36px auto; padding: 0 24px 60px; }
+    .card { background: white; border-radius: 10px; padding: 28px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 20px; }
+    .card h2 { font-size: 15px; font-weight: 700; margin-bottom: 18px; color: #555; text-transform: uppercase; letter-spacing: .5px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #444; }
+    input[type=text], input[type=number], textarea, select {
+      width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px;
+      font-size: 14px; margin-bottom: 16px; background: #fafafa;
+    }
+    textarea { resize: vertical; min-height: 100px; }
+    input[type=text]:focus, textarea:focus, select:focus { outline: none; border-color: #f1641e; background: white; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .drop-zone { border: 2px dashed #ddd; border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; margin-bottom: 16px; transition: border-color .2s; }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #f1641e; background: #fff5f0; }
+    .drop-zone p { font-size: 13px; color: #888; margin-top: 8px; }
+    #preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 12px; display: none; }
+    .taxonomy-wrap { position: relative; }
+    #taxonomy-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 6px; max-height: 200px; overflow-y: auto; z-index: 10; display: none; }
+    #taxonomy-results div { padding: 9px 12px; font-size: 13px; cursor: pointer; }
+    #taxonomy-results div:hover { background: #fff5f0; }
+    .hint { font-size: 12px; color: #999; margin-top: -12px; margin-bottom: 14px; }
+    .btn-submit { width: 100%; padding: 13px; background: #f1641e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .btn-submit:hover { background: #d45519; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>New Listing</h1>
+  <a href="/" class="back">← Back</a>
+</header>
+<div class="container">
+  <form method="POST" action="/create" enctype="multipart/form-data">
+
+    <div class="card">
+      <h2>Photo</h2>
+      <div class="drop-zone" id="dropZone">
+        <svg width="32" height="32" fill="#ccc" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Drop image here or click to upload</p>
+        <input type="file" name="image" id="imageInput" accept="image/*" style="display:none">
+      </div>
+      <img id="preview" alt="preview">
+    </div>
+
+    <div class="card">
+      <h2>Listing Details</h2>
+      <label>Title</label>
+      <input type="text" name="title" required maxlength="140" placeholder="e.g. Handmade Turkish Baby Cardigan, Custom Knit...">
+
+      <label>Description</label>
+      <textarea name="description" required rows="6" placeholder="Describe your item..."></textarea>
+
+      <label>Category (taxonomy)</label>
+      <div class="taxonomy-wrap">
+        <input type="text" id="taxonomySearch" placeholder="Search: baby sweater, brooch, hat..." autocomplete="off">
+        <input type="hidden" name="taxonomy_id" id="taxonomy_id" required>
+        <div id="taxonomy-results"></div>
+      </div>
+      <div class="hint" id="taxonomySelected">No category selected</div>
+
+      <div class="row">
+        <div>
+          <label>Price (€)</label>
+          <input type="number" name="price" step="0.01" min="0.20" required placeholder="25.00">
+        </div>
+        <div>
+          <label>Quantity</label>
+          <input type="number" name="quantity" min="1" value="1" required>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tags & Materials</h2>
+      <label>Tags <span style="font-weight:400;color:#999">(comma separated, max 13)</span></label>
+      <textarea name="tags" rows="3" placeholder="handmade, turkish knit, baby gift, made to order..."></textarea>
+
+      <label>Materials <span style="font-weight:400;color:#999">(comma separated)</span></label>
+      <input type="text" name="materials" placeholder="wool, cotton, acrylic">
+    </div>
+
+    <div class="card">
+      <h2>Shipping</h2>
+      <label>Shipping Profile</label>
+      <select name="shipping_profile_id">
+        <option value="">— none —</option>
+        {% for sp in shipping_profiles %}
+        <option value="{{ sp.shipping_profile_id }}">{{ sp.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="card">
+      <h2>Custom / Personalization</h2>
+      <label>Personalization instructions <span style="font-weight:400;color:#999">(optional)</span></label>
+      <textarea name="personalization_instructions" rows="3"
+        placeholder="Custom color, size, or design? Describe your preferences and we will confirm before production.">Custom color, size, or design? (optional) — All items are handmade and can be made in any color or style. Describe your request and we will confirm before production.</textarea>
+    </div>
+
+    <button type="submit" class="btn-submit">Create Draft Listing</button>
+  </form>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+const dropZone = document.getElementById('dropZone');
+const imageInput = document.getElementById('imageInput');
+const preview = document.getElementById('preview');
+
+dropZone.addEventListener('click', () => imageInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) showPreview(file);
+});
+imageInput.addEventListener('change', () => { if (imageInput.files[0]) showPreview(imageInput.files[0]); });
+
+function showPreview(file) {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  imageInput.files = dt.files;
+  const reader = new FileReader();
+  reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+  reader.readAsDataURL(file);
+}
+
+// Taxonomy search
+let debounce;
+document.getElementById('taxonomySearch').addEventListener('input', function() {
+  clearTimeout(debounce);
+  const q = this.value.trim();
+  if (!q) { document.getElementById('taxonomy-results').style.display = 'none'; return; }
+  debounce = setTimeout(() => {
+    fetch('/api/taxonomy?q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(data => {
+        const box = document.getElementById('taxonomy-results');
+        box.innerHTML = '';
+        data.forEach(item => {
+          const d = document.createElement('div');
+          d.textContent = item.path;
+          d.addEventListener('click', () => {
+            document.getElementById('taxonomy_id').value = item.id;
+            document.getElementById('taxonomySearch').value = item.path;
+            document.getElementById('taxonomySelected').textContent = 'ID: ' + item.id;
+            box.style.display = 'none';
+          });
+          box.appendChild(d);
+        });
+        box.style.display = data.length ? 'block' : 'none';
+      });
+  }, 300);
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('.taxonomy-wrap')) document.getElementById('taxonomy-results').style.display = 'none';
+});
+</script>
+</body>
+</html>

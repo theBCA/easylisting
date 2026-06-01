@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='security.js') }}"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upgrade — EasyListing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
+  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
+  --text: #111827; --muted: #6B7280; --green: #059669;
+  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.09);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
+.nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; text-decoration: none; }
+.nav-logo span { color: var(--text); }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.btn-back { border: 1.5px solid var(--border); background: white; padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; color: var(--text); }
+.lang-switcher { display: flex; gap: 3px; }
+.lang-btn { background: none; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; font-weight: 700; padding: 4px 9px; cursor: pointer; color: var(--muted); font-family: inherit; transition: all .15s; }
+.lang-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.lang-btn:not(.active):hover { border-color: var(--primary); color: var(--primary); }
+
+.container { max-width: 960px; margin: 0 auto; padding: 52px 24px 80px; }
+
+.hero { text-align: center; margin-bottom: 48px; }
+.hero h1 { font-size: 32px; font-weight: 900; margin-bottom: 10px; letter-spacing: -.5px; }
+.hero p { font-size: 16px; color: var(--muted); max-width: 480px; margin: 0 auto; line-height: 1.6; }
+.usage-pill { display: inline-flex; align-items: center; gap: 6px; background: #FFF3CD; color: #856404; border-radius: 20px; padding: 7px 16px; font-size: 13px; font-weight: 700; margin-top: 16px; }
+.usage-pill.pro   { background: var(--primary-light); color: var(--primary); }
+.usage-pill.start { background: #EFF6FF; color: #1D4ED8; }
+
+/* Plans grid */
+.plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+@media (max-width: 720px) { .plans { grid-template-columns: 1fr; } }
+
+.plan { background: white; border-radius: 18px; padding: 28px 24px; box-shadow: var(--shadow); border: 2px solid transparent; position: relative; display: flex; flex-direction: column; }
+.plan.highlight { border-color: var(--primary); }
+.plan-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 20px; white-space: nowrap; }
+.plan-badge.green { background: var(--green); }
+
+.plan-name { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; }
+.plan-price { font-size: 40px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
+.plan-price sup { font-size: 20px; vertical-align: super; }
+.plan-period { font-size: 13px; color: var(--muted); margin-bottom: 22px; line-height: 1.4; }
+.plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; flex: 1; }
+.plan-features li { font-size: 13px; display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; }
+.check { color: var(--green); font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+.cross { color: #D1D5DB; flex-shrink: 0; margin-top: 1px; }
+
+.btn-plan { display: block; width: 100%; padding: 12px 0; border-radius: 10px; font-size: 14px; font-weight: 700; text-align: center; cursor: pointer; border: none; transition: all .15s; font-family: inherit; text-decoration: none; }
+.btn-plan.ghost    { background: white; border: 2px solid var(--border); color: var(--muted); cursor: default; }
+.btn-plan.active-plan { background: var(--primary-light); border: 2px solid var(--primary); color: var(--primary); cursor: default; }
+.btn-plan.cta      { background: linear-gradient(135deg,#6B5AED,var(--primary)); color: white; box-shadow: 0 4px 14px rgba(91,71,224,.3); }
+.btn-plan.cta:hover { opacity: .9; }
+.btn-plan.cta-green { background: linear-gradient(135deg, #16a34a, var(--green)); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.3); }
+.btn-plan.cta-green:hover { opacity: .9; }
+.btn-plan:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Banners */
+.banner { text-align: center; padding: 14px 20px; border-radius: 12px; font-size: 15px; font-weight: 600; margin-bottom: 32px; }
+.banner.success { background: #D1FAE5; color: #065F46; }
+.banner.info    { background: #FFF3CD; color: #856404; }
+
+/* FAQ */
+.faq { margin-top: 60px; }
+.faq h2 { font-size: 20px; font-weight: 800; margin-bottom: 20px; text-align: center; }
+.faq-item { background: white; border-radius: 12px; padding: 18px 22px; margin-bottom: 10px; box-shadow: var(--shadow); }
+.faq-item h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.faq-item p  { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: white; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; transition: transform .3s; z-index: 9999; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo" id="navLogo">Easy<span>Listing</span></a>
+  <div class="nav-right">
+    <div class="lang-switcher">
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
+      <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+    </div>
+    <a href="/" class="btn-back" id="t-back">← Back</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  {% if request.args.get('success') %}
+  <div class="banner success" id="banner-success">🎉 Welcome to EasyListing! Your plan is now active.</div>
+  {% elif request.args.get('cancelled') %}
+  <div class="banner info" id="banner-cancel">You cancelled — no charges were made.</div>
+  {% endif %}
+
+  <div class="hero">
+    <h1 id="t-h1">Simple, Transparent Pricing</h1>
+    <p id="t-sub">Start free, upgrade when you need more AI generations for your shop.</p>
+    {% if current_plan == 'pro' %}
+      <span class="usage-pill pro" id="usagePill">✓ <span id="t-pill">Pro — unlimited generations</span></span>
+    {% elif current_plan == 'starter' %}
+      <span class="usage-pill start" id="usagePill">✓ <span id="t-pill">Starter — 100 generations / month</span></span>
+    {% else %}
+      <span class="usage-pill" id="usagePill">{{ remaining }} <span id="t-pill">free generations left</span></span>
+    {% endif %}
+  </div>
+
+  <div class="plans">
+
+    <!-- FREE -->
+    <div class="plan {% if current_plan == 'free' %}highlight{% endif %}">
+      <div class="plan-name" id="t-free-name">Free</div>
+      <div class="plan-price"><sup>€</sup>0</div>
+      <div class="plan-period" id="t-free-period">forever</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> <span id="t-f1">5 AI-generated listings</span></li>
+        <li><span class="check">✓</span> <span id="t-f2">Gemini + NVIDIA AI models</span></li>
+        <li><span class="check">✓</span> <span id="t-f3">Multi-image upload</span></li>
+        <li><span class="check">✓</span> <span id="t-f4">EN / DE / TR translations</span></li>
+        <li><span class="check">✓</span> <span id="t-f5">Instagram caption generator</span></li>
+        <li><span class="cross">✗</span> <span id="t-f6">Bulk upload</span></li>
+        <li><span class="cross">✗</span> <span id="t-f7">Save templates</span></li>
+        <li><span class="cross">✗</span> <span id="t-f8">Unlimited generations</span></li>
+      </ul>
+      <button class="btn-plan {% if current_plan == 'free' %}active-plan{% else %}ghost{% endif %}" id="t-free-btn">
+        {% if current_plan == 'free' %}Current plan{% else %}Free plan{% endif %}
+      </button>
+    </div>
+
+    <!-- STARTER -->
+    <div class="plan {% if current_plan == 'starter' %}highlight{% endif %}">
+      <span class="plan-badge" id="t-start-badge">⭐ Best Value</span>
+      <div class="plan-name" id="t-start-name">Starter</div>
+      <div class="plan-price"><sup>€</sup>4<span style="font-size:22px;font-weight:700">.99</span></div>
+      <div class="plan-period" id="t-start-period">per month · cancel anytime</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> <span id="t-s1"><strong>100 generations</strong> per month</span></li>
+        <li><span class="check">✓</span> <span id="t-s2">All AI providers</span></li>
+        <li><span class="check">✓</span> <span id="t-s3">Bulk upload (up to 20 at once)</span></li>
+        <li><span class="check">✓</span> <span id="t-s4">Save default templates</span></li>
+        <li><span class="check">✓</span> <span id="t-s5">Multi-image upload</span></li>
+        <li><span class="check">✓</span> <span id="t-s6">EN / DE / TR translations</span></li>
+        <li><span class="check">✓</span> <span id="t-s7">Instagram caption generator</span></li>
+        <li><span class="cross">✗</span> <span id="t-s8">Unlimited generations</span></li>
+      </ul>
+      {% if current_plan == 'starter' %}
+        <button class="btn-plan active-plan" id="t-start-btn">✓ Current plan</button>
+      {% elif has_starter %}
+        <button class="btn-plan cta" id="t-start-btn" onclick="startCheckout('starter')">Get Starter →</button>
+      {% else %}
+        <button class="btn-plan ghost" id="t-start-btn" disabled>Coming soon</button>
+      {% endif %}
+    </div>
+
+    <!-- PRO -->
+    <div class="plan {% if current_plan == 'pro' %}highlight{% endif %}">
+      <span class="plan-badge green" id="t-pro-badge">🚀 Unlimited</span>
+      <div class="plan-name" id="t-pro-name">Pro</div>
+      <div class="plan-price"><sup>€</sup>9<span style="font-size:22px;font-weight:700">.99</span></div>
+      <div class="plan-period" id="t-pro-period">per month · cancel anytime</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> <span id="t-p1"><strong>Unlimited</strong> AI generations</span></li>
+        <li><span class="check">✓</span> <span id="t-p2">All AI providers (Gemini, OpenAI, NVIDIA)</span></li>
+        <li><span class="check">✓</span> <span id="t-p3">Bulk upload (up to 20 at once)</span></li>
+        <li><span class="check">✓</span> <span id="t-p4">Save default templates</span></li>
+        <li><span class="check">✓</span> <span id="t-p5">Multi-image upload</span></li>
+        <li><span class="check">✓</span> <span id="t-p6">EN / DE / TR translations</span></li>
+        <li><span class="check">✓</span> <span id="t-p7">Instagram caption generator</span></li>
+        <li><span class="check">✓</span> <span id="t-p8">Priority support</span></li>
+      </ul>
+      {% if current_plan == 'pro' %}
+        <button class="btn-plan active-plan" id="t-pro-btn">✓ Current plan</button>
+      {% elif has_pro %}
+        <button class="btn-plan cta-green" id="t-pro-btn" onclick="startCheckout('pro')">Get Pro →</button>
+      {% else %}
+        <button class="btn-plan ghost" id="t-pro-btn" disabled>Coming soon</button>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq">
+    <h2 id="t-faq-h">Frequently Asked Questions</h2>
+
+    <div class="faq-item">
+      <h3 id="t-q1">What counts as one generation?</h3>
+      <p id="t-a1">Each time you click "Generate Listing" for a single product photo, that's one generation. Translations and template saves do not count.</p>
+    </div>
+    <div class="faq-item">
+      <h3 id="t-q2">Can I cancel anytime?</h3>
+      <p id="t-a2">Yes — cancel from your Stripe billing portal at any time. Your access stays active until the end of the current billing period.</p>
+    </div>
+    <div class="faq-item">
+      <h3 id="t-q3">What happens when I hit the Starter limit?</h3>
+      <p id="t-a3">You'll see a notification when you're close to your 100 generations. At the limit you can upgrade to Pro or wait for your next billing cycle to reset.</p>
+    </div>
+    <div class="faq-item">
+      <h3 id="t-q4">Is my shop data secure?</h3>
+      <p id="t-a4">We only request the minimum permissions needed to read and create listings. We never store your products or images beyond the time needed to generate the listing.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+{% if stripe_key %}
+<script src="https://js.stripe.com/v3/"></script>
+{% endif %}
+<script nonce="{{ csp_nonce }}">
+const BRAND = {
+  en: 'Easy<span style="color:var(--text)">Listing</span>',
+  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  tr: '<span style="color:var(--text)">kolay</span>listele',
+};
+
+const T = {
+  en: {
+    title:'Upgrade — EasyListing', back:'← Back',
+    h1:'Simple, Transparent Pricing',
+    sub:'Start free, upgrade when you need more AI generations for your shop.',
+    pillFree:'free generations left', pillStart:'Starter — 100 generations / month', pillPro:'Pro — unlimited generations',
+    freeName:'Free', freePeriod:'forever',
+    f1:'5 AI-generated listings', f2:'Gemini + NVIDIA AI models', f3:'Multi-image upload',
+    f4:'EN / DE / TR translations', f5:'Instagram caption generator',
+    f6:'Bulk upload', f7:'Save templates', f8:'Unlimited generations',
+    freeBtnCurrent:'Current plan', freeBtnDefault:'Free plan',
+    startBadge:'⭐ Best Value', startName:'Starter', startPeriod:'per month · cancel anytime',
+    s1:'<strong>100 generations</strong> per month', s2:'All AI providers',
+    s3:'Bulk upload (up to 20 at once)', s4:'Save default templates',
+    s5:'Multi-image upload', s6:'EN / DE / TR translations',
+    s7:'Instagram caption generator', s8:'Unlimited generations',
+    startBtnCurrent:'✓ Current plan', startBtnCta:'Get Starter →',
+    proBadge:'🚀 Unlimited', proName:'Pro', proPeriod:'per month · cancel anytime',
+    p1:'<strong>Unlimited</strong> AI generations', p2:'All AI providers (Gemini, OpenAI, NVIDIA)',
+    p3:'Bulk upload (up to 20 at once)', p4:'Save default templates',
+    p5:'Multi-image upload', p6:'EN / DE / TR translations',
+    p7:'Instagram caption generator', p8:'Priority support',
+    proBtnCurrent:'✓ Current plan', proBtnCta:'Get Pro →',
+    faqH:'Frequently Asked Questions',
+    q1:'What counts as one generation?',
+    a1:'Each time you click "Generate Listing" for a single product photo, that\'s one generation. Translations and template saves do not count.',
+    q2:'Can I cancel anytime?',
+    a2:'Yes — cancel from your Stripe billing portal at any time. Your access stays active until the end of the current billing period.',
+    q3:'What happens when I hit the Starter limit?',
+    a3:'You\'ll see a notification when you\'re close to your 100 generations. At the limit you can upgrade to Pro or wait for your next billing cycle to reset.',
+    q4:'Is my shop data secure?',
+    a4:'We only request the minimum permissions needed to read and create listings. We never store your products or images beyond the time needed to generate the listing.',
+    bannerSuccess:'🎉 Welcome to EasyListing! Your plan is now active.',
+    bannerCancel:'You cancelled — no charges were made.',
+  },
+  de: {
+    title:'Upgrade — EasyListing', back:'← Zurück',
+    h1:'Einfache, transparente Preise',
+    sub:'Starte kostenlos, upgrade wenn du mehr KI-Generierungen benötigst.',
+    pillFree:'kostenlose Generierungen übrig', pillStart:'Starter — 100 Generierungen / Monat', pillPro:'Pro — unbegrenzte Generierungen',
+    freeName:'Kostenlos', freePeriod:'für immer',
+    f1:'5 KI-generierte Listings', f2:'Gemini + NVIDIA KI-Modelle', f3:'Mehrere Bilder hochladen',
+    f4:'EN / DE / TR Übersetzungen', f5:'Instagram-Caption-Generator',
+    f6:'Massen-Upload', f7:'Vorlagen speichern', f8:'Unbegrenzte Generierungen',
+    freeBtnCurrent:'Aktueller Plan', freeBtnDefault:'Kostenloser Plan',
+    startBadge:'⭐ Bestes Preis-Leistungs-Verhältnis', startName:'Starter', startPeriod:'pro Monat · jederzeit kündbar',
+    s1:'<strong>100 Generierungen</strong> pro Monat', s2:'Alle KI-Anbieter',
+    s3:'Massen-Upload (bis zu 20 auf einmal)', s4:'Standard-Vorlagen speichern',
+    s5:'Mehrere Bilder hochladen', s6:'EN / DE / TR Übersetzungen',
+    s7:'Instagram-Caption-Generator', s8:'Unbegrenzte Generierungen',
+    startBtnCurrent:'✓ Aktueller Plan', startBtnCta:'Starter holen →',
+    proBadge:'🚀 Unbegrenzt', proName:'Pro', proPeriod:'pro Monat · jederzeit kündbar',
+    p1:'<strong>Unbegrenzte</strong> KI-Generierungen', p2:'Alle KI-Anbieter (Gemini, OpenAI, NVIDIA)',
+    p3:'Massen-Upload (bis zu 20 auf einmal)', p4:'Standard-Vorlagen speichern',
+    p5:'Mehrere Bilder hochladen', p6:'EN / DE / TR Übersetzungen',
+    p7:'Instagram-Caption-Generator', p8:'Prioritäts-Support',
+    proBtnCurrent:'✓ Aktueller Plan', proBtnCta:'Pro holen →',
+    faqH:'Häufig gestellte Fragen',
+    q1:'Was zählt als eine Generierung?',
+    a1:'Jedes Mal, wenn du "Listing generieren" für ein Produktfoto klickst, zählt das als eine Generierung. Übersetzungen und Vorlagen zählen nicht.',
+    q2:'Kann ich jederzeit kündigen?',
+    a2:'Ja — kündige jederzeit über dein Stripe-Abrechnungsportal. Dein Zugang bleibt bis zum Ende des aktuellen Abrechnungszeitraums aktiv.',
+    q3:'Was passiert, wenn ich das Starter-Limit erreiche?',
+    a3:'Du wirst benachrichtigt, wenn du kurz vor deinen 100 Generierungen bist. Am Limit kannst du auf Pro upgraden oder auf den nächsten Abrechnungszeitraum warten.',
+    q4:'Sind meine Shop-Daten sicher?',
+    a4:'Wir fordern nur die minimal notwendigen Berechtigungen an. Wir speichern deine Produkte oder Bilder nie über die Zeit hinaus, die für die Listing-Generierung benötigt wird.',
+    bannerSuccess:'🎉 Willkommen bei EasyListing! Dein Plan ist jetzt aktiv.',
+    bannerCancel:'Du hast abgebrochen — es wurden keine Kosten berechnet.',
+  },
+  tr: {
+    title:'Yükselt — kolaylistele', back:'← Geri',
+    h1:'Sade, Şeffaf Fiyatlandırma',
+    sub:'Ücretsiz başla, mağazana daha fazla YZ üretimi gerektiğinde yükselt.',
+    pillFree:'ücretsiz ilan hakkı kaldı', pillStart:'Starter — ayda 100 üretim', pillPro:'Pro — sınırsız üretim',
+    freeName:'Ücretsiz', freePeriod:'sonsuza dek',
+    f1:'5 YZ ile oluşturulan ilan', f2:'Gemini + NVIDIA YZ modelleri', f3:'Çoklu görsel yükleme',
+    f4:'EN / DE / TR çevirileri', f5:'Instagram açıklama üreticisi',
+    f6:'Toplu yükleme', f7:'Şablon kaydetme', f8:'Sınırsız üretim',
+    freeBtnCurrent:'Mevcut plan', freeBtnDefault:'Ücretsiz plan',
+    startBadge:'⭐ En İyi Değer', startName:'Starter', startPeriod:'aylık · istediğin zaman iptal',
+    s1:'Ayda <strong>100 üretim</strong>', s2:'Tüm YZ sağlayıcıları',
+    s3:'Toplu yükleme (tek seferde 20\'ye kadar)', s4:'Varsayılan şablonları kaydet',
+    s5:'Çoklu görsel yükleme', s6:'EN / DE / TR çevirileri',
+    s7:'Instagram açıklama üreticisi', s8:'Sınırsız üretim',
+    startBtnCurrent:'✓ Mevcut plan', startBtnCta:'Starter\'a geç →',
+    proBadge:'🚀 Sınırsız', proName:'Pro', proPeriod:'aylık · istediğin zaman iptal',
+    p1:'<strong>Sınırsız</strong> YZ üretimi', p2:'Tüm YZ sağlayıcıları (Gemini, OpenAI, NVIDIA)',
+    p3:'Toplu yükleme (tek seferde 20\'ye kadar)', p4:'Varsayılan şablonları kaydet',
+    p5:'Çoklu görsel yükleme', p6:'EN / DE / TR çevirileri',
+    p7:'Instagram açıklama üreticisi', p8:'Öncelikli destek',
+    proBtnCurrent:'✓ Mevcut plan', proBtnCta:'Pro\'ya geç →',
+    faqH:'Sık Sorulan Sorular',
+    q1:'Bir üretim ne anlama gelir?',
+    a1:'Tek bir ürün fotoğrafı için "İlan Oluştur" tuşuna her bastığında bir üretim sayılır. Çeviriler ve şablon kayıtları sayılmaz.',
+    q2:'İstediğim zaman iptal edebilir miyim?',
+    a2:'Evet — Stripe fatura portalından istediğin zaman iptal et. Erişimin mevcut faturalandırma döneminin sonuna kadar aktif kalır.',
+    q3:'Starter limitine ulaşırsam ne olur?',
+    a3:'100 üretimine yaklaştığında bildirim alırsın. Limitde Pro\'ya geçebilir veya bir sonraki dönemin sıfırlanmasını bekleyebilirsin.',
+    q4:'Mağaza verilerim güvende mi?',
+    a4:'Yalnızca ilan okuma ve oluşturma için gereken minimum izinleri talep ediyoruz. Ürünlerini veya görsellerini ilan oluşturma için gereken süreden fazla saklamıyoruz.',
+    bannerSuccess:'🎉 kolaylistele\'ye hoş geldin! Planın artık aktif.',
+    bannerCancel:'İptal ettin — ücret alınmadı.',
+  },
+};
+
+function setLang(lang) {
+  if (!T[lang]) return;
+  const s = T[lang];
+  const byId = (id) => document.getElementById(id);
+  const setText = (id, value) => {
+    const el = byId(id);
+    if (el) el.textContent = value;
+  };
+  const setHtml = (id, value) => {
+    const el = byId(id);
+    if (el) el.innerHTML = value;
+  };
+
+  document.title = s.title;
+  if (byId('navLogo')) byId('navLogo').innerHTML = BRAND[lang];
+  setText('t-back', s.back);
+  setText('t-h1', s.h1);
+  setText('t-sub', s.sub);
+  setText('t-pill', s['pill' + (currentPlan === 'pro' ? 'Pro' : currentPlan === 'starter' ? 'Start' : 'Free')]);
+  // Free plan
+  setText('t-free-name', s.freeName);
+  setText('t-free-period', s.freePeriod);
+  ['f1','f2','f3','f4','f5','f6','f7','f8'].forEach(k => setText('t-' + k, s[k]));
+  const freeBtn = byId('t-free-btn');
+  if (freeBtn) freeBtn.textContent = currentPlan === 'free' ? s.freeBtnCurrent : s.freeBtnDefault;
+  // Starter plan
+  setText('t-start-badge', s.startBadge);
+  setText('t-start-name', s.startName);
+  setText('t-start-period', s.startPeriod);
+  ['s1','s2','s3','s4','s5','s6','s7','s8'].forEach(k => setHtml('t-' + k, s[k]));
+  const startBtn = byId('t-start-btn');
+  if (startBtn) startBtn.innerHTML = currentPlan === 'starter' ? s.startBtnCurrent : s.startBtnCta;
+  // Pro plan
+  setText('t-pro-badge', s.proBadge);
+  setText('t-pro-name', s.proName);
+  setText('t-pro-period', s.proPeriod);
+  ['p1','p2','p3','p4','p5','p6','p7','p8'].forEach(k => setHtml('t-' + k, s[k]));
+  const proBtn = byId('t-pro-btn');
+  if (proBtn) proBtn.innerHTML = currentPlan === 'pro' ? s.proBtnCurrent : s.proBtnCta;
+  // FAQ
+  setText('t-faq-h', s.faqH);
+  ['q1','a1','q2','a2','q3','a3','q4','a4'].forEach(k => setText('t-' + k, s[k]));
+  // Banners
+  const bs = byId('banner-success');
+  const bc = byId('banner-cancel');
+  if (bs) bs.textContent = s.bannerSuccess;
+  if (bc) bc.textContent = s.bannerCancel;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+  document.querySelector('html').lang = lang;
+  localStorage.setItem('easylisting_lang', lang);
+}
+
+const currentPlan = '{{ current_plan }}';
+
+{% if stripe_key %}
+const stripe = Stripe('{{ stripe_key | e }}');
+async function startCheckout(plan) {
+  const btn = document.getElementById('t-' + (plan === 'starter' ? 'start' : 'pro') + '-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const resp = await fetch('/stripe/checkout', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({plan}),
+    });
+    const data = await resp.json();
+    if (data.url) { window.location.href = data.url; }
+    else throw new Error(data.error || 'Checkout failed');
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = plan === 'starter' ? 'Get Starter →' : 'Get Pro →'; }
+    const t = document.getElementById('toast');
+    t.textContent = '⚠ ' + e.message;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+}
+{% else %}
+function startCheckout() {}
+{% endif %}
+
+const saved = localStorage.getItem('easylisting_lang') ||
+  (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
+setLang(saved);
+</script>
+</body>
+</html>

@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='security.js') }}"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EasyListing — AI Listing Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
+  --bg: #F6F7FB; --card: #FFFFFF; --border: #E5E7F0;
+  --text: #111827; --muted: #6B7280; --green: #059669; --green-bg: #ECFDF5;
+  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.09);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* NAV */
+nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 8px; }
+.nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; }
+.nav-logo span { color: var(--text); }
+.nav-links { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nav-links a { text-decoration: none; font-size: 13px; font-weight: 600; color: var(--muted); }
+.nav-links a:hover { color: var(--text); }
+.usage-badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: #FFF3CD; color: #856404; }
+.usage-badge.unlimited { background: #D4EDDA; color: #155724; }
+.nav-sep { color: var(--border); }
+.btn-icon { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary); padding: 0; }
+.lang-switcher { display: flex; gap: 2px; }
+.lang-btn { background: none; border: 1px solid var(--border); border-radius: 5px; font-size: 11px; font-weight: 700; padding: 3px 7px; cursor: pointer; color: var(--muted); }
+.lang-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* SCREENS */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* UPLOAD */
+#upload-screen { max-width: 680px; margin: 0 auto; padding: 60px 24px; position: relative; }
+#upload-screen::before { content:''; position:fixed; inset:0; background:radial-gradient(ellipse 70% 50% at 50% -5%, #EDE9FF 0%, transparent 65%); pointer-events:none; z-index:0; }
+#upload-screen > * { position:relative; z-index:1; }
+.hero-label { font-size: 13px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.hero-title { font-size: 36px; font-weight: 800; line-height: 1.15; margin-bottom: 12px; letter-spacing: -.5px; }
+.hero-sub { font-size: 16px; color: var(--muted); margin-bottom: 40px; line-height: 1.6; }
+.drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 56px 32px; text-align: center; cursor: pointer; transition: all .2s; background: white; position: relative; }
+.drop-zone:hover, .drop-zone.over { border-color: var(--primary); background: #F0EEFF; }
+.drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.drop-icon { font-size: 40px; margin-bottom: 14px; }
+.drop-zone h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.drop-zone p { font-size: 13px; color: var(--muted); }
+.drop-zone .btn-browse { display: inline-block; margin-top: 16px; padding: 9px 20px; background: var(--primary); color: white; border-radius: 8px; font-size: 13px; font-weight: 700; }
+.image-preview-strip { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.preview-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 2px solid var(--border); }
+.preview-thumb.primary { border-color: var(--primary); }
+.options-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+.field-group label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
+.field-group input, .field-group select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 9px; font-size: 14px; background: white; }
+.provider-toggle { display: flex; gap: 8px; }
+.provider-btn { flex: 1; padding: 10px; border: 2px solid var(--border); border-radius: 9px; background: white; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s; text-align: center; }
+.provider-btn.active { border-color: var(--primary); color: var(--primary); background: #F0EEFF; }
+.provider-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
+.badge-free { background: #D4EDDA; color: #155724; }
+.badge-paid { background: #FFF3CD; color: #856404; }
+.btn-generate { width: 100%; margin-top: 24px; padding: 16px; background: linear-gradient(135deg, #6B5AED, var(--primary)); color: white; border: none; border-radius: 11px; font-size: 16px; font-weight: 800; cursor: pointer; transition: opacity .15s; letter-spacing: .2px; box-shadow: 0 4px 16px rgba(91,71,224,.35); }
+.btn-generate:hover { opacity: .9; }
+.btn-generate:disabled { background: #D1D5DB; box-shadow: none; cursor: not-allowed; opacity: 1; }
+.template-row { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 13px; }
+.btn-text { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary); padding: 0; text-decoration: underline; }
+
+/* LOADING */
+#loading-screen { max-width: 480px; margin: 100px auto; padding: 24px; text-align: center; }
+.spinner { width: 52px; height: 52px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 24px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-screen h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+#loading-screen p { font-size: 14px; color: var(--muted); }
+.loading-steps { margin-top: 28px; text-align: left; display: inline-block; }
+.step { font-size: 13px; color: var(--muted); padding: 5px 0; display: flex; align-items: center; gap: 10px; }
+.step.done { color: var(--green); }
+.step.done::before { content: "✓"; font-weight: 700; }
+.step:not(.done)::before { content: "○"; }
+
+/* REVIEW */
+#review-screen { max-width: 1060px; margin: 0 auto; padding: 32px 24px 80px; }
+.review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.review-header h2 { font-size: 22px; font-weight: 800; }
+.review-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn-back { font-size: 14px; color: var(--muted); background: none; border: none; cursor: pointer; font-weight: 600; }
+.btn-back:hover { color: var(--text); }
+.translate-btns { display: flex; gap: 6px; }
+.btn-translate { padding: 6px 12px; border: 1.5px solid var(--border); border-radius: 8px; background: white; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; }
+.btn-translate:hover { border-color: var(--primary); color: var(--primary); }
+.btn-translate.loading { opacity: .6; pointer-events: none; }
+.review-layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
+.image-panel { position: sticky; top: 78px; }
+.main-img { width: 100%; border-radius: var(--radius); aspect-ratio: 1; object-fit: cover; box-shadow: var(--shadow); }
+.img-strip { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.img-thumb { width: 58px; height: 58px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 2px solid var(--border); transition: border-color .15s; }
+.img-thumb.active { border-color: var(--primary); }
+.ai-badge { margin-top: 12px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--green); font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.fields-panel { display: flex; flex-direction: column; gap: 16px; }
+.field-card { background: white; border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); }
+.field-card-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 12px; }
+.field-input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; font-family: inherit; transition: border-color .15s; background: #FAFAFA; }
+.field-input:focus { outline: none; border-color: var(--primary); background: white; }
+textarea.field-input { resize: vertical; min-height: 120px; line-height: 1.6; }
+.char-count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 4px; }
+.char-count.warn { color: #E53E3E; }
+.chips-wrap { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px; border: 1.5px solid var(--border); border-radius: 9px; background: #FAFAFA; min-height: 44px; cursor: text; }
+.chip { background: #EDEAFF; color: var(--primary); border-radius: 20px; padding: 4px 10px 4px 12px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.chip.color-chip { background: #EEF2FF; color: #4338CA; }
+.chip.size-chip  { background: #F0FDF4; color: #15803D; }
+.chip .remove { cursor: pointer; opacity: .6; font-size: 15px; line-height: 1; }
+.chip .remove:hover { opacity: 1; }
+.chip-input { border: none; outline: none; background: transparent; font-size: 13px; min-width: 100px; flex: 1; padding: 4px; font-family: inherit; }
+.chip-count { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.chip-count.warn { color: #E53E3E; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.price-wrap { position: relative; }
+.price-wrap .currency { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--muted); font-size: 14px; }
+.price-wrap input { padding-left: 28px; }
+.price-suggestion { font-size: 12px; color: var(--muted); margin-top: 5px; }
+.price-suggestion span { color: var(--primary); font-weight: 700; cursor: pointer; }
+.taxonomy-wrap { position: relative; }
+.taxonomy-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 1px solid var(--border); border-radius: 10px; max-height: 220px; overflow-y: auto; z-index: 20; box-shadow: var(--shadow); }
+.taxonomy-option { padding: 10px 14px; font-size: 13px; cursor: pointer; transition: background .1s; }
+.taxonomy-option:hover { background: #F0EEFF; }
+.taxonomy-selected { font-size: 12px; color: var(--green); margin-top: 5px; font-weight: 600; }
+.instagram-preview { background: #fafafa; border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 60px; }
+.copy-btn { margin-top: 8px; padding: 7px 14px; background: none; border: 1.5px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); }
+.copy-btn:hover { border-color: var(--primary); color: var(--primary); }
+.btn-publish { width: 100%; padding: 16px; background: linear-gradient(135deg, #6B5AED, var(--primary)); color: white; border: none; border-radius: 11px; font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 8px; transition: opacity .15s; letter-spacing: .2px; box-shadow: 0 4px 16px rgba(91,71,224,.35); }
+.btn-publish:hover { opacity: .9; }
+.btn-publish:disabled { background: #D1D5DB; box-shadow: none; cursor: not-allowed; opacity: 1; }
+.btn-save-template { width: 100%; padding: 12px; background: none; border: 2px solid var(--border); border-radius: 11px; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--muted); margin-top: 6px; }
+.btn-save-template:hover { border-color: var(--primary); color: var(--primary); }
+
+/* PLATFORM SELECTOR */
+.platform-row { margin-bottom: 20px; }
+.platform-row-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+.platform-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.platform-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px; border: 2px solid var(--border); border-radius: 11px; background: white; cursor: pointer; transition: all .15s; min-width: 72px; position: relative; }
+.platform-card:hover { border-color: #B0A8F5; }
+.platform-card.active { border-color: var(--primary); background: #F0EEFF; }
+.platform-icon { font-size: 20px; line-height: 1; }
+.platform-name { font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.platform-card.active .platform-name { color: var(--primary); }
+/* PLATFORM REVIEW SCREEN */
+#platform-review-screen { max-width: 1060px; margin: 0 auto; padding: 32px 24px 80px; }
+.plt-header-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--primary-light); color: var(--primary); border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 700; margin-bottom: 16px; }
+.plt-field-card { background: white; border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); margin-bottom: 16px; }
+.plt-field-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.plt-field-label .copy-btn { font-size: 11px; padding: 4px 10px; margin-top: 0; }
+.plt-input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; font-family: inherit; background: #FAFAFA; transition: border-color .15s; }
+.plt-input:focus { outline: none; border-color: var(--primary); background: white; }
+textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
+.plt-char-count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 4px; }
+.plt-char-count.warn { color: #E53E3E; }
+.plt-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.plt-list-item { display: flex; align-items: flex-start; gap: 8px; }
+.plt-list-item textarea { flex: 1; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; background: #FAFAFA; resize: none; }
+.plt-list-item .copy-btn { flex-shrink: 0; margin-top: 0; padding: 8px 10px; font-size: 11px; }
+.plt-kv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.plt-kv-table td { padding: 7px 10px; border: 1px solid var(--border); }
+.plt-kv-table td:first-child { font-weight: 700; color: var(--muted); background: #FAFAFA; width: 35%; }
+.plt-kv-table input { width: 100%; border: none; background: transparent; font-size: 13px; font-family: inherit; outline: none; }
+.plt-tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1.5px solid var(--border); border-radius: 9px; background: #FAFAFA; min-height: 40px; }
+.plt-tag { background: #EDEAFF; color: var(--primary); border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
+.btn-export-all { width: 100%; padding: 14px; background: white; border: 2px solid var(--border); border-radius: 11px; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--text); margin-top: 8px; transition: all .15s; }
+.btn-export-all:hover { border-color: var(--primary); color: var(--primary); }
+.coming-soon-bar { margin-top: 12px; padding: 14px 18px; background: linear-gradient(135deg, #F0EEFF, #E8E4FF); border-radius: 11px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.coming-soon-bar span { font-size: 13px; font-weight: 600; color: var(--primary); }
+.coming-soon-bar small { font-size: 12px; color: var(--muted); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1A1A1A; color: white; padding: 14px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,.2); z-index: 200; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; text-align: center; }
+.toast.show { opacity: 1; }
+.toast.success { background: var(--green); }
+.toast.error { background: #C0392B; }
+
+/* MODALS */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: white; border-radius: 20px; padding: 36px 40px; max-width: 460px; width: calc(100% - 48px); box-shadow: 0 12px 48px rgba(0,0,0,.18); }
+.modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.modal p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 22px; }
+.modal-actions { display: flex; flex-direction: column; gap: 10px; }
+.btn-modal-primary { padding: 13px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; text-align: center; }
+.btn-modal-primary:hover { background: var(--primary-dark); }
+.btn-modal-secondary { padding: 12px; background: none; border: 2px solid var(--border); border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--muted); }
+.btn-modal-secondary:hover { border-color: var(--primary); color: var(--primary); }
+.modal-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: block; }
+.modal-select { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; margin-bottom: 12px; font-family: inherit; }
+.modal-input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; margin-bottom: 16px; font-family: inherit; }
+.modal-input:focus, .modal-select:focus { outline: none; border-color: var(--primary); }
+
+@media (max-width: 740px) {
+  .review-layout { grid-template-columns: 1fr; }
+  .image-panel { position: static; }
+  .options-row { grid-template-columns: 1fr; }
+  .row2 { grid-template-columns: 1fr; }
+  .hero-title { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo" id="navLogo">Easy<span>Listing</span></div>
+  <div class="nav-links">
+    <a href="/listings" data-i18n="nav_listings">My Listings</a>
+    <a href="/bulk" data-i18n="nav_bulk">Bulk Upload</a>
+    <span class="nav-sep">|</span>
+    {% if unlimited %}
+    <span class="usage-badge unlimited">✓ Unlimited</span>
+    {% else %}
+    <span class="usage-badge" id="usageBadge">{{ remaining }} <span data-i18n="nav_free_left">free left</span></span>
+    {% endif %}
+    <a href="/upgrade" class="btn-icon" style="text-decoration:none;" data-i18n="nav_upgrade">Upgrade</a>
+    <span class="nav-sep">|</span>
+    <div class="lang-switcher">
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
+      <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+    </div>
+    <span class="nav-sep">|</span>
+    <span style="font-size:13px;font-weight:600;color:var(--muted)">🛍 {{ shop_name }}</span>
+    <a href="/disconnect" style="font-size:13px;color:var(--muted);" data-i18n="nav_disconnect">Disconnect</a>
+  </div>
+</nav>
+
+<div id="toast" class="toast"></div>
+
+<!-- PAYWALL MODAL -->
+<div class="modal-overlay" id="paywallModal">
+  <div class="modal">
+    <h2 data-i18n="paywall_title">You've used your free generations</h2>
+    <p data-i18n="paywall_body">Upgrade to EasyListing Pro for unlimited AI generations and bulk listing tools.</p>
+    <div class="modal-actions">
+      <a href="/upgrade" class="btn-modal-primary" style="text-decoration:none;text-align:center;" data-i18n="paywall_upgrade">View upgrade plans</a>
+      <button class="btn-modal-secondary" onclick="closeModal('paywallModal')" data-i18n="paywall_later">Maybe later</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── UPLOAD SCREEN ── -->
+<div id="upload-screen" class="screen active">
+  <div style="max-width:680px;margin:0 auto;padding:60px 24px">
+    <div class="hero-label" data-i18n="hero_label">AI-powered Etsy tool</div>
+    <h1 class="hero-title" data-i18n-html="hero_title">Upload a photo.<br>AI writes your listing.</h1>
+    <p class="hero-sub" data-i18n="hero_sub">Drop your product photo, add a short hint, and get a fully optimized Etsy title, description, tags, and more — ready to publish in seconds.</p>
+
+    <div class="platform-row">
+      <div class="platform-row-label" data-i18n="label_platform">Sell on</div>
+      <div class="platform-grid">
+        <div class="platform-card active" data-platform="etsy" onclick="selectPlatform('etsy',this)">
+          <span class="platform-icon">🛍️</span>
+          <span class="platform-name">Etsy</span>
+        </div>
+        <div class="platform-card" data-platform="shopify" onclick="selectPlatform('shopify',this)">
+          <span class="platform-icon">🛒</span>
+          <span class="platform-name">Shopify</span>
+        </div>
+        <div class="platform-card" data-platform="amazon" onclick="selectPlatform('amazon',this)">
+          <span class="platform-icon">📦</span>
+          <span class="platform-name">Amazon</span>
+        </div>
+        <div class="platform-card" data-platform="trendyol" onclick="selectPlatform('trendyol',this)">
+          <span class="platform-icon">🇹🇷</span>
+          <span class="platform-name">Trendyol</span>
+        </div>
+        <div class="platform-card" data-platform="hepsiburada" onclick="selectPlatform('hepsiburada',this)">
+          <span class="platform-icon">🏪</span>
+          <span class="platform-name">Hepsiburada</span>
+        </div>
+        <div class="platform-card" data-platform="n11" onclick="selectPlatform('n11',this)">
+          <span class="platform-icon">🔖</span>
+          <span class="platform-name">n11</span>
+        </div>
+        <div class="platform-card" data-platform="ebay" onclick="selectPlatform('ebay',this)">
+          <span class="platform-icon">🔨</span>
+          <span class="platform-name">eBay</span>
+        </div>
+        <div class="platform-card" data-platform="woocommerce" onclick="selectPlatform('woocommerce',this)">
+          <span class="platform-icon">🌐</span>
+          <span class="platform-name">WooCommerce</span>
+        </div>
+        <div class="platform-card" data-platform="pinterest" onclick="selectPlatform('pinterest',this)">
+          <span class="platform-icon">📌</span>
+          <span class="platform-name">Pinterest</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" multiple>
+      <div class="drop-icon">📷</div>
+      <h3 data-i18n="drop_title">Drop your product photos here</h3>
+      <p data-i18n="drop_sub">JPG, PNG, WebP — up to 5 photos per listing</p>
+      <div class="btn-browse" data-i18n="drop_browse">Browse files</div>
+    </div>
+    <div class="image-preview-strip" id="previewStrip"></div>
+
+    <div class="options-row">
+      <div class="field-group">
+        <label data-i18n="label_hint">Product hint <em style="font-weight:400;text-transform:none">(optional)</em></label>
+        <input type="text" id="hintInput" data-i18n-placeholder="hint_placeholder" placeholder="e.g. baby cardigan, hand knit, blue">
+      </div>
+      <div class="field-group">
+        <label data-i18n="label_provider">AI Provider</label>
+        <div class="provider-toggle">
+          <button class="provider-btn active" data-provider="gemini" onclick="selectProvider('gemini',this)">
+            Gemini <span class="provider-badge badge-free">FREE</span>
+          </button>
+          <button class="provider-btn" data-provider="nvidia" onclick="selectProvider('nvidia',this)">
+            NVIDIA <span class="provider-badge badge-free">FREE</span>
+          </button>
+        </div>
+        <div id="nvidia-model-wrap" style="display:none;margin-top:10px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;">NVIDIA Model</div>
+          <div style="display:flex;gap:8px;">
+            <label style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 12px;border:2px solid var(--border);border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;" id="model-llama-label">
+              <input type="radio" name="nvidia_model" value="llama-90b" checked onchange="updateModelLabel()" style="accent-color:var(--primary)">
+              Llama 3.2 90B
+            </label>
+            <label style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 12px;border:2px solid var(--border);border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;" id="model-phi-label">
+              <input type="radio" name="nvidia_model" value="phi-3.5" onchange="updateModelLabel()" style="accent-color:var(--primary)">
+              Phi-3.5 Vision
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="template-row">
+      <span style="color:var(--muted);font-size:13px;" data-i18n="template_hint">Load your saved defaults?</span>
+      <button class="btn-text" onclick="loadTemplate()" data-i18n="template_load">Load template</button>
+    </div>
+
+    <button class="btn-generate" id="generateBtn" onclick="startGenerate()" disabled data-i18n="btn_generate">
+      Generate Listing with AI →
+    </button>
+  </div>
+</div>
+
+<!-- ── LOADING SCREEN ── -->
+<div id="loading-screen" class="screen">
+  <div class="spinner"></div>
+  <h2 data-i18n="loading_title">Analyzing your product…</h2>
+  <p data-i18n="loading_sub">AI is writing your title, description, tags, and more.</p>
+  <div class="loading-steps" id="loadingSteps">
+    <div class="step" id="step1" data-i18n="step1">Analyzing product image</div>
+    <div class="step" id="step2" data-i18n="step2">Writing title &amp; description</div>
+    <div class="step" id="step3" data-i18n="step3">Generating tags &amp; materials</div>
+    <div class="step" id="step4" data-i18n="step4">Matching category</div>
+  </div>
+</div>
+
+<!-- ── REVIEW SCREEN ── -->
+<div id="review-screen" class="screen">
+  <div style="max-width:1060px;margin:0 auto;padding:32px 24px 80px;">
+    <div class="review-header">
+      <h2 data-i18n="review_title">Review &amp; Publish</h2>
+      <div class="review-actions">
+        <div class="translate-btns">
+          <button class="btn-translate" onclick="translateTo('en')">🇬🇧 EN</button>
+          <button class="btn-translate" onclick="translateTo('de')">🇩🇪 DE</button>
+          <button class="btn-translate" onclick="translateTo('tr')">🇹🇷 TR</button>
+        </div>
+        <button class="btn-back" onclick="goBack()" data-i18n="btn_back">← Start over</button>
+      </div>
+    </div>
+
+    <div class="review-layout">
+      <div class="image-panel">
+        <img id="mainImg" class="main-img" src="" alt="">
+        <div class="img-strip" id="imgStrip"></div>
+        <div class="ai-badge">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <span data-i18n="ai_badge">AI-generated — review before publishing</span>
+        </div>
+      </div>
+
+      <div class="fields-panel">
+
+        <div class="field-card">
+          <div class="field-card-title" data-i18n="label_title">Title</div>
+          <input type="text" id="r-title" class="field-input" maxlength="140" oninput="updateCharCount(this,'title-count',140)">
+          <div class="char-count" id="title-count">0 / 140</div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title" data-i18n="label_desc">Description</div>
+          <textarea id="r-description" class="field-input" rows="7"></textarea>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title" data-i18n="label_tags">Tags <span id="tag-count-label" class="chip-count"></span></div>
+          <div class="chips-wrap" id="tags-wrap" onclick="focusChipInput('tag-input')">
+            <input class="chip-input" id="tag-input" data-i18n-placeholder="tag_placeholder" placeholder="Add tag, press Enter" onkeydown="chipKeydown(event,'tags-wrap','tag-input',13,'tag-count-label')">
+          </div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title" data-i18n="label_materials">Materials</div>
+          <div class="chips-wrap" id="materials-wrap" onclick="focusChipInput('material-input')">
+            <input class="chip-input" id="material-input" data-i18n-placeholder="material_placeholder" placeholder="Add material, press Enter" onkeydown="chipKeydown(event,'materials-wrap','material-input',13,null)">
+          </div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title" data-i18n="label_variations">Variations</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;" data-i18n="label_colors">Colors</div>
+              <div class="chips-wrap" id="colors-wrap" onclick="focusChipInput('color-input')">
+                <input class="chip-input" id="color-input" data-i18n-placeholder="color_placeholder" placeholder="Add color" onkeydown="chipKeydown(event,'colors-wrap','color-input',20,null,'color-chip')">
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;" data-i18n="label_sizes">Sizes</div>
+              <div class="chips-wrap" id="sizes-wrap" onclick="focusChipInput('size-input')">
+                <input class="chip-input" id="size-input" data-i18n-placeholder="size_placeholder" placeholder="S, M, L, Custom…" onkeydown="chipKeydown(event,'sizes-wrap','size-input',20,null,'size-chip')">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title" data-i18n="label_price_shipping">Price &amp; Shipping</div>
+          <div class="row2">
+            <div>
+              <div class="price-wrap">
+                <span class="currency">€</span>
+                <input type="number" id="r-price" class="field-input" step="0.01" min="0.20">
+              </div>
+              <div class="price-suggestion" id="price-suggestion"></div>
+            </div>
+            <div>
+              <select id="r-shipping" class="field-input"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title" data-i18n="label_category">Category</div>
+          <div class="taxonomy-wrap">
+            <input type="text" id="taxonomy-search" class="field-input" data-i18n-placeholder="category_placeholder" placeholder="Search category…" oninput="taxonomySearch(this.value)" autocomplete="off">
+            <input type="hidden" id="r-taxonomy-id">
+            <div class="taxonomy-dropdown" id="taxonomy-dropdown" style="display:none"></div>
+          </div>
+          <div class="taxonomy-selected" id="taxonomy-selected"></div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title" data-i18n="label_personalization">Custom Order Instructions</div>
+          <textarea id="r-personalization" class="field-input" rows="3" data-i18n-placeholder="personalization_placeholder" placeholder="What should buyers tell you when ordering?"></textarea>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span data-i18n="label_instagram">Instagram Caption</span>
+            <button class="copy-btn" onclick="copyInstagram()" data-i18n="btn_copy">Copy</button>
+          </div>
+          <div class="instagram-preview" id="instagram-caption"></div>
+        </div>
+
+        <button class="btn-publish" id="publishBtn" onclick="publish()" data-i18n="btn_publish">
+          Create Draft on Etsy →
+        </button>
+        <button class="btn-save-template" onclick="saveTemplate()" data-i18n="btn_save_template">
+          💾 Save as default template
+        </button>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PLATFORM REVIEW SCREEN ── -->
+<div id="platform-review-screen" class="screen">
+  <div style="max-width:1060px;margin:0 auto;padding:32px 24px 80px;">
+    <div class="review-header">
+      <div>
+        <div id="plt-header-badge" class="plt-header-badge"><span id="plt-platform-icon">🛒</span> <span id="plt-platform-name">Shopify</span> Content Ready!</div>
+        <div class="ai-badge" style="display:inline-flex;margin-top:6px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <span>AI-generated — review before using</span>
+        </div>
+      </div>
+      <button class="btn-back" onclick="goBack()">← Start over</button>
+    </div>
+    <div class="review-layout">
+      <div class="image-panel">
+        <img id="plt-mainImg" class="main-img" src="" alt="">
+        <div class="img-strip" id="plt-imgStrip"></div>
+        <button class="btn-export-all" onclick="exportAllText()" style="margin-top:14px;">⬇ Export All as Text</button>
+      </div>
+      <div class="fields-panel" id="plt-fields-panel">
+        <!-- dynamically populated by populatePlatformReview() -->
+      </div>
+    </div>
+    <div class="coming-soon-bar" id="plt-coming-soon-bar">
+      <div>
+        <span id="plt-coming-soon-label">🚀 Direct Shopify publishing coming soon</span><br>
+        <small>Generate content now, paste it manually — one-click publishing in next update</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+// ── i18n ──────────────────────────────────────────────────────────────────────
+const STRINGS = {
+  en: {
+    nav_listings:"My Listings", nav_bulk:"Bulk Upload", nav_upgrade:"Upgrade",
+    nav_disconnect:"Disconnect", nav_free_left:"free left",
+    label_platform:"Sell on",
+    hero_label:"AI-powered listing tool",
+    hero_title:"Upload a photo.<br>AI writes your listing.",
+    hero_sub:"Drop your product photo, add a short hint, and get a fully optimized title, description, tags, and more — ready to publish in seconds.",
+    drop_title:"Drop your product photos here", drop_sub:"JPG, PNG, WebP — up to 5 photos per listing", drop_browse:"Browse files",
+    label_hint:"Product hint", hint_placeholder:"e.g. baby cardigan, hand knit, blue",
+    label_provider:"AI Provider",
+    template_hint:"Load your saved defaults?", template_load:"Load template",
+    btn_generate:"Generate Listing with AI →",
+    loading_title:"Analyzing your product…", loading_sub:"AI is writing your title, description, tags, and more.",
+    step1:"Analyzing product image", step2:"Writing title & description", step3:"Generating tags & materials", step4:"Matching category",
+    review_title:"Review & Publish", btn_back:"← Start over",
+    ai_badge:"AI-generated — review before publishing",
+    label_title:"Title", label_desc:"Description", label_tags:"Tags",
+    tag_placeholder:"Add tag, press Enter", material_placeholder:"Add material, press Enter",
+    label_materials:"Materials", label_variations:"Variations",
+    label_colors:"Colors", color_placeholder:"Add color",
+    label_sizes:"Sizes", size_placeholder:"S, M, L, Custom…",
+    label_price_shipping:"Price & Shipping", label_category:"Category",
+    category_placeholder:"Search category…",
+    label_personalization:"Custom Order Instructions",
+    personalization_placeholder:"What should buyers tell you when ordering?",
+    label_instagram:"Instagram Caption", btn_copy:"Copy",
+    btn_publish:"Create Draft on Etsy →", btn_save_template:"💾 Save as default template",
+    paywall_title:"You've used your free generations",
+    paywall_body:"Upgrade to EasyListing Pro for unlimited AI generations and bulk listing tools.",
+    paywall_upgrade:"View upgrade plans", paywall_later:"Maybe later", cancel:"Cancel",
+  },
+  de: {
+    nav_listings:"Meine Listings", nav_bulk:"Massen-Upload", nav_upgrade:"Upgrade",
+    nav_disconnect:"Trennen", nav_free_left:"kostenlose übrig",
+    label_platform:"Verkaufen auf",
+    hero_label:"KI-gestütztes Listing-Tool",
+    hero_title:"Foto hochladen.<br>KI schreibt dein Listing.",
+    hero_sub:"Produktfoto hochladen, kurzen Hinweis hinzufügen und ein vollständig optimiertes Listing erhalten — in Sekunden fertig.",
+    drop_title:"Produktfotos hier ablegen", drop_sub:"JPG, PNG, WebP — bis zu 5 Fotos", drop_browse:"Dateien auswählen",
+    label_hint:"Produkthinweis", hint_placeholder:"z.B. Baby-Cardigan, handgestrickt, blau",
+    label_provider:"KI-Anbieter",
+    template_hint:"Gespeicherte Voreinstellungen laden?", template_load:"Vorlage laden",
+    btn_generate:"Listing mit KI erstellen →",
+    loading_title:"Dein Produkt wird analysiert…", loading_sub:"KI schreibt Titel, Beschreibung, Tags und mehr.",
+    step1:"Produktbild analysieren", step2:"Titel & Beschreibung schreiben", step3:"Tags & Materialien generieren", step4:"Kategorie zuordnen",
+    review_title:"Prüfen & Veröffentlichen", btn_back:"← Von vorne beginnen",
+    ai_badge:"KI-generiert — vor dem Veröffentlichen prüfen",
+    label_title:"Titel", label_desc:"Beschreibung", label_tags:"Tags",
+    tag_placeholder:"Tag hinzufügen, Enter drücken", material_placeholder:"Material hinzufügen, Enter drücken",
+    label_materials:"Materialien", label_variations:"Variationen",
+    label_colors:"Farben", color_placeholder:"Farbe hinzufügen",
+    label_sizes:"Größen", size_placeholder:"S, M, L, Individuell…",
+    label_price_shipping:"Preis & Versand", label_category:"Kategorie",
+    category_placeholder:"Kategorie suchen…",
+    label_personalization:"Anpassungshinweise",
+    personalization_placeholder:"Was sollen Käufer beim Bestellen angeben?",
+    label_instagram:"Instagram-Bildunterschrift", btn_copy:"Kopieren",
+    btn_publish:"Entwurf auf Etsy erstellen →", btn_save_template:"💾 Als Standardvorlage speichern",
+    paywall_title:"Kostenlose Generierungen aufgebraucht",
+    paywall_body:"Upgrade auf EasyListing Pro für unbegrenzte KI-Generierungen und Bulk-Listing-Tools.",
+    paywall_upgrade:"Upgrade-Pläne ansehen", paywall_later:"Vielleicht später", cancel:"Abbrechen",
+  },
+  tr: {
+    nav_listings:"Listelerim", nav_bulk:"Toplu Yükleme", nav_upgrade:"Yükselt",
+    nav_disconnect:"Bağlantıyı Kes", nav_free_left:"ücretsiz kaldı",
+    label_platform:"Platform seç",
+    hero_label:"YZ destekli ilan aracı",
+    hero_title:"Bir fotoğraf yükle.<br>YZ ilanını yazar.",
+    hero_sub:"Ürün fotoğrafınızı bırakın, kısa bir ipucu ekleyin; saniyeler içinde tam optimize başlık, açıklama, etiket ve daha fazlasını alın.",
+    drop_title:"Ürün fotoğraflarını buraya bırakın", drop_sub:"JPG, PNG, WebP — en fazla 5 fotoğraf", drop_browse:"Dosya seç",
+    label_hint:"Ürün ipucu", hint_placeholder:"örn. bebek hırkası, el örgüsü, mavi",
+    label_provider:"YZ Sağlayıcısı",
+    template_hint:"Kaydedilen varsayılanları yükle?", template_load:"Şablonu yükle",
+    btn_generate:"YZ ile Liste Oluştur →",
+    loading_title:"Ürününüz analiz ediliyor…", loading_sub:"YZ başlık, açıklama, etiket ve daha fazlasını yazıyor.",
+    step1:"Ürün görseli analiz ediliyor", step2:"Başlık & açıklama yazılıyor", step3:"Etiket & malzeme üretiliyor", step4:"Kategori eşleştiriliyor",
+    review_title:"İncele ve Yayınla", btn_back:"← Başa dön",
+    ai_badge:"YZ tarafından oluşturuldu — yayınlamadan önce inceleyin",
+    label_title:"Başlık", label_desc:"Açıklama", label_tags:"Etiketler",
+    tag_placeholder:"Etiket ekle, Enter'a bas", material_placeholder:"Malzeme ekle, Enter'a bas",
+    label_materials:"Malzemeler", label_variations:"Varyasyonlar",
+    label_colors:"Renkler", color_placeholder:"Renk ekle",
+    label_sizes:"Bedenler", size_placeholder:"S, M, L, Özel…",
+    label_price_shipping:"Fiyat & Kargo", label_category:"Kategori",
+    category_placeholder:"Kategori ara…",
+    label_personalization:"Özel Sipariş Talimatları",
+    personalization_placeholder:"Alıcılar sipariş verirken ne belirtmeli?",
+    label_instagram:"Instagram Başlığı", btn_copy:"Kopyala",
+    btn_publish:"Etsy'de Taslak Oluştur →", btn_save_template:"💾 Varsayılan şablon olarak kaydet",
+    paywall_title:"Ücretsiz oluşturma hakkınız bitti",
+    paywall_body:"Sınırsız yapay zeka üretimi ve toplu ilan araçları için kolaylistele Pro'ya yükseltin.",
+    paywall_upgrade:"Yükseltme planlarını gör", paywall_later:"Belki daha sonra", cancel:"İptal",
+  }
+};
+let currentLang = localStorage.getItem('easylisting_lang') ||
+  (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
+
+function byId(id) {
+  return document.getElementById(id);
+}
+
+function setText(id, value) {
+  const el = byId(id);
+  if (el) el.textContent = value;
+}
+
+function setHtml(id, value) {
+  const el = byId(id);
+  if (el) el.innerHTML = value;
+}
+
+function setValue(id, value) {
+  const el = byId(id);
+  if (el) el.value = value;
+}
+
+const BRAND = {
+  en: 'Easy<span style="color:var(--text)">Listing</span>',
+  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  tr: '<span style="color:var(--text)">kolay</span>listele',
+};
+
+function setLang(lang) {
+  if (!STRINGS[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('easylisting_lang', lang);
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.dataset.i18n;
+    if (STRINGS[lang][k] !== undefined) el.textContent = STRINGS[lang][k];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const k = el.dataset.i18nHtml;
+    if (STRINGS[lang][k] !== undefined) el.innerHTML = STRINGS[lang][k];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const k = el.dataset.i18nPlaceholder;
+    if (STRINGS[lang][k] !== undefined) el.placeholder = STRINGS[lang][k];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.lang === lang));
+  const logo = byId('navLogo');
+  if (logo && BRAND[lang]) logo.innerHTML = BRAND[lang];
+  document.title = lang === 'tr' ? 'kolaylistele — Yapay Zeka ile Ürün İlanı' : 'EasyListing — AI Listing Generator';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  setLang(currentLang);
+  // Pick up regenerate prefill from My Listings page
+  const raw = sessionStorage.getItem('sd_regenerate');
+  if (raw) {
+    sessionStorage.removeItem('sd_regenerate');
+    try {
+      const prefill = JSON.parse(raw);
+      if (prefill.title) {
+        document.getElementById('hintInput').value = prefill.title;
+      }
+      if (prefill.price) {
+        // store for later so review screen can pre-fill price
+        window._regenPrice = prefill.price;
+      }
+      // show a subtle banner so user knows context
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:#F0EEFF;border:1px solid #C4B8F8;border-radius:9px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--primary);margin-bottom:12px;';
+      banner.textContent = `Re-generating: "${(prefill.title || '').slice(0, 60)}" — upload photo(s) and click Generate`;
+      const upload = byId('upload-screen')?.querySelector('div');
+      if (!upload) return;
+      upload.insertBefore(banner, upload.firstChild);
+    } catch(e) { /* ignore */ }
+  }
+});
+
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedFiles = [], selectedProvider = 'gemini', aiData = {}, selectedPlatform = 'etsy';
+
+// ── Platform config ────────────────────────────────────────────────────────
+const PLATFORM_META = {
+  etsy:        { name:'Etsy',         icon:'🛍️', currency:'€' },
+  shopify:     { name:'Shopify',      icon:'🛒', currency:'€' },
+  amazon:      { name:'Amazon',       icon:'📦', currency:'$' },
+  trendyol:    { name:'Trendyol',     icon:'🇹🇷', currency:'₺' },
+  hepsiburada: { name:'Hepsiburada',  icon:'🏪', currency:'₺' },
+  n11:         { name:'n11',          icon:'🔖', currency:'₺' },
+  ebay:        { name:'eBay',         icon:'🔨', currency:'$' },
+  woocommerce: { name:'WooCommerce',  icon:'🌐', currency:'€' },
+  pinterest:   { name:'Pinterest',    icon:'📌', currency:'€' },
+};
+
+// Field definitions per platform: {key, label, type, maxlen?}
+// types: input | textarea | list | tags | kv | kv_list
+const PLATFORM_FIELDS = {
+  shopify: [
+    {key:'title',              label:'Product Title',        type:'input',    maxlen:70},
+    {key:'description_html',  label:'Description (HTML)',   type:'textarea'},
+    {key:'seo_title',          label:'SEO Title',            type:'input',    maxlen:60},
+    {key:'seo_description',    label:'SEO Meta Description', type:'input',    maxlen:155},
+    {key:'tags',               label:'Tags',                 type:'tags'},
+    {key:'product_type',       label:'Product Type',         type:'input'},
+    {key:'colors',             label:'Colors',               type:'tags'},
+    {key:'sizes',              label:'Sizes',                type:'tags'},
+    {key:'suggested_price_eur',label:'Suggested Price (€)',  type:'input'},
+    {key:'instagram_caption',  label:'Instagram Caption',    type:'textarea'},
+  ],
+  amazon: [
+    {key:'title',              label:'Product Title',        type:'input',    maxlen:200},
+    {key:'bullet_points',      label:'Bullet Points (5)',    type:'list'},
+    {key:'description',        label:'Product Description',  type:'textarea'},
+    {key:'backend_keywords',   label:'Backend Keywords',     type:'textarea'},
+    {key:'brand',              label:'Brand',                type:'input'},
+    {key:'key_features',       label:'Key Features',         type:'list'},
+    {key:'suggested_price_usd',label:'Suggested Price ($)',  type:'input'},
+    {key:'instagram_caption',  label:'Instagram Caption',    type:'textarea'},
+  ],
+  trendyol: [
+    {key:'title',              label:'Ürün Başlığı',         type:'input',    maxlen:65},
+    {key:'description',        label:'Ürün Açıklaması',      type:'textarea'},
+    {key:'key_features',       label:'Öne Çıkan Özellikler', type:'list'},
+    {key:'category_name',      label:'Kategori',             type:'input'},
+    {key:'attributes',         label:'Özellikler',           type:'kv'},
+    {key:'stock_code',         label:'Stok Kodu',            type:'input'},
+    {key:'cargo_size',         label:'Kargo Boyutu',         type:'input'},
+    {key:'suggested_price_try',label:'Önerilen Fiyat (₺)',   type:'input'},
+    {key:'instagram_caption',  label:'Instagram Başlığı',    type:'textarea'},
+  ],
+  hepsiburada: [
+    {key:'title',              label:'Ürün Adı',             type:'input',    maxlen:150},
+    {key:'description',        label:'Ürün Açıklaması',      type:'textarea'},
+    {key:'key_features',       label:'Ürün Özellikleri',     type:'list'},
+    {key:'category_name',      label:'Kategori',             type:'input'},
+    {key:'attributes',         label:'Özellikler',           type:'kv'},
+    {key:'merchant_sku',       label:'Satıcı Stok Kodu',     type:'input'},
+    {key:'warranty_period',    label:'Garanti',              type:'input'},
+    {key:'suggested_price_try',label:'Önerilen Fiyat (₺)',   type:'input'},
+    {key:'instagram_caption',  label:'Instagram Başlığı',    type:'textarea'},
+  ],
+  n11: [
+    {key:'title',              label:'Ürün Başlığı',         type:'input',    maxlen:65},
+    {key:'subtitle',           label:'Alt Başlık',           type:'input',    maxlen:65},
+    {key:'description',        label:'Ürün Açıklaması',      type:'textarea'},
+    {key:'tags',               label:'Etiketler',            type:'tags'},
+    {key:'category_name',      label:'Kategori',             type:'input'},
+    {key:'attributes',         label:'Özellikler',           type:'kv'},
+    {key:'stock_code',         label:'Stok Kodu',            type:'input'},
+    {key:'suggested_price_try',label:'Önerilen Fiyat (₺)',   type:'input'},
+    {key:'instagram_caption',  label:'Instagram Başlığı',    type:'textarea'},
+  ],
+  ebay: [
+    {key:'title',              label:'Title (80 chars max)', type:'input',    maxlen:80},
+    {key:'subtitle',           label:'Subtitle',             type:'input',    maxlen:55},
+    {key:'description_html',   label:'Description (HTML)',   type:'textarea'},
+    {key:'item_specifics',     label:'Item Specifics',       type:'kv_list'},
+    {key:'condition',          label:'Condition',            type:'input'},
+    {key:'category_name',      label:'Category',             type:'input'},
+    {key:'suggested_price_usd',label:'Suggested Price ($)',  type:'input'},
+    {key:'instagram_caption',  label:'Instagram Caption',    type:'textarea'},
+  ],
+  woocommerce: [
+    {key:'title',              label:'Product Title',        type:'input',    maxlen:60},
+    {key:'short_description',  label:'Short Description',    type:'textarea'},
+    {key:'description_html',   label:'Full Description (HTML)', type:'textarea'},
+    {key:'seo_title',          label:'SEO Title',            type:'input',    maxlen:60},
+    {key:'seo_description',    label:'SEO Meta Description', type:'input',    maxlen:155},
+    {key:'tags',               label:'Tags',                 type:'tags'},
+    {key:'product_type',       label:'Product Type',         type:'input'},
+    {key:'colors',             label:'Colors',               type:'tags'},
+    {key:'sizes',              label:'Sizes',                type:'tags'},
+    {key:'suggested_price_eur',label:'Suggested Price (€)',  type:'input'},
+    {key:'instagram_caption',  label:'Instagram Caption',    type:'textarea'},
+  ],
+  pinterest: [
+    {key:'pin_title',          label:'Pin Title',            type:'input',    maxlen:60},
+    {key:'pin_description',    label:'Pin Description',      type:'textarea'},
+    {key:'alt_text',           label:'Alt Text',             type:'input',    maxlen:125},
+    {key:'board_name',         label:'Suggested Board',      type:'input'},
+    {key:'hashtags',           label:'Hashtags',             type:'tags'},
+    {key:'instagram_caption',  label:'Instagram Caption',    type:'textarea'},
+  ],
+};
+
+function selectPlatform(p, btn) {
+  selectedPlatform = p;
+  document.querySelectorAll('.platform-card').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function populatePlatformReview(data, platform) {
+  const meta   = PLATFORM_META[platform] || PLATFORM_META.shopify;
+  const fields = PLATFORM_FIELDS[platform] || [];
+
+  // Header
+  setText('plt-platform-icon', meta.icon);
+  setText('plt-platform-name', meta.name);
+  setText('plt-coming-soon-label', `🚀 Direct ${meta.name} publishing coming soon`);
+
+  // Images
+  const previews = data.image_previews || [];
+  if (previews.length) {
+    const mainImg = byId('plt-mainImg');
+    const strip = byId('plt-imgStrip');
+    if (!mainImg || !strip) return;
+    mainImg.src = previews[0];
+    strip.innerHTML = '';
+    previews.forEach((src, i) => {
+      const img = document.createElement('img');
+      img.src = src; img.className = 'img-thumb' + (i === 0 ? ' active' : '');
+      img.onclick = () => {
+        mainImg.src = src;
+        strip.querySelectorAll('.img-thumb').forEach(t => t.classList.remove('active'));
+        img.classList.add('active');
+      };
+      strip.appendChild(img);
+    });
+  }
+
+  // Fields
+  const panel = byId('plt-fields-panel');
+  if (!panel) return;
+  panel.innerHTML = '';
+  fields.forEach(f => {
+    const val = data[f.key];
+    if (val === undefined || val === null) return;
+    panel.appendChild(buildPlatformField(f, val));
+  });
+
+  showScreen('platform-review-screen');
+}
+
+function buildPlatformField(f, val) {
+  const card = document.createElement('div');
+  card.className = 'plt-field-card';
+
+  const labelEl = document.createElement('div');
+  labelEl.className = 'plt-field-label';
+
+  const labelText = document.createElement('span');
+  labelText.textContent = f.label;
+  labelEl.appendChild(labelText);
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = 'Copy';
+  const fieldId = 'plt-fld-' + f.key;
+
+  if (f.type === 'input') {
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.id = fieldId; inp.className = 'plt-input';
+    inp.value = String(val);
+    if (f.maxlen) inp.maxLength = f.maxlen;
+    card.appendChild(labelEl);
+    card.appendChild(inp);
+    if (f.maxlen) {
+      const cc = document.createElement('div');
+      cc.className = 'plt-char-count';
+      cc.textContent = `${String(val).length} / ${f.maxlen}`;
+      inp.oninput = () => {
+        cc.textContent = `${inp.value.length} / ${f.maxlen}`;
+        cc.classList.toggle('warn', inp.value.length > f.maxlen * 0.9);
+      };
+      card.appendChild(cc);
+    }
+    copyBtn.onclick = () => { navigator.clipboard.writeText(inp.value); showToast('Copied!','success'); };
+
+  } else if (f.type === 'textarea') {
+    const ta = document.createElement('textarea');
+    ta.id = fieldId; ta.className = 'plt-input'; ta.rows = 6;
+    ta.value = Array.isArray(val) ? val.join('\n') : String(val);
+    card.appendChild(labelEl);
+    card.appendChild(ta);
+    copyBtn.onclick = () => { navigator.clipboard.writeText(ta.value); showToast('Copied!','success'); };
+
+  } else if (f.type === 'list') {
+    card.appendChild(labelEl);
+    const ul = document.createElement('ul');
+    ul.className = 'plt-list';
+    const items = Array.isArray(val) ? val : [String(val)];
+    items.forEach((item, idx) => {
+      const li = document.createElement('li');
+      li.className = 'plt-list-item';
+      const ta = document.createElement('textarea');
+      ta.id = fieldId + '-' + idx; ta.rows = 2;
+      ta.textContent = item;
+      const cb = document.createElement('button');
+      cb.className = 'copy-btn'; cb.textContent = '⎘';
+      cb.onclick = () => { navigator.clipboard.writeText(ta.value); showToast('Copied!','success'); };
+      li.appendChild(ta); li.appendChild(cb);
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+    copyBtn.onclick = () => {
+      const all = items.map((_, i) => document.getElementById(fieldId + '-' + i)?.value || '').join('\n');
+      navigator.clipboard.writeText(all); showToast('Copied all!','success');
+    };
+
+  } else if (f.type === 'tags') {
+    card.appendChild(labelEl);
+    const wrap = document.createElement('div');
+    wrap.id = fieldId; wrap.className = 'plt-tags-wrap';
+    const arr = Array.isArray(val) ? val : String(val).split(',').map(s => s.trim()).filter(Boolean);
+    arr.forEach(t => {
+      const chip = document.createElement('span');
+      chip.className = 'plt-tag'; chip.textContent = t;
+      wrap.appendChild(chip);
+    });
+    card.appendChild(wrap);
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(arr.join(', ')); showToast('Copied!','success');
+    };
+
+  } else if (f.type === 'kv') {
+    card.appendChild(labelEl);
+    const tbl = document.createElement('table');
+    tbl.className = 'plt-kv-table';
+    const obj = typeof val === 'object' && !Array.isArray(val) ? val : {};
+    Object.entries(obj).forEach(([k, v]) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${k}</td><td><input value="${v}"></td>`;
+      tbl.appendChild(tr);
+    });
+    card.appendChild(tbl);
+    copyBtn.onclick = () => {
+      const text = Object.entries(obj).map(([k,v])=>`${k}: ${v}`).join('\n');
+      navigator.clipboard.writeText(text); showToast('Copied!','success');
+    };
+
+  } else if (f.type === 'kv_list') {
+    card.appendChild(labelEl);
+    const tbl = document.createElement('table');
+    tbl.className = 'plt-kv-table';
+    const arr = Array.isArray(val) ? val : [];
+    arr.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${row.name||row.key||''}</td><td><input value="${row.value||''}"></td>`;
+      tbl.appendChild(tr);
+    });
+    card.appendChild(tbl);
+    copyBtn.onclick = () => {
+      const text = arr.map(r=>`${r.name||r.key||''}: ${r.value||''}`).join('\n');
+      navigator.clipboard.writeText(text); showToast('Copied!','success');
+    };
+  }
+
+  labelEl.appendChild(copyBtn);
+  return card;
+}
+
+function exportAllText() {
+  const platform = selectedPlatform;
+  const fields   = PLATFORM_FIELDS[platform] || [];
+  const meta     = PLATFORM_META[platform] || {};
+  let output = `${meta.name} Listing Content\n${'='.repeat(40)}\n\n`;
+  fields.forEach(f => {
+    const val = aiData[f.key];
+    if (val === undefined || val === null) return;
+    output += `${f.label.toUpperCase()}\n${'-'.repeat(f.label.length)}\n`;
+    if (Array.isArray(val)) {
+      output += val.map((v, i) => `${i+1}. ${typeof v === 'object' ? JSON.stringify(v) : v}`).join('\n');
+    } else if (typeof val === 'object') {
+      output += Object.entries(val).map(([k,v])=>`${k}: ${v}`).join('\n');
+    } else {
+      output += String(val);
+    }
+    output += '\n\n';
+  });
+  const blob = new Blob([output], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${platform}-listing.txt`;
+  a.click();
+}
+
+// ── File handling ──────────────────────────────────────────────────────────
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+function handleFiles(files) {
+  selectedFiles = [...files].slice(0, 5);
+  const strip = document.getElementById('previewStrip');
+  strip.innerHTML = '';
+  selectedFiles.forEach((f, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.className = 'preview-thumb' + (i === 0 ? ' primary' : '');
+      strip.appendChild(img);
+    };
+    reader.readAsDataURL(f);
+  });
+  document.getElementById('generateBtn').disabled = !selectedFiles.length;
+}
+
+function selectProvider(p, btn) {
+  selectedProvider = p;
+  document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('nvidia-model-wrap').style.display = p === 'nvidia' ? 'block' : 'none';
+}
+function updateModelLabel() {
+  ['llama-90b','phi-3.5'].forEach(v => {
+    const lbl = document.querySelector(`input[value="${v}"]`)?.closest('label');
+    if (lbl) lbl.style.borderColor = document.querySelector(`input[value="${v}"]`).checked ? 'var(--primary)' : 'var(--border)';
+  });
+}
+
+// ── Template ──────────────────────────────────────────────────────────────
+async function loadTemplate() {
+  try {
+    const res = await fetch('/api/template');
+    const t   = await res.json();
+    if (!t || !Object.keys(t).length) { showToast('No saved template yet.'); return; }
+    // Pre-fill hint (template doesn't override the photo hint, just remember it visually)
+    if (t.price) document.getElementById('r-price').value = t.price;
+    showToast('Template loaded — defaults will apply after generation.', 'success');
+    // Store for post-generate apply
+    window._savedTemplate = t;
+  } catch(e) { showToast('Could not load template', 'error'); }
+}
+
+async function saveTemplate() {
+  const payload = {
+    shipping_profile_id: document.getElementById('r-shipping').value || null,
+    price:     document.getElementById('r-price').value,
+    materials: getChips('materials-wrap'),
+    tags:      getChips('tags-wrap'),
+    personalization_instructions: document.getElementById('r-personalization').value,
+  };
+  try {
+    const res = await fetch('/api/template', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Template saved!', 'success');
+  } catch(e) { showToast('Could not save template', 'error'); }
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────
+async function startGenerate() {
+  if (!selectedFiles.length) return;
+  showScreen('loading-screen');
+  animateSteps();
+
+  const fd = new FormData();
+  selectedFiles.forEach(f => fd.append('images', f));
+  fd.append('hint',     document.getElementById('hintInput').value);
+  fd.append('provider', selectedProvider);
+  fd.append('lang',     currentLang);
+  fd.append('platform', selectedPlatform);
+  const nvidiaModel = document.querySelector('input[name="nvidia_model"]:checked');
+  if (nvidiaModel) fd.append('nvidia_model', nvidiaModel.value);
+
+  try {
+    const res  = await fetch('/api/generate', { method:'POST', body:fd });
+    const data = await res.json();
+    if (data.error === 'free_limit_reached') {
+      showScreen('upload-screen'); openModal('paywallModal'); return;
+    }
+    if (data.error) { showToast(data.error, 'error'); showScreen('upload-screen'); return; }
+    aiData = data;
+    if (selectedPlatform === 'etsy') {
+      populateReview(data);
+      if (window._savedTemplate) applyTemplate(window._savedTemplate);
+      showScreen('review-screen');
+    } else {
+      populatePlatformReview(data, selectedPlatform);
+    }
+    refreshUsageBadge();
+  } catch(e) {
+    showToast('Generation failed: ' + e.message, 'error');
+    showScreen('upload-screen');
+  }
+}
+
+function applyTemplate(t) {
+  if (t.shipping_profile_id) {
+    const sel = document.getElementById('r-shipping');
+    for (let o of sel.options) if (o.value == t.shipping_profile_id) { sel.value = t.shipping_profile_id; break; }
+  }
+  if (t.price && !document.getElementById('r-price').value) setVal('r-price', t.price);
+  if (t.personalization_instructions && !document.getElementById('r-personalization').value)
+    setVal('r-personalization', t.personalization_instructions);
+}
+
+function animateSteps() {
+  ['step1','step2','step3','step4'].forEach((id,i) =>
+    setTimeout(() => document.getElementById(id).classList.add('done'), (i+1)*900));
+}
+
+// ── Populate review ────────────────────────────────────────────────────────
+function populateReview(data) {
+  const previews = data.image_previews || [];
+  if (previews.length) {
+    const mainImg = byId('mainImg');
+    const strip = byId('imgStrip');
+    if (!mainImg || !strip) return;
+    mainImg.src = previews[0];
+    strip.innerHTML = '';
+    previews.forEach((src,i) => {
+      const img = document.createElement('img');
+      img.src = src; img.className = 'img-thumb' + (i===0?' active':'');
+      img.onclick = () => {
+        mainImg.src = src;
+        strip.querySelectorAll('.img-thumb').forEach(t=>t.classList.remove('active'));
+        img.classList.add('active');
+      };
+      strip.appendChild(img);
+    });
+  }
+  setVal('r-title', data.title || '');
+  const titleInput = byId('r-title');
+  if (titleInput) updateCharCount(titleInput, 'title-count', 140);
+  setVal('r-description', data.description || '');
+  setVal('r-price', data.suggested_price_eur || '');
+
+  const ps = byId('price-suggestion');
+  if (!ps) return;
+  ps.textContent = '';
+  if (data.suggested_price_eur) {
+    const label = document.createTextNode('AI suggested ');
+    const span  = document.createElement('span');
+    span.textContent = '€' + Number(data.suggested_price_eur).toFixed(2);
+    span.onclick = () => setValue('r-price', data.suggested_price_eur);
+    ps.appendChild(label); ps.appendChild(span);
+  }
+
+  setChips('tags-wrap',      'tag-input',      data.tags      || [], 13, 'tag-count-label');
+  setChips('materials-wrap', 'material-input', data.materials || [], 13, null);
+  setChips('colors-wrap',    'color-input',    data.colors    || [], 20, null, 'color-chip');
+  setChips('sizes-wrap',     'size-input',     [],                  20, null, 'size-chip');
+
+  if (data.taxonomy_id) {
+    setValue('r-taxonomy-id', data.taxonomy_id);
+    setValue('taxonomy-search', data.taxonomy_path || '');
+    setText('taxonomy-selected', 'ID: ' + data.taxonomy_id);
+  }
+
+  const sel = byId('r-shipping');
+  if (!sel) return;
+  sel.innerHTML = '';
+  const defOpt = document.createElement('option');
+  defOpt.value = ''; defOpt.textContent = '— no shipping profile —';
+  sel.appendChild(defOpt);
+  (data.shipping_profiles || []).forEach(sp => {
+    const opt = document.createElement('option');
+    opt.value = String(sp.shipping_profile_id);
+    opt.textContent = sp.title;
+    sel.appendChild(opt);
+    if (sel.options.length === 2) sel.selectedIndex = 1;
+  });
+
+  setVal('r-personalization', data.personalization_instructions || '');
+
+  // Instagram caption
+  const igEl = byId('instagram-caption');
+  if (igEl) igEl.textContent = data.instagram_caption || '';
+}
+
+// ── Translate ─────────────────────────────────────────────────────────────
+async function translateTo(lang) {
+  const btns = document.querySelectorAll('.btn-translate');
+  btns.forEach(b => b.classList.add('loading'));
+  try {
+    const res = await fetch('/api/translate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        lang,
+        title:       document.getElementById('r-title').value,
+        description: document.getElementById('r-description').value,
+        tags:        getChips('tags-wrap'),
+      }),
+    });
+    const d = await res.json();
+    if (d.error) { showToast('Translation failed: ' + d.error, 'error'); return; }
+    if (d.title)       { setVal('r-title', d.title); updateCharCount(document.getElementById('r-title'),'title-count',140); }
+    if (d.description) setVal('r-description', d.description);
+    if (d.tags)        setChips('tags-wrap','tag-input', d.tags, 13, 'tag-count-label');
+    showToast('Translated!', 'success');
+  } catch(e) {
+    showToast('Translation failed', 'error');
+  } finally {
+    btns.forEach(b => b.classList.remove('loading'));
+  }
+}
+
+// ── Publish ───────────────────────────────────────────────────────────────
+async function publish() {
+  const btn = document.getElementById('publishBtn');
+  btn.disabled = true; btn.textContent = 'Publishing…';
+
+  const taxId = document.getElementById('r-taxonomy-id').value;
+  if (!taxId) {
+    showToast('Please select a category', 'error');
+    btn.disabled = false; btn.textContent = STRINGS[currentLang].btn_publish || 'Create Draft on Etsy →';
+    return;
+  }
+
+  // Append variations to description if set
+  let description = document.getElementById('r-description').value;
+  const colors = getChips('colors-wrap');
+  const sizes  = getChips('sizes-wrap');
+  if (colors.length || sizes.length) {
+    const parts = [];
+    if (colors.length) parts.push('Colors: ' + colors.join(', '));
+    if (sizes.length)  parts.push('Sizes: '  + sizes.join(', '));
+    description += '\n\nAvailable in: ' + parts.join(' | ');
+  }
+
+  const payload = {
+    title:                      document.getElementById('r-title').value,
+    description,
+    price:                      document.getElementById('r-price').value,
+    taxonomy_id:                taxId,
+    shipping_profile_id:        document.getElementById('r-shipping').value,
+    tags:                       getChips('tags-wrap'),
+    materials:                  getChips('materials-wrap'),
+    personalization_instructions: document.getElementById('r-personalization').value,
+    image_previews:             aiData.image_previews || [],
+  };
+
+  try {
+    const res  = await fetch('/api/publish', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.error) {
+      showToast('Error: ' + data.error, 'error');
+      btn.disabled = false; btn.textContent = STRINGS[currentLang].btn_publish || 'Create Draft on Etsy →';
+      return;
+    }
+    showToast('Draft created! listing_id=' + data.listing_id, 'success');
+    setTimeout(() => { window.location.href = '/listings'; }, 1800);
+  } catch(e) {
+    showToast('Publish failed', 'error');
+    btn.disabled = false; btn.textContent = STRINGS[currentLang].btn_publish || 'Create Draft on Etsy →';
+  }
+}
+
+// ── Instagram copy ─────────────────────────────────────────────────────────
+function copyInstagram() {
+  const text = document.getElementById('instagram-caption').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!', 'success'));
+}
+
+// ── Chips ──────────────────────────────────────────────────────────────────
+function setChips(wrapId, inputId, items, max, countId, chipClass) {
+  const wrap = document.getElementById(wrapId);
+  wrap.querySelectorAll('.chip').forEach(c => c.remove());
+  const input = document.getElementById(inputId);
+  items.forEach(item => addChip(wrap, input, item, max, countId, chipClass));
+  updateChipCount(wrapId, max, countId);
+}
+
+function addChip(wrap, input, text, max, countId, chipClass) {
+  if (!text.trim() || wrap.querySelectorAll('.chip').length >= max) return;
+  const chip = document.createElement('span');
+  chip.className = 'chip' + (chipClass ? ' ' + chipClass : '');
+  const textNode = document.createTextNode(text.trim());
+  const rm = document.createElement('span');
+  rm.className = 'remove'; rm.textContent = '×';
+  rm.onclick = () => { chip.remove(); updateChipCount(wrap.id, max, countId); };
+  chip.appendChild(textNode); chip.appendChild(rm);
+  wrap.insertBefore(chip, input);
+  updateChipCount(wrap.id, max, countId);
+}
+
+function updateChipCount(wrapId, max, countId) {
+  if (!countId) return;
+  const wrap = byId(wrapId);
+  const el = byId(countId);
+  if (!wrap || !el) return;
+  const n = wrap.querySelectorAll('.chip').length;
+  el.textContent = `${n}/${max} used`;
+  el.className   = 'chip-count' + (n >= max ? ' warn' : '');
+}
+
+function chipKeydown(e, wrapId, inputId, max, countId, chipClass) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const input = document.getElementById(inputId);
+    const wrap  = document.getElementById(wrapId);
+    addChip(wrap, input, input.value, max, countId, chipClass);
+    input.value = '';
+  }
+}
+
+function getChips(wrapId) {
+  return [...document.getElementById(wrapId).querySelectorAll('.chip')]
+    .map(c => c.childNodes[0].textContent.trim());
+}
+function focusChipInput(id) { document.getElementById(id).focus(); }
+
+// ── Taxonomy ───────────────────────────────────────────────────────────────
+let taxDebounce;
+function taxonomySearch(q) {
+  clearTimeout(taxDebounce);
+  const dd = document.getElementById('taxonomy-dropdown');
+  if (!q) { dd.style.display='none'; return; }
+  taxDebounce = setTimeout(async () => {
+    const res   = await fetch('/api/taxonomy?q=' + encodeURIComponent(q));
+    const items = await res.json();
+    dd.innerHTML = '';
+    items.forEach(item => {
+      const d = document.createElement('div');
+      d.className = 'taxonomy-option'; d.textContent = item.path;
+      d.onclick = () => {
+        document.getElementById('r-taxonomy-id').value   = item.id;
+        document.getElementById('taxonomy-search').value = item.path;
+        setText('taxonomy-selected', 'ID: ' + item.id);
+        dd.style.display = 'none';
+      };
+      dd.appendChild(d);
+    });
+    dd.style.display = items.length ? 'block' : 'none';
+  }, 280);
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.taxonomy-wrap'))
+    document.getElementById('taxonomy-dropdown').style.display = 'none';
+});
+
+// ── Modals ─────────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el =>
+  el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); }));
+
+async function refreshUsageBadge() {
+  try {
+    const res = await fetch('/api/status');
+    const d   = await res.json();
+    const badge = byId('usageBadge');
+    if (!badge) return;
+    if (d.remaining >= 999) {
+      badge.textContent = '✓ Unlimited';
+      badge.classList.add('unlimited');
+    } else {
+      badge.textContent = d.remaining + ' ' + (STRINGS[currentLang].nav_free_left || 'free left');
+      badge.classList.remove('unlimited');
+    }
+  } catch(_) {}
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // Reset step states when going back to loading
+  if (id === 'loading-screen')
+    ['step1','step2','step3','step4'].forEach(s => document.getElementById(s).classList.remove('done'));
+}
+function goBack()   { showScreen('upload-screen'); }
+function setVal(id, val) { setValue(id, val); }
+function updateCharCount(el, countId, max) {
+  if (!el) return;
+  const n  = el.value.length;
+  const c  = byId(countId);
+  if (!c) return;
+  c.textContent = `${n} / ${max}`;
+  c.className   = 'char-count' + (n > max * 0.9 ? ' warn' : '');
+}
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3500);
+}
+</script>
+</body>
+</html>
