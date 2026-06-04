@@ -560,33 +560,33 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
         </div>
 
         <div class="field-card">
-          <div class="field-card-title">AI improve tools</div>
+          <div class="field-card-title" data-i18n="tools_improve_title">AI improve tools</div>
           <div class="tool-grid">
-            <button class="tool-btn improve-btn" data-action="title_seo">Make title more searchable</button>
-            <button class="tool-btn improve-btn" data-action="description_warm">Make description warmer</button>
-            <button class="tool-btn improve-btn" data-action="tags">Generate better tags</button>
-            <button class="tool-btn improve-btn" data-action="shorten_etsy">Shorten for Etsy</button>
+            <button class="tool-btn improve-btn" data-action="title_seo" data-i18n="tools_title_seo">Make title more searchable</button>
+            <button class="tool-btn improve-btn" data-action="description_warm" data-i18n="tools_desc_warm">Make description warmer</button>
+            <button class="tool-btn improve-btn" data-action="tags" data-i18n="tools_better_tags">Generate better tags</button>
+            <button class="tool-btn improve-btn" data-action="shorten_etsy" data-i18n="tools_shorten_etsy">Shorten for Etsy</button>
           </div>
-          <div class="tool-note">Free users get 1 AI improve or translation. More AI edits require a paid plan.</div>
+          <div class="tool-note" data-i18n="tools_improve_note">Free users get 1 AI improve or translation. More AI edits require a paid plan.</div>
         </div>
 
         <div class="field-card">
-          <div class="field-card-title">Listing variants</div>
-          <button class="tool-btn" id="generateVariantsBtn" style="width:100%;">Generate 3 paid variants</button>
+          <div class="field-card-title" data-i18n="tools_variants_title">Listing variants</div>
+          <button class="tool-btn" id="generateVariantsBtn" style="width:100%;" data-i18n="tools_variants_btn">Generate 3 paid variants</button>
           <div class="variant-list" id="variantList"></div>
         </div>
 
         <div class="field-card">
-          <div class="field-card-title">Pro photo variants</div>
-          <button class="tool-btn" id="generatePhotosBtn" style="width:100%;">Generate white, lifestyle, seasonal photos</button>
-          <div class="tool-note">Pro only. Uses paid image API with a monthly cap.</div>
+          <div class="field-card-title" data-i18n="tools_photos_title">Pro photo variants</div>
+          <button class="tool-btn" id="generatePhotosBtn" style="width:100%;" data-i18n="tools_photos_btn">Generate white, lifestyle, seasonal photos</button>
+          <div class="tool-note" data-i18n="tools_photos_note">Pro only. Uses paid image API with a monthly cap.</div>
           <div class="photo-variant-list" id="photoVariantList"></div>
         </div>
 
         <div class="field-card">
-          <div class="field-card-title">Product pack export</div>
+          <div class="field-card-title" data-i18n="tools_export_title">Product pack export</div>
           <div class="export-grid">
-            <button class="tool-btn export-btn" data-export="etsy">Etsy text</button>
+            <button class="tool-btn export-btn" data-export="etsy" data-i18n="tools_export_etsy">Etsy text</button>
             <button class="tool-btn export-btn" data-export="shopify">Shopify</button>
             <button class="tool-btn export-btn" data-export="amazon">Amazon</button>
             <button class="tool-btn export-btn" data-export="pinterest">Pinterest</button>
@@ -596,35 +596,35 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
         </div>
 
         <div class="field-card">
-          <div class="field-card-title">Brand voice / shop style</div>
+          <div class="field-card-title" data-i18n="tools_brand_title">Brand voice / shop style</div>
           <div class="style-grid">
             <div>
-              <label class="field-card-title" for="style-tone">Tone</label>
+              <label class="field-card-title" for="style-tone" data-i18n="tools_tone_label">Tone</label>
               <select id="style-tone" class="field-input">
-                <option value="">Default</option>
-                <option value="warm handmade">Warm handmade</option>
-                <option value="premium minimal">Premium minimal</option>
-                <option value="playful giftable">Playful giftable</option>
+                <option value="" data-i18n="tools_tone_default">Default</option>
+                <option value="warm handmade" data-i18n="tools_tone_warm">Warm handmade</option>
+                <option value="premium minimal" data-i18n="tools_tone_premium">Premium minimal</option>
+                <option value="playful giftable" data-i18n="tools_tone_playful">Playful giftable</option>
               </select>
             </div>
             <div>
-              <label class="field-card-title" for="style-production">Production time</label>
-              <input id="style-production" class="field-input" placeholder="Made to order in 3-5 days">
+              <label class="field-card-title" for="style-production" data-i18n="tools_production_label">Production time</label>
+              <input id="style-production" class="field-input" data-i18n-placeholder="tools_production_placeholder" placeholder="Made to order in 3-5 days">
             </div>
             <div>
-              <label class="field-card-title" for="style-materials">Material phrases</label>
-              <textarea id="style-materials" class="field-input" placeholder="soft cotton yarn, handmade knit detailing"></textarea>
+              <label class="field-card-title" for="style-materials" data-i18n="tools_materials_label">Material phrases</label>
+              <textarea id="style-materials" class="field-input" data-i18n-placeholder="tools_materials_placeholder" placeholder="soft cotton yarn, handmade knit detailing"></textarea>
             </div>
             <div>
-              <label class="field-card-title" for="style-shipping">Shipping note</label>
-              <textarea id="style-shipping" class="field-input" placeholder="Ships carefully packaged with tracking."></textarea>
+              <label class="field-card-title" for="style-shipping" data-i18n="tools_shipping_label">Shipping note</label>
+              <textarea id="style-shipping" class="field-input" data-i18n-placeholder="tools_shipping_placeholder" placeholder="Ships carefully packaged with tracking."></textarea>
             </div>
             <div style="grid-column:1/-1;">
-              <label class="field-card-title" for="style-cta">Default CTA</label>
-              <input id="style-cta" class="field-input" placeholder="Message me before ordering for custom colors or sizing.">
+              <label class="field-card-title" for="style-cta" data-i18n="tools_cta_label">Default CTA</label>
+              <input id="style-cta" class="field-input" data-i18n-placeholder="tools_cta_placeholder" placeholder="Message me before ordering for custom colors or sizing.">
             </div>
           </div>
-          <div class="tool-note">These defaults are saved with your template and included in future AI prompts.</div>
+          <div class="tool-note" data-i18n="tools_brand_note">These defaults are saved with your template and included in future AI prompts.</div>
         </div>
 
         {% if not is_guest %}
@@ -739,6 +739,24 @@ const STRINGS = {
     paywall_title:"You've used your free generations",
     paywall_body:"Upgrade to EasyListing Pro for unlimited AI generations and bulk listing tools.",
     paywall_upgrade:"View upgrade plans", paywall_later:"Maybe later", cancel:"Cancel",
+    tools_improve_title:"AI improve tools",
+    tools_title_seo:"Make title more searchable", tools_desc_warm:"Make description warmer",
+    tools_better_tags:"Generate better tags", tools_shorten_etsy:"Shorten for Etsy",
+    tools_improve_note:"Free users get 1 AI improve or translation. More AI edits require a paid plan.",
+    tools_variants_title:"Listing variants", tools_variants_btn:"Generate 3 paid variants",
+    tools_photos_title:"Pro photo variants", tools_photos_btn:"Generate white, lifestyle, seasonal photos",
+    tools_photos_note:"Pro only. Uses paid image API with a monthly cap.",
+    tools_export_title:"Product pack export", tools_export_etsy:"Etsy text",
+    tools_brand_title:"Brand voice / shop style", tools_tone_label:"Tone",
+    tools_tone_default:"Default", tools_tone_warm:"Warm handmade",
+    tools_tone_premium:"Premium minimal", tools_tone_playful:"Playful giftable",
+    tools_production_label:"Production time", tools_materials_label:"Material phrases",
+    tools_shipping_label:"Shipping note", tools_cta_label:"Default CTA",
+    tools_production_placeholder:"Made to order in 3-5 days",
+    tools_materials_placeholder:"soft cotton yarn, handmade knit detailing",
+    tools_shipping_placeholder:"Ships carefully packaged with tracking.",
+    tools_cta_placeholder:"Message me before ordering for custom colors or sizing.",
+    tools_brand_note:"These defaults are saved with your template and included in future AI prompts.",
   },
   de: {
     nav_listings:"Meine Listings", nav_bulk:"Massen-Upload", nav_upgrade:"Upgrade",
@@ -770,6 +788,24 @@ const STRINGS = {
     paywall_title:"Kostenlose Generierungen aufgebraucht",
     paywall_body:"Upgrade auf EasyListing Pro für unbegrenzte KI-Generierungen und Bulk-Listing-Tools.",
     paywall_upgrade:"Upgrade-Pläne ansehen", paywall_later:"Vielleicht später", cancel:"Abbrechen",
+    tools_improve_title:"KI-Verbesserungstools",
+    tools_title_seo:"Titel suchbarer machen", tools_desc_warm:"Beschreibung wärmer gestalten",
+    tools_better_tags:"Bessere Tags generieren", tools_shorten_etsy:"Für Etsy kürzen",
+    tools_improve_note:"Kostenlose Nutzer erhalten 1 KI-Verbesserung oder Übersetzung. Mehr KI-Bearbeitungen erfordern einen kostenpflichtigen Plan.",
+    tools_variants_title:"Listing-Varianten", tools_variants_btn:"3 kostenpflichtige Varianten erstellen",
+    tools_photos_title:"Pro-Foto-Varianten", tools_photos_btn:"Weiße, Lifestyle- und Saisonfotos generieren",
+    tools_photos_note:"Nur Pro. Nutzt kostenpflichtige Bild-API mit monatlichem Kontingent.",
+    tools_export_title:"Produktpaket-Export", tools_export_etsy:"Etsy-Text",
+    tools_brand_title:"Markenstimme / Shop-Stil", tools_tone_label:"Ton",
+    tools_tone_default:"Standard", tools_tone_warm:"Warm handgemacht",
+    tools_tone_premium:"Premium minimal", tools_tone_playful:"Verspielt & verschenkbar",
+    tools_production_label:"Produktionszeit", tools_materials_label:"Materialphrasen",
+    tools_shipping_label:"Versandhinweis", tools_cta_label:"Standard-CTA",
+    tools_production_placeholder:"Auf Bestellung in 3-5 Tagen hergestellt",
+    tools_materials_placeholder:"weiches Baumwollgarn, handgestrickte Details",
+    tools_shipping_placeholder:"Wird sorgfältig verpackt mit Sendungsverfolgung versendet.",
+    tools_cta_placeholder:"Schreiben Sie mir vor der Bestellung für individuelle Farben oder Größen.",
+    tools_brand_note:"Diese Standardwerte werden mit Ihrer Vorlage gespeichert und in zukünftige KI-Aufforderungen einbezogen.",
   },
   tr: {
     nav_listings:"Listelerim", nav_bulk:"Toplu Yükleme", nav_upgrade:"Yükselt",
@@ -801,6 +837,24 @@ const STRINGS = {
     paywall_title:"Ücretsiz oluşturma hakkınız bitti",
     paywall_body:"Sınırsız yapay zeka üretimi ve toplu ilan araçları için kolaylistele Pro'ya yükseltin.",
     paywall_upgrade:"Yükseltme planlarını gör", paywall_later:"Belki daha sonra", cancel:"İptal",
+    tools_improve_title:"YZ iyileştirme araçları",
+    tools_title_seo:"Başlığı daha aranabilir yap", tools_desc_warm:"Açıklamayı daha samimi yap",
+    tools_better_tags:"Daha iyi etiketler üret", tools_shorten_etsy:"Etsy için kısalt",
+    tools_improve_note:"Ücretsiz kullanıcılar 1 YZ iyileştirmesi veya çeviri hakkı alır. Daha fazla YZ düzenlemesi için ücretli plan gereklidir.",
+    tools_variants_title:"İlan varyantları", tools_variants_btn:"3 ücretli varyant oluştur",
+    tools_photos_title:"Pro fotoğraf varyantları", tools_photos_btn:"Beyaz, yaşam tarzı, mevsimsel fotoğraflar oluştur",
+    tools_photos_note:"Yalnızca Pro. Aylık kotası olan ücretli görüntü API'si kullanır.",
+    tools_export_title:"Ürün paketi dışa aktar", tools_export_etsy:"Etsy metni",
+    tools_brand_title:"Marka sesi / mağaza stili", tools_tone_label:"Ton",
+    tools_tone_default:"Varsayılan", tools_tone_warm:"Sıcak el yapımı",
+    tools_tone_premium:"Premium minimal", tools_tone_playful:"Eğlenceli hediyelik",
+    tools_production_label:"Üretim süresi", tools_materials_label:"Malzeme ifadeleri",
+    tools_shipping_label:"Kargo notu", tools_cta_label:"Varsayılan CTA",
+    tools_production_placeholder:"3-5 günde sipariş üzerine üretilir",
+    tools_materials_placeholder:"yumuşak pamuklu iplik, el örgüsü detayı",
+    tools_shipping_placeholder:"Takip numarasıyla özenle paketlenerek kargoya verilir.",
+    tools_cta_placeholder:"Özel renk veya beden için sipariş vermeden önce mesaj atın.",
+    tools_brand_note:"Bu varsayılanlar şablonunuzla kaydedilir ve gelecekteki YZ istemlerine dahil edilir.",
   }
 };
 let currentLang = localStorage.getItem('easylisting_lang') ||
