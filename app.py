@@ -890,6 +890,8 @@ def api_fingerprint():
 def api_magic_link():
     if not is_guest():
         return jsonify({"error": "not_guest"}), 400
+    if is_email_verified():
+        return jsonify({"ok": True, "already_verified": True})
     body  = request.get_json(silent=True) or {}
     email = (body.get("email") or "").strip().lower()
 
