@@ -9,6 +9,7 @@ images/
 *.sqlite-shm
 *.sqlite-wal
 .DS_Store
+demo/
 .wrangler
 .dev.vars*
 !.dev.vars.example
