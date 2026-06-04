@@ -116,9 +116,9 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
     <span style="font-size:13px;font-weight:600;color:var(--muted);">🛍 {{ shop_name }}</span>
     <a href="/listings" style="font-size:13px;" data-i18n="nav_listings">My Listings</a>
     <div class="lang-switcher">
-      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
-      <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
-      <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="de">DE</button>
+      <button class="lang-btn" data-lang="tr">TR</button>
     </div>
     <a href="/" class="btn-outline" data-i18n="nav_single">Single Listing</a>
   </div>
@@ -129,7 +129,7 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
   <p class="sub" data-i18n="sub">Upload multiple product photos — each gets its own AI-generated listing.</p>
 
   <!-- Drop zone -->
-  <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+  <div class="upload-zone" id="dropZone">
     <div class="icon">📦</div>
     <h3 data-i18n="drop_title">Drop product photos here</h3>
     <p data-i18n="drop_sub">Up to 20 photos — one listing generated per photo</p>
@@ -151,7 +151,7 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
         <option value="openai">OpenAI</option>
       </select>
     </div>
-    <button class="btn-gen" id="btnGen" onclick="startBulk()" data-i18n="generate_all">Generate All</button>
+    <button class="btn-gen" id="btnGen" data-i18n="generate_all">Generate All</button>
   </div>
 
   <!-- Progress -->
@@ -164,7 +164,7 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
   <div class="results" id="results">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <h2 id="resultsHeading" data-i18n="results_heading">Generated Listings</h2>
-      <button class="btn-pub-all" id="btnPubAll" onclick="publishAll()" data-i18n="publish_all">Publish All as Draft</button>
+      <button class="btn-pub-all" id="btnPubAll" data-i18n="publish_all">Publish All as Draft</button>
     </div>
     <div class="result-grid" id="resultGrid"></div>
   </div>
@@ -425,7 +425,7 @@ function renderResults() {
         </div>
       </div>
       <div class="rc-actions">
-        <button class="btn-pub" id="rc-pub-${ri}" onclick="publishOne(${ri})">${tr('save_draft')}</button>
+        <button class="btn-pub" id="rc-pub-${ri}" data-ri="${ri}">${tr('save_draft')}</button>
         <span class="pub-status" id="rc-status-${ri}"></span>
       </div>
     `;
@@ -506,6 +506,23 @@ async function publishAll() {
   showToast(tr('done', ok, fail));
 }
 setLang(currentLang);
+
+// ── Event listeners (replacing inline handlers) ────────────────────────────
+document.querySelectorAll('.lang-btn').forEach(btn =>
+  btn.addEventListener('click', () => setLang(btn.dataset.lang)));
+
+document.getElementById('dropZone')?.addEventListener('click', () =>
+  document.getElementById('fileInput').click());
+
+document.getElementById('btnGen')?.addEventListener('click', () => startBulk());
+
+document.getElementById('btnPubAll')?.addEventListener('click', () => publishAll());
+
+// Event delegation for dynamically-created publish buttons
+document.getElementById('resultGrid')?.addEventListener('click', e => {
+  const btn = e.target.closest('.btn-pub[data-ri]');
+  if (btn) publishOne(Number(btn.dataset.ri));
+});
 </script>
 </body>
 </html>

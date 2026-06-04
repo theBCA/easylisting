@@ -83,9 +83,9 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
   <div class="nav-links">
     <span style="font-size:13px;font-weight:600;color:var(--muted);">🛍 {{ shop_name }}</span>
     <div class="lang-switcher">
-      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
-      <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
-      <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="de">DE</button>
+      <button class="lang-btn" data-lang="tr">TR</button>
     </div>
     <a href="/disconnect" style="font-size:13px;color:var(--muted);" data-i18n="disconnect">Disconnect</a>
     <a href="/" class="btn-new" data-i18n="new_listing">+ New Listing</a>
@@ -160,7 +160,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
         <a href="{{ item.get('url') or 'https://www.etsy.com/listing/' ~ item['listing_id'] }}"
            target="_blank" rel="noopener noreferrer" class="card-action" data-i18n="view">View</a>
         <button class="card-action primary"
-                onclick="regenerate('{{ item['listing_id'] }}')"
+                data-listing-id="{{ item['listing_id'] }}"
                 data-i18n="regenerate">
           Re-generate
         </button>
@@ -260,6 +260,16 @@ function regenerate(lid) {
   }
 }
 setLang(currentLang);
+
+// ── Event listeners (replacing inline handlers) ────────────────────────────
+document.querySelectorAll('.lang-btn').forEach(btn =>
+  btn.addEventListener('click', () => setLang(btn.dataset.lang)));
+
+// Event delegation for server-rendered regenerate buttons
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-listing-id]');
+  if (btn) regenerate(btn.dataset.listingId);
+});
 </script>
 </body>
 </html>
