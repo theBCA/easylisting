@@ -332,28 +332,6 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
 <div id="toast" class="toast"></div>
 
 <!-- PAYWALL MODAL -->
-<div class="modal-overlay" id="magicModal">
-  <div class="modal">
-    <div id="magicStep1">
-      <h2 data-i18n="magic_title">Ücretsiz 3 ilan hakkınız hazır</h2>
-      <p data-i18n="magic_sub">E-posta adresinize bir giriş bağlantısı gönderelim.</p>
-      <input type="email" id="magicEmailInput" class="field-input" style="margin:16px 0 12px;"
-             data-i18n-placeholder="magic_placeholder" placeholder="ornek@eposta.com">
-      <div id="magicError" style="color:#EF4444;font-size:13px;margin-bottom:10px;display:none;"></div>
-      <div class="modal-actions">
-        <button class="btn-modal-primary" id="magicSendBtn" data-i18n="magic_send">Bağlantı gönder →</button>
-        <button class="btn-modal-secondary" id="magicCloseBtn" data-i18n="magic_skip">Şimdilik geç</button>
-      </div>
-    </div>
-    <div id="magicStep2" style="display:none;text-align:center;">
-      <div style="font-size:40px;margin-bottom:12px;">📬</div>
-      <h2 data-i18n="magic_sent_title">E-postanızı kontrol edin</h2>
-      <p id="magicSentDesc" style="color:var(--muted);font-size:14px;margin-top:8px;line-height:1.6;"
-         data-i18n="magic_sent_sub">Bağlantı gönderildi. Linke tıklayınca bu sekmeye dönebilirsiniz.</p>
-      <button class="btn-modal-secondary" style="margin-top:16px;" id="magicBackBtn" data-i18n="magic_resend">Farklı e-posta dene</button>
-    </div>
-  </div>
-</div>
 
 <div class="modal-overlay" id="paywallModal">
   <div class="modal">
@@ -1435,7 +1413,7 @@ async function saveTemplate() {
 async function startGenerate() {
   if (!selectedFiles.length) return;
   // Show email verification modal for guests who haven't verified yet
-  if (IS_GUEST && !EMAIL_VERIFIED) { openModal('magicModal'); return; }
+
   if (IS_GUEST) await _fpReady;
   showScreen('loading-screen');
   animateSteps();
