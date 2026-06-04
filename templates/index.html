@@ -768,7 +768,7 @@ const STRINGS = {
     magic_placeholder:"you@example.com", magic_send:"Send link →",
     magic_skip:"Skip for now", magic_sent_title:"Check your email",
     magic_sent_sub:"Link sent. Click it and you'll be brought right back.",
-    magic_resend:"Try a different email",
+    magic_resend:"Try a different email", magic_verified:"Email verified ✓",
     tools_improve_title:"AI improve tools",
     tools_title_seo:"Make title more searchable", tools_desc_warm:"Make description warmer",
     tools_better_tags:"Generate better tags", tools_shorten_etsy:"Shorten for Etsy",
@@ -828,7 +828,7 @@ const STRINGS = {
     magic_placeholder:"du@beispiel.de", magic_send:"Link senden →",
     magic_skip:"Jetzt überspringen", magic_sent_title:"Prüfe deine E-Mails",
     magic_sent_sub:"Link wurde gesendet. Klicke darauf und du wirst zurückgebracht.",
-    magic_resend:"Andere E-Mail versuchen",
+    magic_resend:"Andere E-Mail versuchen", magic_verified:"E-Mail bestätigt ✓",
     tools_improve_title:"KI-Verbesserungstools",
     tools_title_seo:"Titel suchbarer machen", tools_desc_warm:"Beschreibung wärmer gestalten",
     tools_better_tags:"Bessere Tags generieren", tools_shorten_etsy:"Für Etsy kürzen",
@@ -888,7 +888,7 @@ const STRINGS = {
     magic_placeholder:"siz@ornek.com", magic_send:"Bağlantı gönder →",
     magic_skip:"Şimdilik geç", magic_sent_title:"E-postanızı kontrol edin",
     magic_sent_sub:"Bağlantı gönderildi. Linke tıklayınca bu sayfaya dönersiniz.",
-    magic_resend:"Farklı e-posta dene",
+    magic_resend:"Farklı e-posta dene", magic_verified:"E-posta doğrulandı ✓",
     tools_improve_title:"YZ iyileştirme araçları",
     tools_title_seo:"Başlığı daha aranabilir yap", tools_desc_warm:"Açıklamayı daha samimi yap",
     tools_better_tags:"Daha iyi etiketler üret", tools_shorten_etsy:"Etsy için kısalt",
@@ -1051,10 +1051,28 @@ async function sendMagicLink() {
     }
     document.getElementById('magicStep1').style.display = 'none';
     document.getElementById('magicStep2').style.display = 'block';
+    startEmailVerifiedPolling();
   } catch(e) {
     if (errEl) { errEl.textContent = 'Bağlantı hatası.'; errEl.style.display = 'block'; }
     if (btn) { btn.disabled = false; }
   }
+}
+
+let _magicPollTimer = null;
+function startEmailVerifiedPolling() {
+  clearInterval(_magicPollTimer);
+  _magicPollTimer = setInterval(async () => {
+    try {
+      const r = await fetch('/api/email-verified');
+      const d = await r.json();
+      if (d.verified) {
+        clearInterval(_magicPollTimer);
+        closeModal('magicModal');
+        showToast(STRINGS[currentLang]?.magic_verified || 'E-posta doğrulandı ✓', 'success');
+        startGenerate();
+      }
+    } catch(_) {}
+  }, 2000);
 }
 
 // ── State ──────────────────────────────────────────────────────────────────

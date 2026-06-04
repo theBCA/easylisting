@@ -1062,6 +1062,12 @@ def index():
         is_guest=False,
     )
 
+@app.route("/api/email-verified")
+@limiter.limit("30 per minute")
+def api_email_verified():
+    return jsonify({"verified": is_email_verified()})
+
+
 @app.route("/listings")
 def listings():
     redir = require_connection()
