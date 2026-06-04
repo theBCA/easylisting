@@ -83,6 +83,22 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 /* Toast */
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: white; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; transition: transform .3s; z-index: 9999; pointer-events: none; }
 .toast.show { transform: translateX(-50%) translateY(0); }
+@media (max-width: 600px) {
+  .container { padding: 28px 14px 60px; }
+  .hero h1 { font-size: 24px; }
+  .hero p { font-size: 14px; }
+  .plans { gap: 14px; }
+  .plan { padding: 22px 18px; }
+  .plan-price { font-size: 32px; }
+  .plan-features li { font-size: 12px; }
+  .btn-plan { font-size: 13px; padding: 11px; }
+  .faq-item { padding: 14px 16px; }
+  .faq-item h3 { font-size: 13px; }
+  .faq-item p { font-size: 12px; }
+  nav { padding: 0 14px; }
+  /* value prop stats */
+  .billing-toggle-row { flex-wrap: wrap; justify-content: center; }
+}
 </style>
 </head>
 <body>
