@@ -1,0 +1,533 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 950" width="1500" height="950" font-family="Inter, Helvetica Neue, Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6B5AED;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#5B47E0;stop-opacity:1"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-5%" y="-5%" width="110%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#5B47E033"/>
+    </filter>
+    <filter id="layerShadow" x="-2%" y="-2%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#00000015"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 Z" fill="#3B82F6"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 Z" fill="#5B47E0"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 Z" fill="#059669"/>
+    </marker>
+    <marker id="arrowAmber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 Z" fill="#D97706"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 Z" fill="#6B7280"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1500" height="950" fill="#F8F9FC"/>
+
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <rect x="0" y="0" width="1500" height="62" fill="url(#headerGrad)"/>
+  <!-- Subtle grid texture on header -->
+  <rect x="0" y="0" width="1500" height="62" fill="none" stroke="#ffffff08" stroke-width="0.5"/>
+
+  <!-- Brand dots decoration -->
+  <circle cx="30" cy="31" r="8" fill="#ffffff25"/>
+  <circle cx="50" cy="31" r="5" fill="#ffffff15"/>
+
+  <text x="72" y="24" font-size="13" font-weight="700" fill="#ffffff99" letter-spacing="3" text-transform="uppercase">KOLAYLISTELE</text>
+  <text x="72" y="47" font-size="20" font-weight="800" fill="#ffffff" letter-spacing="-0.5">System Architecture</text>
+
+  <!-- Badge -->
+  <rect x="1350" y="17" width="120" height="28" rx="14" fill="#ffffff20"/>
+  <text x="1410" y="35" font-size="12" font-weight="600" fill="#ffffffcc" text-anchor="middle">v2.0 · 2025</text>
+
+  <!-- Decorative right accent -->
+  <circle cx="1460" cy="31" r="18" fill="#ffffff08"/>
+  <circle cx="1480" cy="31" r="10" fill="#ffffff10"/>
+
+  <!-- ═══════════════════════════ LAYER 1: PRESENTATION ═══════════════════════════ -->
+  <rect x="20" y="75" width="1460" height="155" rx="12" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1.5" filter="url(#layerShadow)"/>
+
+  <!-- Layer pill -->
+  <rect x="34" y="87" width="175" height="24" rx="12" fill="#3B82F6"/>
+  <text x="121" y="103" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="1">PRESENTATION LAYER</text>
+
+  <!-- Browser box -->
+  <rect x="34" y="120" width="180" height="96" rx="10" fill="#ffffff" stroke="#BFDBFE" stroke-width="1.5" filter="url(#cardShadow)"/>
+  <rect x="34" y="120" width="180" height="28" rx="10" fill="#EFF6FF"/>
+  <rect x="34" y="136" width="180" height="12" fill="#EFF6FF"/>
+  <text x="124" y="139" font-size="10" font-weight="700" fill="#1E40AF" text-anchor="middle" letter-spacing="0.5">BROWSER CLIENT</text>
+  <!-- Browser icon dots -->
+  <circle cx="50" cy="133" r="4" fill="#EF4444"/>
+  <circle cx="62" cy="133" r="4" fill="#F59E0B"/>
+  <circle cx="74" cy="133" r="4" fill="#10B981"/>
+  <text x="124" y="159" font-size="10" fill="#374151" text-anchor="middle">React + Vanilla JS</text>
+  <text x="124" y="173" font-size="9" fill="#6B7280" text-anchor="middle">Image upload · CSRF token</text>
+  <text x="124" y="187" font-size="9" fill="#6B7280" text-anchor="middle">Session cookie · Fingerprint</text>
+  <text x="124" y="201" font-size="9" fill="#6B7280" text-anchor="middle">Stripe.js · Email modal</text>
+
+  <!-- Cloudflare box -->
+  <rect x="270" y="120" width="200" height="96" rx="10" fill="#ffffff" stroke="#BFDBFE" stroke-width="1.5" filter="url(#cardShadow)"/>
+  <rect x="270" y="120" width="200" height="28" rx="10" fill="#FFF7ED"/>
+  <rect x="270" y="136" width="200" height="12" fill="#FFF7ED"/>
+  <text x="370" y="139" font-size="10" font-weight="700" fill="#C2410C" text-anchor="middle" letter-spacing="0.5">CLOUDFLARE</text>
+  <!-- CF orange cloud icon -->
+  <text x="288" y="137" font-size="12" fill="#F97316">☁</text>
+  <text x="370" y="159" font-size="10" fill="#374151" text-anchor="middle">WAF · DDoS Protection</text>
+  <text x="370" y="173" font-size="9" fill="#6B7280" text-anchor="middle">CDN · Global Edge Cache</text>
+  <text x="370" y="187" font-size="9" fill="#6B7280" text-anchor="middle">SSL Termination</text>
+  <text x="370" y="201" font-size="9" fill="#6B7280" text-anchor="middle">Bot Score Filtering</text>
+
+  <!-- Domains box -->
+  <rect x="525" y="120" width="220" height="96" rx="10" fill="#ffffff" stroke="#BFDBFE" stroke-width="1.5" filter="url(#cardShadow)"/>
+  <rect x="525" y="120" width="220" height="28" rx="10" fill="#F0FDF4"/>
+  <rect x="525" y="136" width="220" height="12" fill="#F0FDF4"/>
+  <text x="635" y="139" font-size="10" font-weight="700" fill="#166534" text-anchor="middle" letter-spacing="0.5">DOMAINS</text>
+  <text x="543" y="137" font-size="12" fill="#059669">🌐</text>
+  <text x="635" y="159" font-size="10" fill="#374151" text-anchor="middle" font-weight="600">kolaylistele.com</text>
+  <text x="635" y="172" font-size="9" fill="#6B7280" text-anchor="middle">Turkish market · ₺ TRY pricing</text>
+  <text x="635" y="187" font-size="10" fill="#374151" text-anchor="middle" font-weight="600">easylisting.* (EN/DE)</text>
+  <text x="635" y="200" font-size="9" fill="#6B7280" text-anchor="middle">International · € EUR pricing</text>
+
+  <!-- Arrows: Browser → Cloudflare → App -->
+  <line x1="214" y1="168" x2="262" y2="168" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowBlue)"/>
+  <line x1="470" y1="168" x2="517" y2="168" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowBlue)"/>
+
+  <!-- ═══════════════════════════ LAYER 2: SECURITY & ROUTING ═══════════════════════════ -->
+  <rect x="20" y="240" width="1460" height="130" rx="12" fill="#FFFBEB" stroke="#FDE68A" stroke-width="1.5" filter="url(#layerShadow)"/>
+
+  <!-- Layer pill -->
+  <rect x="34" y="252" width="185" height="24" rx="12" fill="#D97706"/>
+  <text x="126" y="268" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="1">SECURITY &amp; ROUTING</text>
+
+  <!-- Security module cards -->
+  <!-- Rate Limiter -->
+  <rect x="34" y="284" width="160" height="74" rx="8" fill="#ffffff" stroke="#FDE68A" stroke-width="1" filter="url(#cardShadow)"/>
+  <text x="114" y="301" font-size="9" font-weight="700" fill="#92400E" text-anchor="middle" letter-spacing="0.5">RATE LIMITER</text>
+  <line x1="34" y1="306" x2="194" y2="306" stroke="#FDE68A" stroke-width="1"/>
+  <text x="114" y="320" font-size="9" fill="#374151" text-anchor="middle">Flask-Limiter</text>
+  <text x="114" y="333" font-size="9" fill="#6B7280" text-anchor="middle">200/day · 60/hr global</text>
+  <text x="114" y="346" font-size="9" fill="#6B7280" text-anchor="middle">/api/generate: 10/min</text>
+
+  <!-- Probe Blocker -->
+  <rect x="212" y="284" width="165" height="74" rx="8" fill="#ffffff" stroke="#FDE68A" stroke-width="1" filter="url(#cardShadow)"/>
+  <text x="294" y="301" font-size="9" font-weight="700" fill="#92400E" text-anchor="middle" letter-spacing="0.5">PROBE BLOCKER</text>
+  <line x1="212" y1="306" x2="377" y2="306" stroke="#FDE68A" stroke-width="1"/>
+  <text x="294" y="320" font-size="9" fill="#374151" text-anchor="middle">before_request hook</text>
+  <text x="294" y="333" font-size="9" fill="#6B7280" text-anchor="middle">Blocks .git · .env · wp-*</text>
+  <text x="294" y="346" font-size="9" fill="#6B7280" text-anchor="middle">xmlrpc · docker-compose</text>
+
+  <!-- CSRF -->
+  <rect x="395" y="284" width="150" height="74" rx="8" fill="#ffffff" stroke="#FDE68A" stroke-width="1" filter="url(#cardShadow)"/>
+  <text x="470" y="301" font-size="9" font-weight="700" fill="#92400E" text-anchor="middle" letter-spacing="0.5">CSRF PROTECTION</text>
+  <line x1="395" y1="306" x2="545" y2="306" stroke="#FDE68A" stroke-width="1"/>
+  <text x="470" y="320" font-size="9" fill="#374151" text-anchor="middle">Flask-WTF CSRFProtect</text>
+  <text x="470" y="333" font-size="9" fill="#6B7280" text-anchor="middle">Token in every form</text>
+  <text x="470" y="346" font-size="9" fill="#6B7280" text-anchor="middle">WTF_CSRF_TIME_LIMIT=∞</text>
+
+  <!-- Fingerprint -->
+  <rect x="563" y="284" width="165" height="74" rx="8" fill="#ffffff" stroke="#FDE68A" stroke-width="1" filter="url(#cardShadow)"/>
+  <text x="645" y="301" font-size="9" font-weight="700" fill="#92400E" text-anchor="middle" letter-spacing="0.5">FINGERPRINT</text>
+  <line x1="563" y1="306" x2="728" y2="306" stroke="#FDE68A" stroke-width="1"/>
+  <text x="645" y="320" font-size="9" fill="#374151" text-anchor="middle">Browser FP → SHA-256</text>
+  <text x="645" y="333" font-size="9" fill="#6B7280" text-anchor="middle">guest_fp_{hash24}</text>
+  <text x="645" y="346" font-size="9" fill="#6B7280" text-anchor="middle">Usage migration · abuse log</text>
+
+  <!-- Security Headers -->
+  <rect x="746" y="284" width="165" height="74" rx="8" fill="#ffffff" stroke="#FDE68A" stroke-width="1" filter="url(#cardShadow)"/>
+  <text x="828" y="301" font-size="9" font-weight="700" fill="#92400E" text-anchor="middle" letter-spacing="0.5">SECURITY HEADERS</text>
+  <line x1="746" y1="306" x2="911" y2="306" stroke="#FDE68A" stroke-width="1"/>
+  <text x="828" y="320" font-size="9" fill="#374151" text-anchor="middle">CSP with per-req nonce</text>
+  <text x="828" y="333" font-size="9" fill="#6B7280" text-anchor="middle">HSTS · X-Frame DENY</text>
+  <text x="828" y="346" font-size="9" fill="#6B7280" text-anchor="middle">Magic-byte img validation</text>
+
+  <!-- Magic Bytes -->
+  <rect x="929" y="284" width="155" height="74" rx="8" fill="#ffffff" stroke="#FDE68A" stroke-width="1" filter="url(#cardShadow)"/>
+  <text x="1006" y="301" font-size="9" font-weight="700" fill="#92400E" text-anchor="middle" letter-spacing="0.5">SESSION SECURITY</text>
+  <line x1="929" y1="306" x2="1084" y2="306" stroke="#FDE68A" stroke-width="1"/>
+  <text x="1006" y="320" font-size="9" fill="#374151" text-anchor="middle">HttpOnly · Secure · SameSite</text>
+  <text x="1006" y="333" font-size="9" fill="#6B7280" text-anchor="middle">48hr lifetime · PKCE</text>
+  <text x="1006" y="346" font-size="9" fill="#6B7280" text-anchor="middle">Session fixation prevention</text>
+
+  <!-- ═══════════════════════════ LAYER 3: APPLICATION ═══════════════════════════ -->
+  <rect x="20" y="382" width="1460" height="220" rx="12" fill="#F0EEFF" stroke="#C4B8F8" stroke-width="1.5" filter="url(#layerShadow)"/>
+
+  <!-- Layer pill -->
+  <rect x="34" y="394" width="165" height="24" rx="12" fill="#5B47E0"/>
+  <text x="116" y="410" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="1">APPLICATION LAYER</text>
+
+  <!-- Railway badge -->
+  <rect x="210" y="394" width="155" height="24" rx="12" fill="#5B47E015" stroke="#C4B8F8" stroke-width="1"/>
+  <text x="287" y="410" font-size="10" font-weight="600" fill="#5B47E0" text-anchor="middle">Railway · Gunicorn 2W</text>
+
+  <!-- Module card: Auth -->
+  <rect x="34" y="428" width="240" height="160" rx="10" fill="#ffffff" stroke="#C4B8F8" stroke-width="1.5" filter="url(#cardShadow)"/>
+  <rect x="34" y="428" width="240" height="32" rx="10" fill="#F0EEFF"/>
+  <rect x="34" y="448" width="240" height="12" fill="#F0EEFF"/>
+  <text x="154" y="449" font-size="11" font-weight="700" fill="#4338CA" text-anchor="middle" letter-spacing="0.5">AUTH MODULE</text>
+  <line x1="34" y1="460" x2="274" y2="460" stroke="#C4B8F8" stroke-width="1"/>
+  <text x="154" y="476" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Etsy OAuth 2.0 + PKCE</text>
+  <text x="154" y="489" font-size="9" fill="#6B7280" text-anchor="middle">/auth/start · /auth/callback</text>
+  <text x="154" y="503" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Guest Magic Link</text>
+  <text x="154" y="516" font-size="9" fill="#6B7280" text-anchor="middle">/api/magic-link · /auth/magic</text>
+  <text x="154" y="530" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Browser Fingerprint</text>
+  <text x="154" y="543" font-size="9" fill="#6B7280" text-anchor="middle">/api/fingerprint (exempt CSRF)</text>
+  <text x="154" y="557" font-size="9" fill="#6B7280" text-anchor="middle">/guest · /disconnect</text>
+  <text x="154" y="571" font-size="9" fill="#6B7280" text-anchor="middle">48hr session · 180d cookie</text>
+  <text x="154" y="578" font-size="9" fill="#6B7280" text-anchor="middle"> </text>
+
+  <!-- Module card: Core API -->
+  <rect x="292" y="428" width="245" height="160" rx="10" fill="#ffffff" stroke="#C4B8F8" stroke-width="1.5" filter="url(#cardShadow)"/>
+  <rect x="292" y="428" width="245" height="32" rx="10" fill="#F0EEFF"/>
+  <rect x="292" y="448" width="245" height="12" fill="#F0EEFF"/>
+  <text x="414" y="449" font-size="11" font-weight="700" fill="#4338CA" text-anchor="middle" letter-spacing="0.5">CORE API MODULE</text>
+  <line x1="292" y1="460" x2="537" y2="460" stroke="#C4B8F8" stroke-width="1"/>
+  <text x="414" y="476" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Listing Generation</text>
+  <text x="414" y="489" font-size="9" fill="#6B7280" text-anchor="middle">POST /api/generate (10/min)</text>
+  <text x="414" y="503" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Listing Publish</text>
+  <text x="414" y="516" font-size="9" fill="#6B7280" text-anchor="middle">POST /api/publish → Etsy REST</text>
+  <text x="414" y="530" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Improve / Translate / Variants</text>
+  <text x="414" y="543" font-size="9" fill="#6B7280" text-anchor="middle">/api/improve-listing · /translate</text>
+  <text x="414" y="557" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Bulk Generate (Premium)</text>
+  <text x="414" y="570" font-size="9" fill="#6B7280" text-anchor="middle">POST /api/bulk-generate (5/min)</text>
+  <text x="414" y="584" font-size="9" fill="#6B7280" text-anchor="middle">POST /api/template (shop style)</text>
+
+  <!-- Module card: Payments -->
+  <rect x="555" y="428" width="225" height="160" rx="10" fill="#ffffff" stroke="#C4B8F8" stroke-width="1.5" filter="url(#cardShadow)"/>
+  <rect x="555" y="428" width="225" height="32" rx="10" fill="#F0EEFF"/>
+  <rect x="555" y="448" width="225" height="12" fill="#F0EEFF"/>
+  <text x="667" y="449" font-size="11" font-weight="700" fill="#4338CA" text-anchor="middle" letter-spacing="0.5">PAYMENTS MODULE</text>
+  <line x1="555" y1="460" x2="780" y2="460" stroke="#C4B8F8" stroke-width="1"/>
+  <text x="667" y="476" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Stripe Checkout</text>
+  <text x="667" y="489" font-size="9" fill="#6B7280" text-anchor="middle">POST /stripe/checkout</text>
+  <text x="667" y="503" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Plans: Free · Starter · Pro</text>
+  <text x="667" y="516" font-size="9" fill="#6B7280" text-anchor="middle">EUR: €4.99/mo · €9.99/mo</text>
+  <text x="667" y="529" font-size="9" fill="#6B7280" text-anchor="middle">TRY: ₺249/mo · ₺499/mo</text>
+  <text x="667" y="543" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Webhook Handler</text>
+  <text x="667" y="556" font-size="9" fill="#6B7280" text-anchor="middle">POST /stripe/webhook</text>
+  <text x="667" y="569" font-size="9" fill="#6B7280" text-anchor="middle">checkout.completed → set_premium()</text>
+  <text x="667" y="582" font-size="9" fill="#6B7280" text-anchor="middle">subscription.deleted → revoke</text>
+
+  <!-- Module card: AI Pipeline -->
+  <rect x="798" y="428" width="270" height="160" rx="10" fill="#ffffff" stroke="#C4B8F8" stroke-width="1.5" filter="url(#cardShadow)"/>
+  <rect x="798" y="428" width="270" height="32" rx="10" fill="#F0EEFF"/>
+  <rect x="798" y="448" width="270" height="12" fill="#F0EEFF"/>
+  <text x="933" y="449" font-size="11" font-weight="700" fill="#4338CA" text-anchor="middle" letter-spacing="0.5">AI PIPELINE MODULE</text>
+  <line x1="798" y1="460" x2="1068" y2="460" stroke="#C4B8F8" stroke-width="1"/>
+  <text x="933" y="475" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Provider Chain (fallback order)</text>
+  <!-- Provider chain visual -->
+  <rect x="815" y="480" width="72" height="22" rx="5" fill="#E8F5E9" stroke="#A5D6A7" stroke-width="1"/>
+  <text x="851" y="495" font-size="8" fill="#2E7D32" text-anchor="middle" font-weight="700">① Gemini 2.5F</text>
+  <text x="893" y="491" font-size="14" fill="#9CA3AF">→</text>
+  <rect x="907" y="480" width="72" height="22" rx="5" fill="#E3F2FD" stroke="#90CAF9" stroke-width="1"/>
+  <text x="943" y="495" font-size="8" fill="#1565C0" text-anchor="middle" font-weight="700">② Llama 90B</text>
+  <text x="985" y="491" font-size="14" fill="#9CA3AF">→</text>
+  <rect x="999" y="480" width="60" height="22" rx="5" fill="#FFF3E0" stroke="#FFCC80" stroke-width="1"/>
+  <text x="1029" y="495" font-size="8" fill="#E65100" text-anchor="middle" font-weight="700">③ GPT-4o</text>
+
+  <text x="933" y="519" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">8 Platform Prompts</text>
+  <text x="933" y="531" font-size="9" fill="#6B7280" text-anchor="middle">Etsy · Shopify · Amazon · eBay</text>
+  <text x="933" y="543" font-size="9" fill="#6B7280" text-anchor="middle">WooCommerce · Pinterest</text>
+  <text x="933" y="555" font-size="9" fill="#6B7280" text-anchor="middle">Trendyol · Hepsiburada · n11</text>
+  <text x="933" y="569" font-size="9" fill="#374151" text-anchor="middle" font-weight="600">Photo Variants (Pro)</text>
+  <text x="933" y="581" font-size="9" fill="#6B7280" text-anchor="middle">FLUX.1 Kontext via fal.ai · 30/mo</text>
+
+  <!-- ═══════════════════════════ LAYER 4: DATA & SERVICES ═══════════════════════════ -->
+  <!-- Left half: SQLite -->
+  <rect x="20" y="614" width="720" height="220" rx="12" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1.5" filter="url(#layerShadow)"/>
+  <!-- Right half: External Services -->
+  <rect x="756" y="614" width="724" height="220" rx="12" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5" filter="url(#layerShadow)"/>
+
+  <!-- Left pill -->
+  <rect x="34" y="626" width="175" height="24" rx="12" fill="#059669"/>
+  <text x="121" y="642" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="1">DATA LAYER · SQLite</text>
+
+  <!-- Right pill -->
+  <rect x="770" y="626" width="175" height="24" rx="12" fill="#374151"/>
+  <text x="857" y="642" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="1">EXTERNAL SERVICES</text>
+
+  <!-- Railway Volume badge -->
+  <rect x="222" y="626" width="160" height="24" rx="12" fill="#05966915" stroke="#A7F3D0" stroke-width="1"/>
+  <text x="302" y="642" font-size="10" font-weight="600" fill="#059669" text-anchor="middle">Railway Volume · /data/</text>
+
+  <!-- DB Table cards (5 tables) -->
+  <!-- shops -->
+  <rect x="34" y="659" width="155" height="162" rx="8" fill="#ffffff" stroke="#A7F3D0" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="34" y="659" width="155" height="26" rx="8" fill="#D1FAE5"/>
+  <rect x="34" y="673" width="155" height="12" fill="#D1FAE5"/>
+  <text x="111" y="676" font-size="9.5" font-weight="800" fill="#065F46" text-anchor="middle" letter-spacing="0.5">shops</text>
+  <line x1="34" y1="685" x2="189" y2="685" stroke="#A7F3D0" stroke-width="1"/>
+  <text x="44" y="699" font-size="8.5" fill="#374151">🔑 shop_id (PK)</text>
+  <text x="44" y="712" font-size="8.5" fill="#374151">shop_name</text>
+  <text x="44" y="725" font-size="8.5" fill="#374151">free_used</text>
+  <text x="44" y="738" font-size="8.5" fill="#374151">has_premium · plan</text>
+  <text x="44" y="751" font-size="8.5" fill="#374151">stripe_customer_id</text>
+  <text x="44" y="764" font-size="8.5" fill="#374151">stripe_subscription_id</text>
+  <text x="44" y="777" font-size="8.5" fill="#374151">photo_variant_used</text>
+  <text x="44" y="790" font-size="8.5" fill="#374151">created_at</text>
+  <text x="44" y="806" font-size="7.5" fill="#6B7280" font-style="italic">Usage + billing state</text>
+
+  <!-- templates -->
+  <rect x="200" y="659" width="135" height="162" rx="8" fill="#ffffff" stroke="#A7F3D0" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="200" y="659" width="135" height="26" rx="8" fill="#D1FAE5"/>
+  <rect x="200" y="673" width="135" height="12" fill="#D1FAE5"/>
+  <text x="267" y="676" font-size="9.5" font-weight="800" fill="#065F46" text-anchor="middle" letter-spacing="0.5">templates</text>
+  <line x1="200" y1="685" x2="335" y2="685" stroke="#A7F3D0" stroke-width="1"/>
+  <text x="210" y="699" font-size="8.5" fill="#374151">🔑 shop_id (PK)</text>
+  <text x="210" y="712" font-size="8.5" fill="#374151">data (JSON blob)</text>
+  <text x="210" y="725" font-size="8.5" fill="#374151">updated_at</text>
+  <text x="210" y="742" font-size="8" fill="#6B7280">brand_tone</text>
+  <text x="210" y="754" font-size="8" fill="#6B7280">material_phrases</text>
+  <text x="210" y="766" font-size="8" fill="#6B7280">shipping_note</text>
+  <text x="210" y="778" font-size="8" fill="#6B7280">brand_cta</text>
+  <text x="210" y="806" font-size="7.5" fill="#6B7280" font-style="italic">Shop style prompt</text>
+
+  <!-- magic_links -->
+  <rect x="347" y="659" width="145" height="162" rx="8" fill="#ffffff" stroke="#A7F3D0" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="347" y="659" width="145" height="26" rx="8" fill="#D1FAE5"/>
+  <rect x="347" y="673" width="145" height="12" fill="#D1FAE5"/>
+  <text x="419" y="676" font-size="9.5" font-weight="800" fill="#065F46" text-anchor="middle" letter-spacing="0.5">magic_links</text>
+  <line x1="347" y1="685" x2="492" y2="685" stroke="#A7F3D0" stroke-width="1"/>
+  <text x="357" y="699" font-size="8.5" fill="#374151">🔑 token (PK)</text>
+  <text x="357" y="712" font-size="8.5" fill="#374151">email_hash</text>
+  <text x="357" y="725" font-size="8.5" fill="#374151">shop_id</text>
+  <text x="357" y="738" font-size="8.5" fill="#374151">created_at</text>
+  <text x="357" y="751" font-size="8.5" fill="#374151">used_at</text>
+  <text x="357" y="768" font-size="8" fill="#6B7280">15-min TTL</text>
+  <text x="357" y="780" font-size="8" fill="#6B7280">one-time use</text>
+  <text x="357" y="806" font-size="7.5" fill="#6B7280" font-style="italic">Guest email auth</text>
+
+  <!-- verified_emails -->
+  <rect x="504" y="659" width="130" height="162" rx="8" fill="#ffffff" stroke="#A7F3D0" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="504" y="659" width="130" height="26" rx="8" fill="#D1FAE5"/>
+  <rect x="504" y="673" width="130" height="12" fill="#D1FAE5"/>
+  <text x="569" y="676" font-size="9.5" font-weight="800" fill="#065F46" text-anchor="middle" letter-spacing="0.5">verified_emails</text>
+  <line x1="504" y1="685" x2="634" y2="685" stroke="#A7F3D0" stroke-width="1"/>
+  <text x="514" y="699" font-size="8.5" fill="#374151">🔑 email_hash (PK)</text>
+  <text x="514" y="712" font-size="8.5" fill="#374151">shop_id</text>
+  <text x="514" y="725" font-size="8.5" fill="#374151">created_at</text>
+  <text x="514" y="742" font-size="8" fill="#6B7280">Persistent mapping</text>
+  <text x="514" y="754" font-size="8" fill="#6B7280">email → shop_id</text>
+  <text x="514" y="806" font-size="7.5" fill="#6B7280" font-style="italic">Email identity store</text>
+
+  <!-- abuse_signals -->
+  <rect x="646" y="659" width="82" height="162" rx="8" fill="#ffffff" stroke="#A7F3D0" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="646" y="659" width="82" height="26" rx="8" fill="#D1FAE5"/>
+  <rect x="646" y="673" width="82" height="12" fill="#D1FAE5"/>
+  <text x="687" y="676" font-size="8" font-weight="800" fill="#065F46" text-anchor="middle" letter-spacing="0.3">abuse_signals</text>
+  <line x1="646" y1="685" x2="728" y2="685" stroke="#A7F3D0" stroke-width="1"/>
+  <text x="656" y="699" font-size="8" fill="#374151">id (PK)</text>
+  <text x="656" y="712" font-size="8" fill="#374151">event</text>
+  <text x="656" y="725" font-size="8" fill="#374151">ip_hash</text>
+  <text x="656" y="738" font-size="8" fill="#374151">guest_id</text>
+  <text x="656" y="751" font-size="8" fill="#374151">fp_hash</text>
+  <text x="656" y="764" font-size="8" fill="#374151">detail</text>
+  <text x="656" y="777" font-size="8" fill="#374151">created_at</text>
+  <text x="656" y="806" font-size="7" fill="#6B7280" font-style="italic">Fraud signals</text>
+
+  <!-- External Services grid (right panel) -->
+  <!-- Etsy API -->
+  <rect x="770" y="659" width="148" height="80" rx="8" fill="#ffffff" stroke="#E5E7EB" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="770" y="659" width="148" height="22" rx="8" fill="#FFF1F0"/>
+  <rect x="770" y="669" width="148" height="12" fill="#FFF1F0"/>
+  <text x="844" y="675" font-size="9" font-weight="700" fill="#C62828" text-anchor="middle">ETSY REST API v3</text>
+  <line x1="770" y1="681" x2="918" y2="681" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="844" y="695" font-size="8.5" fill="#374151" text-anchor="middle">oauth.token · users/me</text>
+  <text x="844" y="708" font-size="8.5" fill="#6B7280" text-anchor="middle">shops/{id}/listings</text>
+  <text x="844" y="721" font-size="8.5" fill="#6B7280" text-anchor="middle">listings/{id}/images</text>
+  <text x="844" y="734" font-size="8.5" fill="#6B7280" text-anchor="middle">seller-taxonomy/nodes</text>
+
+  <!-- Stripe -->
+  <rect x="928" y="659" width="145" height="80" rx="8" fill="#ffffff" stroke="#E5E7EB" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="928" y="659" width="145" height="22" rx="8" fill="#F3F0FF"/>
+  <rect x="928" y="669" width="145" height="12" fill="#F3F0FF"/>
+  <text x="1000" y="675" font-size="9" font-weight="700" fill="#5B47E0" text-anchor="middle">STRIPE</text>
+  <line x1="928" y1="681" x2="1073" y2="681" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1000" y="695" font-size="8.5" fill="#374151" text-anchor="middle">Checkout Sessions</text>
+  <text x="1000" y="708" font-size="8.5" fill="#6B7280" text-anchor="middle">Subscriptions · Webhooks</text>
+  <text x="1000" y="721" font-size="8.5" fill="#6B7280" text-anchor="middle">EUR + TRY price IDs</text>
+  <text x="1000" y="734" font-size="8.5" fill="#6B7280" text-anchor="middle">customer.subscription.*</text>
+
+  <!-- Gemini -->
+  <rect x="1083" y="659" width="140" height="80" rx="8" fill="#ffffff" stroke="#E5E7EB" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="1083" y="659" width="140" height="22" rx="8" fill="#E8F5E9"/>
+  <rect x="1083" y="669" width="140" height="12" fill="#E8F5E9"/>
+  <text x="1153" y="675" font-size="9" font-weight="700" fill="#2E7D32" text-anchor="middle">GOOGLE GEMINI</text>
+  <line x1="1083" y1="681" x2="1223" y2="681" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1153" y="695" font-size="8.5" fill="#374151" text-anchor="middle">gemini-2.5-flash (primary)</text>
+  <text x="1153" y="708" font-size="8.5" fill="#6B7280" text-anchor="middle">2.5-flash-lite (quota fallback)</text>
+  <text x="1153" y="721" font-size="8.5" fill="#6B7280" text-anchor="middle">Vision + text generation</text>
+  <text x="1153" y="734" font-size="8.5" fill="#6B7280" text-anchor="middle">Free tier · AI Studio</text>
+
+  <!-- NVIDIA -->
+  <rect x="1233" y="659" width="130" height="80" rx="8" fill="#ffffff" stroke="#E5E7EB" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="1233" y="659" width="130" height="22" rx="8" fill="#E3F2FD"/>
+  <rect x="1233" y="669" width="130" height="12" fill="#E3F2FD"/>
+  <text x="1298" y="675" font-size="9" font-weight="700" fill="#1565C0" text-anchor="middle">NVIDIA NIM</text>
+  <line x1="1233" y1="681" x2="1363" y2="681" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1298" y="695" font-size="8.5" fill="#374151" text-anchor="middle">Llama-3.2-90B-Vision</text>
+  <text x="1298" y="708" font-size="8.5" fill="#6B7280" text-anchor="middle">integrate.api.nvidia.com</text>
+  <text x="1298" y="721" font-size="8.5" fill="#6B7280" text-anchor="middle">Secondary fallback</text>
+  <text x="1298" y="734" font-size="8.5" fill="#6B7280" text-anchor="middle">Free · build.nvidia.com</text>
+
+  <!-- Natro SMTP -->
+  <rect x="770" y="749" width="148" height="72" rx="8" fill="#ffffff" stroke="#E5E7EB" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="770" y="749" width="148" height="22" rx="8" fill="#FFF8E1"/>
+  <rect x="770" y="759" width="148" height="12" fill="#FFF8E1"/>
+  <text x="844" y="765" font-size="9" font-weight="700" fill="#F57F17" text-anchor="middle">NATRO SMTP</text>
+  <line x1="770" y1="771" x2="918" y2="771" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="844" y="785" font-size="8.5" fill="#374151" text-anchor="middle">mail.kurumsaleposta.com</text>
+  <text x="844" y="798" font-size="8.5" fill="#6B7280" text-anchor="middle">info@kolaylistele.com</text>
+  <text x="844" y="811" font-size="8.5" fill="#6B7280" text-anchor="middle">Port 465 (SSL) · Magic links</text>
+
+  <!-- fal.ai -->
+  <rect x="928" y="749" width="145" height="72" rx="8" fill="#ffffff" stroke="#E5E7EB" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="928" y="749" width="145" height="22" rx="8" fill="#FCE4EC"/>
+  <rect x="928" y="759" width="145" height="12" fill="#FCE4EC"/>
+  <text x="1000" y="765" font-size="9" font-weight="700" fill="#880E4F" text-anchor="middle">FAL.AI</text>
+  <line x1="928" y1="771" x2="1073" y2="771" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1000" y="785" font-size="8.5" fill="#374151" text-anchor="middle">FLUX.1 Kontext</text>
+  <text x="1000" y="798" font-size="8.5" fill="#6B7280" text-anchor="middle">fal-ai/flux-pro/kontext</text>
+  <text x="1000" y="811" font-size="8.5" fill="#6B7280" text-anchor="middle">Pro plan · 30 imgs/mo</text>
+
+  <!-- OpenAI -->
+  <rect x="1083" y="749" width="140" height="72" rx="8" fill="#ffffff" stroke="#E5E7EB" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="1083" y="749" width="140" height="22" rx="8" fill="#F3F0FF"/>
+  <rect x="1083" y="759" width="140" height="12" fill="#F3F0FF"/>
+  <text x="1153" y="765" font-size="9" font-weight="700" fill="#5B47E0" text-anchor="middle">OPENAI GPT-4o</text>
+  <line x1="1083" y1="771" x2="1223" y2="771" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1153" y="785" font-size="8.5" fill="#374151" text-anchor="middle">Tertiary fallback</text>
+  <text x="1153" y="798" font-size="8.5" fill="#6B7280" text-anchor="middle">Opt-in: ALLOW_PAID_OPENAI</text>
+  <text x="1153" y="811" font-size="8.5" fill="#6B7280" text-anchor="middle">gpt-4o-mini (text tasks)</text>
+
+  <!-- Railway -->
+  <rect x="1233" y="749" width="130" height="72" rx="8" fill="#ffffff" stroke="#E5E7EB" stroke-width="1" filter="url(#cardShadow)"/>
+  <rect x="1233" y="749" width="130" height="22" rx="8" fill="#F0EEFF"/>
+  <rect x="1233" y="759" width="130" height="12" fill="#F0EEFF"/>
+  <text x="1298" y="765" font-size="9" font-weight="700" fill="#5B47E0" text-anchor="middle">RAILWAY</text>
+  <line x1="1233" y1="771" x2="1363" y2="771" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1298" y="785" font-size="8.5" fill="#374151" text-anchor="middle">Nixpacks deploy</text>
+  <text x="1298" y="798" font-size="8.5" fill="#6B7280" text-anchor="middle">Volume /data/ (SQLite)</text>
+  <text x="1298" y="811" font-size="8.5" fill="#6B7280" text-anchor="middle">$PORT · /health check</text>
+
+  <!-- ═══════════════════════════ FLOW CONNECTORS ═══════════════════════════ -->
+
+  <!-- Layer 1 → Layer 2 (vertical) -->
+  <line x1="370" y1="216" x2="370" y2="232" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- Layer 2 → Layer 3 (vertical) -->
+  <line x1="400" y1="370" x2="400" y2="420" stroke="#5B47E0" stroke-width="2" marker-end="url(#arrowPurple)"/>
+
+  <!-- Layer 3 → Layer 4 (vertical, auth → db) -->
+  <line x1="154" y1="589" x2="154" y2="651" stroke="#059669" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowGreen)"/>
+
+  <!-- Layer 3 → External (payments → stripe) -->
+  <line x1="667" y1="589" x2="1000" y2="651" stroke="#5B47E0" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowPurple)"/>
+
+  <!-- Layer 3 → Etsy API -->
+  <line x1="414" y1="589" x2="844" y2="651" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowGray)"/>
+
+  <!-- Layer 3 → AI providers -->
+  <line x1="933" y1="589" x2="1153" y2="651" stroke="#059669" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowGreen)"/>
+
+  <!-- ═══════════════════════════ NUMBERED FLOW CIRCLES ═══════════════════════════ -->
+
+  <!-- Flow legend box -->
+  <rect x="1090" y="87" width="390" height="130" rx="10" fill="#ffffff" stroke="#E5E7EB" stroke-width="1.5" filter="url(#cardShadow)"/>
+  <text x="1285" y="105" font-size="10" font-weight="700" fill="#374151" text-anchor="middle" letter-spacing="0.5">NUMBERED FLOWS</text>
+  <line x1="1100" y1="110" x2="1470" y2="110" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Flow items -->
+  <circle cx="1112" cy="125" r="9" fill="#5B47E0"/>
+  <text x="1112" y="129" font-size="10" font-weight="800" fill="#fff" text-anchor="middle">①</text>
+  <text x="1128" y="129" font-size="9" fill="#374151">Guest: email modal → magic link → /auth/magic → session</text>
+
+  <circle cx="1112" cy="148" r="9" fill="#3B82F6"/>
+  <text x="1112" y="152" font-size="10" font-weight="800" fill="#fff" text-anchor="middle">②</text>
+  <text x="1128" y="152" font-size="9" fill="#374151">Etsy OAuth: /auth/start PKCE → etsy.com → /auth/callback</text>
+
+  <circle cx="1112" cy="171" r="9" fill="#059669"/>
+  <text x="1112" y="175" font-size="10" font-weight="800" fill="#fff" text-anchor="middle">③</text>
+  <text x="1128" y="175" font-size="9" fill="#374151">AI Generate: images+hint → Gemini→NVIDIA→OpenAI → JSON</text>
+
+  <circle cx="1300" cy="125" r="9" fill="#D97706"/>
+  <text x="1300" y="129" font-size="10" font-weight="800" fill="#fff" text-anchor="middle">④</text>
+  <text x="1316" y="129" font-size="9" fill="#374151">/upgrade → Stripe Checkout → webhook → set_premium()</text>
+
+  <circle cx="1300" cy="148" r="9" fill="#7C3AED"/>
+  <text x="1300" y="152" font-size="10" font-weight="800" fill="#fff" text-anchor="middle">⑤</text>
+  <text x="1316" y="152" font-size="9" fill="#374151">Publish: listing data → Etsy REST API → draft listing</text>
+
+  <!-- ═══════════════════════════ LEGEND BAR ═══════════════════════════ -->
+  <rect x="20" y="846" width="1460" height="46" rx="8" fill="#ffffff" stroke="#E5E7EB" stroke-width="1"/>
+
+  <text x="36" y="862" font-size="9" font-weight="700" fill="#6B7280" letter-spacing="1">LEGEND</text>
+  <line x1="36" y1="866" x2="76" y2="866" stroke="#6B7280" stroke-width="0.5"/>
+
+  <!-- Swatches -->
+  <rect x="90" y="855" width="14" height="14" rx="3" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="110" y="866" font-size="9" fill="#374151">Presentation</text>
+
+  <rect x="195" y="855" width="14" height="14" rx="3" fill="#FFFBEB" stroke="#FDE68A" stroke-width="1"/>
+  <text x="215" y="866" font-size="9" fill="#374151">Security</text>
+
+  <rect x="285" y="855" width="14" height="14" rx="3" fill="#F0EEFF" stroke="#C4B8F8" stroke-width="1"/>
+  <text x="305" y="866" font-size="9" fill="#374151">Application</text>
+
+  <rect x="385" y="855" width="14" height="14" rx="3" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1"/>
+  <text x="405" y="866" font-size="9" fill="#374151">Data (SQLite)</text>
+
+  <rect x="490" y="855" width="14" height="14" rx="3" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="510" y="866" font-size="9" fill="#374151">External Services</text>
+
+  <!-- Arrow types -->
+  <line x1="615" y1="862" x2="640" y2="862" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <text x="648" y="866" font-size="9" fill="#374151">HTTP request</text>
+
+  <line x1="730" y1="862" x2="755" y2="862" stroke="#5B47E0" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrowPurple)"/>
+  <text x="763" y="866" font-size="9" fill="#374151">Internal call</text>
+
+  <!-- Plan tiers -->
+  <rect x="855" y="855" width="10" height="10" rx="2" fill="#111827"/>
+  <text x="871" y="865" font-size="9" fill="#374151">Free (3 gen)</text>
+  <rect x="950" y="855" width="10" height="10" rx="2" fill="#5B47E0"/>
+  <text x="966" y="865" font-size="9" fill="#374151">Starter</text>
+  <rect x="1020" y="855" width="10" height="10" rx="2" fill="#059669"/>
+  <text x="1036" y="865" font-size="9" fill="#374151">Pro + Photo Variants</text>
+
+  <!-- Secondary legend line -->
+  <text x="90" y="882" font-size="9" fill="#374151">Python 3.12</text>
+  <text x="160" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="170" y="882" font-size="9" fill="#374151">Flask 3.1</text>
+  <text x="228" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="238" y="882" font-size="9" fill="#374151">Gunicorn 2W</text>
+  <text x="312" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="322" y="882" font-size="9" fill="#374151">SQLite WAL</text>
+  <text x="390" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="400" y="882" font-size="9" fill="#374151">Flask-Limiter</text>
+  <text x="470" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="480" y="882" font-size="9" fill="#374151">Flask-WTF CSRF</text>
+  <text x="570" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="580" y="882" font-size="9" fill="#374151">itsdangerous</text>
+  <text x="647" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="657" y="882" font-size="9" fill="#374151">Stripe SDK</text>
+  <text x="717" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="727" y="882" font-size="9" fill="#374151">google-genai 2.5</text>
+  <text x="818" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="828" y="882" font-size="9" fill="#374151">openai 2.37</text>
+  <text x="893" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="903" y="882" font-size="9" fill="#374151">Railway Nixpacks</text>
+  <text x="993" y="882" font-size="9" fill="#6B7280">·</text>
+  <text x="1003" y="882" font-size="9" fill="#374151">Cloudflare WAF+CDN</text>
+
+  <!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+  <rect x="0" y="922" width="1500" height="28" fill="#111827"/>
+  <text x="750" y="940" font-size="10" fill="#9CA3AF" text-anchor="middle" letter-spacing="1">Confidential · kolaylistele Tech Stack · 2025 · berk.arslan@kobil.com</text>
+  <text x="1460" y="940" font-size="9" fill="#6B7280" text-anchor="end">architecture.svg v2.0</text>
+  <text x="40" y="940" font-size="9" fill="#6B7280">kolaylistele.com · easylisting.*</text>
+</svg>
