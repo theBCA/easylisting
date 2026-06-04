@@ -102,6 +102,7 @@ ETSY_SCOPES         = "listings_r listings_w shops_r"
 READINESS_ID        = 1489219211571
 REDIRECT_URI        = os.getenv("REDIRECT_URI", "http://localhost:5050/auth/callback")
 HTTP_TIMEOUT        = (5, 30)  # (connect timeout, read timeout) in seconds
+GUEST_FREE_LIMIT    = 2
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_TITLE_LEN       = 140
@@ -139,8 +140,18 @@ def shop_id():
 def is_connected():
     return bool(session.get("access_token") and session.get("shop_id"))
 
+def is_guest():
+    return bool(session.get("guest"))
+
+def is_authorized():
+    return is_connected() or is_guest()
+
+def guest_shop_id():
+    ip_hash = hashlib.sha256(request.remote_addr.encode()).hexdigest()[:16]
+    return f"guest_{ip_hash}"
+
 def require_connection():
-    if not is_connected():
+    if not is_authorized():
         return redirect(url_for("connect"))
     return None
 
@@ -640,12 +651,26 @@ def disconnect():
     session.clear()
     return redirect(url_for("connect"))
 
+@app.route("/guest")
+@limiter.limit("20 per minute")
+def start_guest():
+    session.clear()
+    session["guest"] = True
+    return redirect(url_for("index"))
+
 # ── App routes ────────────────────────────────────────────────────────────────
 
 @app.route("/")
 def index():
     redir = require_connection()
     if redir: return redir
+    if is_guest():
+        gid = guest_shop_id()
+        ensure_shop(gid, "Guest")
+        _, remaining = can_generate(gid, GUEST_FREE_LIMIT)
+        return render_template("index.html",
+            shop_name=None, remaining=remaining,
+            unlimited=False, is_guest=True)
     sid = str(shop_id())
     _, remaining = can_generate(sid)
     return render_template(
@@ -653,6 +678,7 @@ def index():
         shop_name=session.get("shop_name"),
         remaining=remaining,
         unlimited=remaining >= 999,
+        is_guest=False,
     )
 
 @app.route("/listings")
@@ -674,25 +700,31 @@ def listings():
 @app.route("/api/status")
 @limiter.limit("60 per minute")
 def api_status():
-    redir = require_connection()
-    if redir: return jsonify({"error": "Not connected"}), 401
-    sid = str(shop_id())
-    allowed, remaining = can_generate(sid)
+    if not is_authorized(): return jsonify({"error": "Not connected"}), 401
+    if is_guest():
+        gid = guest_shop_id()
+        ensure_shop(gid, "Guest")
+        allowed, remaining = can_generate(gid, GUEST_FREE_LIMIT)
+    else:
+        allowed, remaining = can_generate(str(shop_id()))
     return jsonify({
-        "allowed":     allowed,
-        "remaining":   remaining,
-        "has_own_key": False,
-        "providers":   [],
+        "allowed":   allowed,
+        "remaining": remaining,
+        "is_guest":  is_guest(),
     })
 
 @app.route("/api/generate", methods=["POST"])
 @limiter.limit("10 per minute; 50 per day")
 def api_generate():
-    redir = require_connection()
-    if redir: return jsonify({"error": "Not connected"}), 401
+    if not is_authorized(): return jsonify({"error": "Not connected"}), 401
 
-    sid          = str(shop_id())
-    allowed, remaining = can_generate(sid)
+    if is_guest():
+        sid = guest_shop_id()
+        ensure_shop(sid, "Guest")
+        allowed, remaining = can_generate(sid, GUEST_FREE_LIMIT)
+    else:
+        sid = str(shop_id())
+        allowed, remaining = can_generate(sid)
     if not allowed:
         return jsonify({"error": "free_limit_reached", "remaining": 0}), 403
 
@@ -753,8 +785,7 @@ def api_generate():
     increment_usage(sid)
 
     try:
-        # Etsy-specific enrichment only needed for Etsy platform
-        if platform == "etsy":
+        if not is_guest() and platform == "etsy":
             tq = data.get("taxonomy_query", "")
             tax_id, tax_path = _find_taxonomy_id(tq)
             if not tax_id and tq:
@@ -765,20 +796,19 @@ def api_generate():
                             break
             data["taxonomy_id"]   = tax_id
             data["taxonomy_path"] = tax_path
-
             sp_resp = requests.get(
                 f"https://openapi.etsy.com/v3/application/shops/{shop_id()}/shipping-profiles",
                 headers=etsy_headers(), timeout=HTTP_TIMEOUT,
             )
             data["shipping_profiles"] = sp_resp.json().get("results", []) if sp_resp.ok else []
         else:
-            data["taxonomy_id"]      = None
-            data["taxonomy_path"]    = None
+            data["taxonomy_id"]       = None
+            data["taxonomy_path"]     = None
             data["shipping_profiles"] = []
     except Exception as e:
         logger.exception("Post-generation enrichment error: %s", e)
-        data["taxonomy_id"]      = None
-        data["taxonomy_path"]    = None
+        data["taxonomy_id"]       = None
+        data["taxonomy_path"]     = None
         data["shipping_profiles"] = []
 
     data["image_previews"] = [
