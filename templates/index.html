@@ -144,6 +144,9 @@ textarea.field-input { resize: vertical; min-height: 120px; line-height: 1.6; }
 .platform-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px; border: 2px solid var(--border); border-radius: 11px; background: white; cursor: pointer; transition: all .15s; min-width: 72px; position: relative; }
 .platform-card:hover { border-color: #B0A8F5; }
 .platform-card.active { border-color: var(--primary); background: #F0EEFF; }
+.platform-card.coming-soon { cursor: not-allowed; opacity: .55; }
+.platform-card.coming-soon:hover { border-color: var(--border); }
+.coming-soon-badge { position: absolute; top: -7px; right: -7px; font-size: 9px; font-weight: 800; background: #6B7280; color: white; border-radius: 6px; padding: 2px 5px; letter-spacing: .3px; text-transform: uppercase; }
 .platform-icon { font-size: 20px; line-height: 1; }
 .platform-name { font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; }
 .platform-card.active .platform-name { color: var(--primary); }
@@ -221,9 +224,9 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     <a href="/upgrade" class="btn-icon" style="text-decoration:none;" data-i18n="nav_upgrade">Upgrade</a>
     <span class="nav-sep">|</span>
     <div class="lang-switcher">
-      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
-      <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
-      <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="de">DE</button>
+      <button class="lang-btn" data-lang="tr">TR</button>
     </div>
     <span class="nav-sep">|</span>
     <span style="font-size:13px;font-weight:600;color:var(--muted)">🛍 {{ shop_name }}</span>
@@ -240,7 +243,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     <p data-i18n="paywall_body">Upgrade to EasyListing Pro for unlimited AI generations and bulk listing tools.</p>
     <div class="modal-actions">
       <a href="/upgrade" class="btn-modal-primary" style="text-decoration:none;text-align:center;" data-i18n="paywall_upgrade">View upgrade plans</a>
-      <button class="btn-modal-secondary" onclick="closeModal('paywallModal')" data-i18n="paywall_later">Maybe later</button>
+      <button class="btn-modal-secondary" id="paywallCloseBtn" data-i18n="paywall_later">Maybe later</button>
     </div>
   </div>
 </div>
@@ -255,39 +258,47 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     <div class="platform-row">
       <div class="platform-row-label" data-i18n="label_platform">Sell on</div>
       <div class="platform-grid">
-        <div class="platform-card active" data-platform="etsy" onclick="selectPlatform('etsy',this)">
+        <div class="platform-card active" data-platform="etsy">
           <span class="platform-icon">🛍️</span>
           <span class="platform-name">Etsy</span>
         </div>
-        <div class="platform-card" data-platform="shopify" onclick="selectPlatform('shopify',this)">
+        <div class="platform-card coming-soon" data-platform="shopify">
+          <span class="coming-soon-badge">Yakında</span>
           <span class="platform-icon">🛒</span>
           <span class="platform-name">Shopify</span>
         </div>
-        <div class="platform-card" data-platform="amazon" onclick="selectPlatform('amazon',this)">
+        <div class="platform-card coming-soon" data-platform="amazon">
+          <span class="coming-soon-badge">Yakında</span>
           <span class="platform-icon">📦</span>
           <span class="platform-name">Amazon</span>
         </div>
-        <div class="platform-card" data-platform="trendyol" onclick="selectPlatform('trendyol',this)">
+        <div class="platform-card coming-soon" data-platform="trendyol">
+          <span class="coming-soon-badge">Yakında</span>
           <span class="platform-icon">🇹🇷</span>
           <span class="platform-name">Trendyol</span>
         </div>
-        <div class="platform-card" data-platform="hepsiburada" onclick="selectPlatform('hepsiburada',this)">
+        <div class="platform-card coming-soon" data-platform="hepsiburada">
+          <span class="coming-soon-badge">Yakında</span>
           <span class="platform-icon">🏪</span>
           <span class="platform-name">Hepsiburada</span>
         </div>
-        <div class="platform-card" data-platform="n11" onclick="selectPlatform('n11',this)">
+        <div class="platform-card coming-soon" data-platform="n11">
+          <span class="coming-soon-badge">Yakında</span>
           <span class="platform-icon">🔖</span>
           <span class="platform-name">n11</span>
         </div>
-        <div class="platform-card" data-platform="ebay" onclick="selectPlatform('ebay',this)">
+        <div class="platform-card coming-soon" data-platform="ebay">
+          <span class="coming-soon-badge">Yakında</span>
           <span class="platform-icon">🔨</span>
           <span class="platform-name">eBay</span>
         </div>
-        <div class="platform-card" data-platform="woocommerce" onclick="selectPlatform('woocommerce',this)">
+        <div class="platform-card coming-soon" data-platform="woocommerce">
+          <span class="coming-soon-badge">Yakında</span>
           <span class="platform-icon">🌐</span>
           <span class="platform-name">WooCommerce</span>
         </div>
-        <div class="platform-card" data-platform="pinterest" onclick="selectPlatform('pinterest',this)">
+        <div class="platform-card coming-soon" data-platform="pinterest">
+          <span class="coming-soon-badge">Yakında</span>
           <span class="platform-icon">📌</span>
           <span class="platform-name">Pinterest</span>
         </div>
@@ -309,37 +320,16 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
         <input type="text" id="hintInput" data-i18n-placeholder="hint_placeholder" placeholder="e.g. baby cardigan, hand knit, blue">
       </div>
       <div class="field-group">
-        <label data-i18n="label_provider">AI Provider</label>
-        <div class="provider-toggle">
-          <button class="provider-btn active" data-provider="gemini" onclick="selectProvider('gemini',this)">
-            Gemini <span class="provider-badge badge-free">FREE</span>
-          </button>
-          <button class="provider-btn" data-provider="nvidia" onclick="selectProvider('nvidia',this)">
-            NVIDIA <span class="provider-badge badge-free">FREE</span>
-          </button>
-        </div>
-        <div id="nvidia-model-wrap" style="display:none;margin-top:10px;">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;">NVIDIA Model</div>
-          <div style="display:flex;gap:8px;">
-            <label style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 12px;border:2px solid var(--border);border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;" id="model-llama-label">
-              <input type="radio" name="nvidia_model" value="llama-90b" checked onchange="updateModelLabel()" style="accent-color:var(--primary)">
-              Llama 3.2 90B
-            </label>
-            <label style="flex:1;display:flex;align-items:center;gap:7px;padding:9px 12px;border:2px solid var(--border);border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;" id="model-phi-label">
-              <input type="radio" name="nvidia_model" value="phi-3.5" onchange="updateModelLabel()" style="accent-color:var(--primary)">
-              Phi-3.5 Vision
-            </label>
-          </div>
-        </div>
+        <label data-i18n="label_lang">Language</label>
       </div>
     </div>
 
     <div class="template-row">
       <span style="color:var(--muted);font-size:13px;" data-i18n="template_hint">Load your saved defaults?</span>
-      <button class="btn-text" onclick="loadTemplate()" data-i18n="template_load">Load template</button>
+      <button class="btn-text" id="loadTemplateBtn" data-i18n="template_load">Load template</button>
     </div>
 
-    <button class="btn-generate" id="generateBtn" onclick="startGenerate()" disabled data-i18n="btn_generate">
+    <button class="btn-generate" id="generateBtn" disabled data-i18n="btn_generate">
       Generate Listing with AI →
     </button>
   </div>
@@ -365,11 +355,11 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
       <h2 data-i18n="review_title">Review &amp; Publish</h2>
       <div class="review-actions">
         <div class="translate-btns">
-          <button class="btn-translate" onclick="translateTo('en')">🇬🇧 EN</button>
-          <button class="btn-translate" onclick="translateTo('de')">🇩🇪 DE</button>
-          <button class="btn-translate" onclick="translateTo('tr')">🇹🇷 TR</button>
+          <button class="btn-translate" id="translateEnBtn">🇬🇧 EN</button>
+          <button class="btn-translate" id="translateDeBtn">🇩🇪 DE</button>
+          <button class="btn-translate" id="translateTrBtn">🇹🇷 TR</button>
         </div>
-        <button class="btn-back" onclick="goBack()" data-i18n="btn_back">← Start over</button>
+        <button class="btn-back" id="reviewBackBtn" data-i18n="btn_back">← Start over</button>
       </div>
     </div>
 
@@ -387,7 +377,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
 
         <div class="field-card">
           <div class="field-card-title" data-i18n="label_title">Title</div>
-          <input type="text" id="r-title" class="field-input" maxlength="140" oninput="updateCharCount(this,'title-count',140)">
+          <input type="text" id="r-title" class="field-input" maxlength="140">
           <div class="char-count" id="title-count">0 / 140</div>
         </div>
 
@@ -398,15 +388,15 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
 
         <div class="field-card">
           <div class="field-card-title" data-i18n="label_tags">Tags <span id="tag-count-label" class="chip-count"></span></div>
-          <div class="chips-wrap" id="tags-wrap" onclick="focusChipInput('tag-input')">
-            <input class="chip-input" id="tag-input" data-i18n-placeholder="tag_placeholder" placeholder="Add tag, press Enter" onkeydown="chipKeydown(event,'tags-wrap','tag-input',13,'tag-count-label')">
+          <div class="chips-wrap" id="tags-wrap">
+            <input class="chip-input" id="tag-input" data-i18n-placeholder="tag_placeholder" placeholder="Add tag, press Enter">
           </div>
         </div>
 
         <div class="field-card">
           <div class="field-card-title" data-i18n="label_materials">Materials</div>
-          <div class="chips-wrap" id="materials-wrap" onclick="focusChipInput('material-input')">
-            <input class="chip-input" id="material-input" data-i18n-placeholder="material_placeholder" placeholder="Add material, press Enter" onkeydown="chipKeydown(event,'materials-wrap','material-input',13,null)">
+          <div class="chips-wrap" id="materials-wrap">
+            <input class="chip-input" id="material-input" data-i18n-placeholder="material_placeholder" placeholder="Add material, press Enter">
           </div>
         </div>
 
@@ -415,14 +405,14 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div>
               <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;" data-i18n="label_colors">Colors</div>
-              <div class="chips-wrap" id="colors-wrap" onclick="focusChipInput('color-input')">
-                <input class="chip-input" id="color-input" data-i18n-placeholder="color_placeholder" placeholder="Add color" onkeydown="chipKeydown(event,'colors-wrap','color-input',20,null,'color-chip')">
+              <div class="chips-wrap" id="colors-wrap">
+                <input class="chip-input" id="color-input" data-i18n-placeholder="color_placeholder" placeholder="Add color">
               </div>
             </div>
             <div>
               <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;" data-i18n="label_sizes">Sizes</div>
-              <div class="chips-wrap" id="sizes-wrap" onclick="focusChipInput('size-input')">
-                <input class="chip-input" id="size-input" data-i18n-placeholder="size_placeholder" placeholder="S, M, L, Custom…" onkeydown="chipKeydown(event,'sizes-wrap','size-input',20,null,'size-chip')">
+              <div class="chips-wrap" id="sizes-wrap">
+                <input class="chip-input" id="size-input" data-i18n-placeholder="size_placeholder" placeholder="S, M, L, Custom…">
               </div>
             </div>
           </div>
@@ -447,7 +437,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
         <div class="field-card">
           <div class="field-card-title" data-i18n="label_category">Category</div>
           <div class="taxonomy-wrap">
-            <input type="text" id="taxonomy-search" class="field-input" data-i18n-placeholder="category_placeholder" placeholder="Search category…" oninput="taxonomySearch(this.value)" autocomplete="off">
+            <input type="text" id="taxonomy-search" class="field-input" data-i18n-placeholder="category_placeholder" placeholder="Search category…" autocomplete="off">
             <input type="hidden" id="r-taxonomy-id">
             <div class="taxonomy-dropdown" id="taxonomy-dropdown" style="display:none"></div>
           </div>
@@ -462,15 +452,15 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
         <div class="field-card">
           <div class="field-card-title" style="display:flex;justify-content:space-between;align-items:center;">
             <span data-i18n="label_instagram">Instagram Caption</span>
-            <button class="copy-btn" onclick="copyInstagram()" data-i18n="btn_copy">Copy</button>
+            <button class="copy-btn" id="copyInstagramBtn" data-i18n="btn_copy">Copy</button>
           </div>
           <div class="instagram-preview" id="instagram-caption"></div>
         </div>
 
-        <button class="btn-publish" id="publishBtn" onclick="publish()" data-i18n="btn_publish">
+        <button class="btn-publish" id="publishBtn" data-i18n="btn_publish">
           Create Draft on Etsy →
         </button>
-        <button class="btn-save-template" onclick="saveTemplate()" data-i18n="btn_save_template">
+        <button class="btn-save-template" id="saveTemplateBtn" data-i18n="btn_save_template">
           💾 Save as default template
         </button>
 
@@ -490,13 +480,13 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
           <span>AI-generated — review before using</span>
         </div>
       </div>
-      <button class="btn-back" onclick="goBack()">← Start over</button>
+      <button class="btn-back" id="pltBackBtn">← Start over</button>
     </div>
     <div class="review-layout">
       <div class="image-panel">
         <img id="plt-mainImg" class="main-img" src="" alt="">
         <div class="img-strip" id="plt-imgStrip"></div>
-        <button class="btn-export-all" onclick="exportAllText()" style="margin-top:14px;">⬇ Export All as Text</button>
+        <button class="btn-export-all" id="exportAllBtn" style="margin-top:14px;">⬇ Export All as Text</button>
       </div>
       <div class="fields-panel" id="plt-fields-panel">
         <!-- dynamically populated by populatePlatformReview() -->
@@ -686,6 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── State ──────────────────────────────────────────────────────────────────
 let selectedFiles = [], selectedProvider = 'gemini', aiData = {}, selectedPlatform = 'etsy';
+const PROVIDER = 'gemini';
 
 // ── Platform config ────────────────────────────────────────────────────────
 const PLATFORM_META = {
@@ -1062,7 +1053,7 @@ async function startGenerate() {
   const fd = new FormData();
   selectedFiles.forEach(f => fd.append('images', f));
   fd.append('hint',     document.getElementById('hintInput').value);
-  fd.append('provider', selectedProvider);
+  fd.append('provider', PROVIDER);
   fd.append('lang',     currentLang);
   fd.append('platform', selectedPlatform);
   const nvidiaModel = document.querySelector('input[name="nvidia_model"]:checked');
@@ -1383,6 +1374,85 @@ function showToast(msg, type='') {
   t.textContent = msg; t.className = 'toast show ' + type;
   setTimeout(() => t.className = 'toast', 3500);
 }
+
+// ── Event listeners (replacing inline handlers) ────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Lang buttons
+  document.querySelectorAll('.lang-btn').forEach(btn =>
+    btn.addEventListener('click', () => setLang(btn.dataset.lang)));
+
+  // Platform cards
+  document.querySelectorAll('.platform-card').forEach(card => {
+    if (card.classList.contains('coming-soon')) return;
+    card.addEventListener('click', () => selectPlatform(card.dataset.platform, card));
+  });
+
+  // Provider buttons
+  document.querySelectorAll('.provider-btn').forEach(btn =>
+    btn.addEventListener('click', () => selectProvider(btn.dataset.provider, btn)));
+
+  // NVIDIA model radio buttons
+  document.querySelectorAll('input[name="nvidia_model"]').forEach(radio =>
+    radio.addEventListener('change', () => updateModelLabel()));
+
+  // Load template button
+  document.getElementById('loadTemplateBtn')?.addEventListener('click', () => loadTemplate());
+
+  // Generate button
+  document.getElementById('generateBtn')?.addEventListener('click', () => startGenerate());
+
+  // Translate buttons
+  document.getElementById('translateEnBtn')?.addEventListener('click', () => translateTo('en'));
+  document.getElementById('translateDeBtn')?.addEventListener('click', () => translateTo('de'));
+  document.getElementById('translateTrBtn')?.addEventListener('click', () => translateTo('tr'));
+
+  // Review back button
+  document.getElementById('reviewBackBtn')?.addEventListener('click', () => goBack());
+
+  // Platform review back button
+  document.getElementById('pltBackBtn')?.addEventListener('click', () => goBack());
+
+  // Export all text button
+  document.getElementById('exportAllBtn')?.addEventListener('click', () => exportAllText());
+
+  // Title char count
+  document.getElementById('r-title')?.addEventListener('input', function() {
+    updateCharCount(this, 'title-count', 140);
+  });
+
+  // Chip wrap click-to-focus
+  document.getElementById('tags-wrap')?.addEventListener('click', () => focusChipInput('tag-input'));
+  document.getElementById('materials-wrap')?.addEventListener('click', () => focusChipInput('material-input'));
+  document.getElementById('colors-wrap')?.addEventListener('click', () => focusChipInput('color-input'));
+  document.getElementById('sizes-wrap')?.addEventListener('click', () => focusChipInput('size-input'));
+
+  // Chip input keydown
+  document.getElementById('tag-input')?.addEventListener('keydown', e =>
+    chipKeydown(e, 'tags-wrap', 'tag-input', 13, 'tag-count-label'));
+  document.getElementById('material-input')?.addEventListener('keydown', e =>
+    chipKeydown(e, 'materials-wrap', 'material-input', 13, null));
+  document.getElementById('color-input')?.addEventListener('keydown', e =>
+    chipKeydown(e, 'colors-wrap', 'color-input', 20, null, 'color-chip'));
+  document.getElementById('size-input')?.addEventListener('keydown', e =>
+    chipKeydown(e, 'sizes-wrap', 'size-input', 20, null, 'size-chip'));
+
+  // Taxonomy search
+  document.getElementById('taxonomy-search')?.addEventListener('input', function() {
+    taxonomySearch(this.value);
+  });
+
+  // Copy Instagram button
+  document.getElementById('copyInstagramBtn')?.addEventListener('click', () => copyInstagram());
+
+  // Publish button
+  document.getElementById('publishBtn')?.addEventListener('click', () => publish());
+
+  // Save template button
+  document.getElementById('saveTemplateBtn')?.addEventListener('click', () => saveTemplate());
+
+  // Paywall close button
+  document.getElementById('paywallCloseBtn')?.addEventListener('click', () => closeModal('paywallModal'));
+});
 </script>
 </body>
 </html>
