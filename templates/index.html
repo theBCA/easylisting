@@ -441,9 +441,9 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
       </div>
     </div>
 
-    <div class="template-row">
-      <span style="color:var(--muted);font-size:13px;" data-i18n="template_hint">Load your saved defaults?</span>
-      <button class="btn-text" id="loadTemplateBtn" data-i18n="template_load">Load template</button>
+    <div class="template-row" id="templateRow" style="display:none">
+      <span style="color:var(--muted);font-size:13px;" id="templateHint"></span>
+      <button class="btn-text" id="loadTemplateBtn"></button>
     </div>
 
     <button class="btn-generate" id="generateBtn" disabled data-i18n="btn_generate">
@@ -744,7 +744,7 @@ const STRINGS = {
     drop_title:"Drop your product photos here", drop_sub:"JPG, PNG, WebP — up to 5 photos per listing", drop_browse:"Browse files",
     label_hint:"Product hint", hint_placeholder:"e.g. baby cardigan, hand knit, blue",
     label_provider:"AI Provider",
-    template_hint:"Load your saved defaults?", template_load:"Load template",
+    template_hint:"Your saved defaults are ready", template_load:"Apply template", template_applied:"Template applied ✓",
     btn_generate:"Generate Listing with AI →",
     loading_title:"Analyzing your product…", loading_sub:"AI is writing your title, description, tags, and more.",
     step1:"Analyzing product image", step2:"Writing title & description", step3:"Generating tags & materials", step4:"Matching category",
@@ -804,7 +804,7 @@ const STRINGS = {
     drop_title:"Produktfotos hier ablegen", drop_sub:"JPG, PNG, WebP — bis zu 5 Fotos", drop_browse:"Dateien auswählen",
     label_hint:"Produkthinweis", hint_placeholder:"z.B. Baby-Cardigan, handgestrickt, blau",
     label_provider:"KI-Anbieter",
-    template_hint:"Gespeicherte Voreinstellungen laden?", template_load:"Vorlage laden",
+    template_hint:"Ihre gespeicherten Voreinstellungen sind bereit", template_load:"Vorlage anwenden", template_applied:"Vorlage angewendet ✓",
     btn_generate:"Listing mit KI erstellen →",
     loading_title:"Dein Produkt wird analysiert…", loading_sub:"KI schreibt Titel, Beschreibung, Tags und mehr.",
     step1:"Produktbild analysieren", step2:"Titel & Beschreibung schreiben", step3:"Tags & Materialien generieren", step4:"Kategorie zuordnen",
@@ -864,7 +864,7 @@ const STRINGS = {
     drop_title:"Ürün fotoğraflarını buraya bırakın", drop_sub:"JPG, PNG, WebP — en fazla 5 fotoğraf", drop_browse:"Dosya seç",
     label_hint:"Ürün ipucu", hint_placeholder:"örn. bebek hırkası, el örgüsü, mavi",
     label_provider:"YZ Sağlayıcısı",
-    template_hint:"Kaydedilen varsayılanları yükle?", template_load:"Şablonu yükle",
+    template_hint:"Varsayılan şablonunuz hazır", template_load:"Şablonu uygula", template_applied:"Şablon uygulandı ✓",
     btn_generate:"YZ ile Liste Oluştur →",
     loading_title:"Ürününüz analiz ediliyor…", loading_sub:"YZ başlık, açıklama, etiket ve daha fazlasını yazıyor.",
     step1:"Ürün görseli analiz ediliyor", step2:"Başlık & açıklama yazılıyor", step3:"Etiket & malzeme üretiliyor", step4:"Kategori eşleştiriliyor",
@@ -1419,13 +1419,24 @@ async function loadTemplate() {
   try {
     const res = await fetch('/api/template');
     const t   = await res.json();
-    if (!t || !Object.keys(t).length) { showToast('No saved template yet.'); return; }
-    // Pre-fill hint (template doesn't override the photo hint, just remember it visually)
-    if (t.price) document.getElementById('r-price').value = t.price;
-    showToast('Template loaded — defaults will apply after generation.', 'success');
-    // Store for post-generate apply
+    const row  = document.getElementById('templateRow');
+    const hint = document.getElementById('templateHint');
+    const btn  = document.getElementById('loadTemplateBtn');
+    if (!t || !Object.keys(t).length) {
+      if (row) row.style.display = 'none';
+      return;
+    }
     window._savedTemplate = t;
-  } catch(e) { showToast('Could not load template', 'error'); }
+    if (row)  row.style.display  = 'flex';
+    if (hint) hint.textContent   = STRINGS[currentLang]?.template_hint || 'Varsayılan şablonunuz hazır';
+    if (btn)  { btn.textContent  = STRINGS[currentLang]?.template_load || 'Şablonu uygula'; btn.style.display = 'inline'; }
+  } catch(e) {}
+}
+function applyTemplateManually() {
+  if (window._savedTemplate) {
+    applyTemplate(window._savedTemplate);
+    showToast(STRINGS[currentLang]?.template_applied || 'Şablon uygulandı ✓', 'success');
+  }
 }
 
 async function saveTemplate() {
@@ -2057,8 +2068,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('input[name="nvidia_model"]').forEach(radio =>
     radio.addEventListener('change', () => updateModelLabel()));
 
-  // Load template button
-  document.getElementById('loadTemplateBtn')?.addEventListener('click', () => loadTemplate());
+  // Load template button — auto-fetch on load, manual apply on click
+  loadTemplate();
+  document.getElementById('loadTemplateBtn')?.addEventListener('click', () => applyTemplateManually());
 
   // Generate button
   document.getElementById('generateBtn')?.addEventListener('click', () => startGenerate());
