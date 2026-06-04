@@ -757,6 +757,12 @@ const STRINGS = {
     tools_shipping_placeholder:"Ships carefully packaged with tracking.",
     tools_cta_placeholder:"Message me before ordering for custom colors or sizing.",
     tools_brand_note:"These defaults are saved with your template and included in future AI prompts.",
+    sc_title_len:'Title length 70–140 chars', sc_desc_len:'Description ≥800 chars',
+    sc_tags_count:'All 13 tags used', sc_tags_safe:'Tags ≤20 chars each',
+    sc_tags_multi:'Tags are multi-word phrases', sc_materials:'Materials listed (≥2)',
+    sc_category:'Category selected', sc_price:'Price is valid',
+    sc_photos:'Multiple photos attached', sc_personal:'Personalization guidance present',
+    sc_shipping:'Shipping profile selected',
   },
   de: {
     nav_listings:"Meine Listings", nav_bulk:"Massen-Upload", nav_upgrade:"Upgrade",
@@ -806,6 +812,12 @@ const STRINGS = {
     tools_shipping_placeholder:"Wird sorgfältig verpackt mit Sendungsverfolgung versendet.",
     tools_cta_placeholder:"Schreiben Sie mir vor der Bestellung für individuelle Farben oder Größen.",
     tools_brand_note:"Diese Standardwerte werden mit Ihrer Vorlage gespeichert und in zukünftige KI-Aufforderungen einbezogen.",
+    sc_title_len:'Titel 70–140 Zeichen', sc_desc_len:'Beschreibung ≥800 Zeichen',
+    sc_tags_count:'Alle 13 Tags genutzt', sc_tags_safe:'Tags max. 20 Zeichen',
+    sc_tags_multi:'Tags sind Mehrwort-Phrasen', sc_materials:'Materialien angegeben (≥2)',
+    sc_category:'Kategorie ausgewählt', sc_price:'Preis gültig',
+    sc_photos:'Mehrere Fotos hochgeladen', sc_personal:'Personalisierungshinweis vorhanden',
+    sc_shipping:'Versandprofil ausgewählt',
   },
   tr: {
     nav_listings:"Listelerim", nav_bulk:"Toplu Yükleme", nav_upgrade:"Yükselt",
@@ -855,6 +867,12 @@ const STRINGS = {
     tools_shipping_placeholder:"Takip numarasıyla özenle paketlenerek kargoya verilir.",
     tools_cta_placeholder:"Özel renk veya beden için sipariş vermeden önce mesaj atın.",
     tools_brand_note:"Bu varsayılanlar şablonunuzla kaydedilir ve gelecekteki YZ istemlerine dahil edilir.",
+    sc_title_len:'Başlık 70–140 karakter', sc_desc_len:'Açıklama ≥800 karakter',
+    sc_tags_count:'13 etiketin tamamı kullanıldı', sc_tags_safe:'Etiketler max. 20 karakter',
+    sc_tags_multi:'Etiketler çok kelimeli ifadeler', sc_materials:'Malzeme girildi (≥2)',
+    sc_category:'Kategori seçildi', sc_price:'Fiyat geçerli',
+    sc_photos:'Birden fazla fotoğraf eklendi', sc_personal:'Kişiselleştirme talimatı var',
+    sc_shipping:'Kargo profili seçildi',
   }
 };
 let currentLang = localStorage.getItem('easylisting_lang') ||
@@ -909,6 +927,7 @@ function setLang(lang) {
 }
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
+  if (IS_GUEST) _sendFingerprint();
   // Pick up regenerate prefill from My Listings page
   const raw = sessionStorage.getItem('sd_regenerate');
   if (raw) {
@@ -932,6 +951,35 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) { /* ignore */ }
   }
 });
+
+// ── Browser fingerprint (guest incognito resistance) ──────────────────────
+async function _sendFingerprint() {
+  try {
+    const parts = [];
+    // Canvas
+    const cv = document.createElement('canvas');
+    const ctx = cv.getContext('2d');
+    ctx.textBaseline = 'top'; ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60'; ctx.fillRect(125, 1, 62, 20);
+    ctx.fillStyle = '#069'; ctx.fillText('klstl\u{1F6CD}️', 2, 15);
+    parts.push(cv.toDataURL());
+    // WebGL
+    const gl = document.createElement('canvas').getContext('webgl');
+    const ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
+    if (ext) { parts.push(gl.getParameter(ext.UNMASKED_VENDOR_WEBGL), gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)); }
+    // Stable device signals
+    parts.push(screen.width + 'x' + screen.height + 'x' + screen.colorDepth);
+    parts.push(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    parts.push(navigator.language, navigator.platform);
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(parts.join('||')));
+    const fp = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    await fetch('/api/fingerprint', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({fp}),
+    });
+  } catch(_) {}
+}
 
 // ── State ──────────────────────────────────────────────────────────────────
 const IS_GUEST = {{ 'true' if is_guest else 'false' }};
@@ -1473,17 +1521,23 @@ function collectListingFields() {
 function qualityChecks() {
   const f = collectListingFields();
   const titleLen = f.title.trim().length;
-  const descLen = f.description.trim().length;
-  const price = Number(f.price);
+  const descLen  = f.description.trim().length;
+  const price    = Number(f.price);
+  const tags     = f.tags || [];
+  const avgTagWords = tags.length ? tags.reduce((s,t) => s + t.trim().split(/\s+/).length, 0) / tags.length : 0;
+  const L = STRINGS[currentLang] || STRINGS.en;
   return [
-    {label:'Title has strong Etsy length', ok:titleLen >= 70 && titleLen <= 140, points:16},
-    {label:'Description is detailed', ok:descLen >= 700, points:16},
-    {label:'Uses all 13 tags', ok:f.tags.length >= 13, points:16},
-    {label:'Tags are Etsy-safe length', ok:f.tags.length > 0 && f.tags.every(t => t.length <= 20), points:12},
-    {label:'Price is valid', ok:Number.isFinite(price) && price >= 0.2 && price <= 50000, points:12},
-    {label:'Multiple photos attached', ok:f.image_previews.length >= 2, points:10},
-    {label:'Personalization guidance present', ok:f.personalization.trim().length >= 20, points:9},
-    {label:'Shipping profile selected', ok:IS_GUEST || !!f.shipping_profile_id, points:9},
+    {label: L.sc_title_len   || 'Title length 70–140 chars',         ok: titleLen >= 70 && titleLen <= 140,                                   points: 14},
+    {label: L.sc_desc_len    || 'Description ≥800 chars',            ok: descLen >= 800,                                                      points: 14},
+    {label: L.sc_tags_count  || 'All 13 tags used',                  ok: tags.length >= 13,                                                   points: 13},
+    {label: L.sc_tags_safe   || 'Tags ≤20 chars each',               ok: tags.length > 0 && tags.every(t => t.length <= 20),                  points: 8},
+    {label: L.sc_tags_multi  || 'Tags are multi-word phrases',       ok: avgTagWords >= 2,                                                    points: 8},
+    {label: L.sc_materials   || 'Materials listed (≥2)',             ok: (f.materials || []).length >= 2,                                     points: 10},
+    {label: L.sc_category    || 'Category selected',                 ok: f.category.trim().length > 0,                                       points: 8},
+    {label: L.sc_price       || 'Price is valid',                    ok: Number.isFinite(price) && price >= 0.2 && price <= 50000,            points: 8},
+    {label: L.sc_photos      || 'Multiple photos attached',          ok: f.image_previews.length >= 2,                                       points: 8},
+    {label: L.sc_personal    || 'Personalization guidance present',  ok: f.personalization.trim().length >= 20,                              points: 5},
+    {label: L.sc_shipping    || 'Shipping profile selected',         ok: IS_GUEST || !!f.shipping_profile_id,                               points: 4},
   ];
 }
 
