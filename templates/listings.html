@@ -160,7 +160,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
         </div>
       </div>
       <div class="card-actions">
-        <a href="{{ item.get('url') or 'https://www.etsy.com/listing/' ~ item['listing_id'] }}"
+        <a href="{% if item['state'] == 'draft' %}https://www.etsy.com/your/shops/me/tools/listings/{{ item['listing_id'] }}/edit{% else %}{{ item.get('url') or 'https://www.etsy.com/listing/' ~ item['listing_id'] }}{% endif %}"
            target="_blank" rel="noopener noreferrer" class="card-action" data-i18n="view">View</a>
         <button class="card-action primary"
                 data-listing-id="{{ item['listing_id'] }}"
