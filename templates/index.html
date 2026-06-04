@@ -1025,7 +1025,7 @@ async function _sendFingerprint() {
 }
 
 // ── Magic link modal ──────────────────────────────────────────────────────
-const EMAIL_VERIFIED = {{ 'true' if email_verified|default(false) else 'false' }};
+let EMAIL_VERIFIED = {{ 'true' if email_verified|default(false) else 'false' }};
 
 async function sendMagicLink() {
   const email = document.getElementById('magicEmailInput')?.value?.trim();
@@ -1067,6 +1067,7 @@ function startEmailVerifiedPolling() {
       const d = await r.json();
       if (d.verified) {
         clearInterval(_magicPollTimer);
+        EMAIL_VERIFIED = true;
         closeModal('magicModal');
         showToast(STRINGS[currentLang]?.magic_verified || 'E-posta doğrulandı ✓', 'success');
         startGenerate();
