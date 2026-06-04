@@ -47,7 +47,7 @@ footer { text-align:center; padding:32px; font-size:13px; color:var(--muted); bo
     <li><strong>Usage data</strong> — how many AI-generated listings you have created, to enforce free tier limits.</li>
     <li><strong>Billing data</strong> — if you subscribe to a paid plan, we store your Stripe customer ID and subscription ID. We do not store your credit card details (handled entirely by Stripe).</li>
   </ul>
-  <p>When you upload product images, those images are processed by our AI providers (Google Gemini, OpenAI) to generate listing content. Images are not permanently stored on our servers after processing.</p>
+  <p>When you upload product images, those images may be processed by our configured AI providers (Google Gemini, NVIDIA, optional paid OpenAI, and optional paid fal.ai for Pro photo variants) to generate listing content or product photo variants. Images are not permanently stored on our servers after processing.</p>
 
   <h2>2. How We Use Your Information</h2>
   <ul>
@@ -69,7 +69,8 @@ footer { text-align:center; padding:32px; font-size:13px; color:var(--muted); bo
 
   <h2>4. Third-Party Services</h2>
   <ul>
-    <li><strong>Google Gemini / OpenAI</strong> — your product images and optional text hints are sent to these services to generate listing content. Please review their respective privacy policies.</li>
+    <li><strong>Google Gemini / NVIDIA / optional OpenAI</strong> — your product images and optional text hints are sent to configured AI providers to generate listing content. Please review their respective privacy policies.</li>
+    <li><strong>fal.ai</strong> — used only when Pro photo variant generation is configured and requested.</li>
     <li><strong>Stripe</strong> — payment processing for paid plans. Stripe's privacy policy applies to all billing data.</li>
     <li><strong>Railway</strong> — our hosting provider. Application data is hosted on Railway's infrastructure.</li>
   </ul>
