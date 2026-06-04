@@ -9,3 +9,4 @@ openai==2.37.0
 Pillow==12.2.0
 stripe==15.1.0
 redis==5.2.1
+resend==2.10.0
