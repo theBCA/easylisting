@@ -170,7 +170,6 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
       <select id="provider">
         <option value="gemini" data-i18n="provider_gemini">Gemini (free)</option>
         <option value="nvidia" data-i18n="provider_nvidia">NVIDIA (free)</option>
-        <option value="openai">OpenAI</option>
       </select>
     </div>
     <button class="btn-gen" id="btnGen" data-i18n="generate_all">Generate All</button>
@@ -205,6 +204,7 @@ const STRINGS = {
     generate_all:'Generate All', results_heading:'Generated Listings', publish_all:'Publish All as Draft',
     only_images:'Only JPEG/PNG/WebP/GIF allowed', max_photos:'Max 20 photos at a time',
     free_limit:'Free limit reached. Upgrade for more.', skipped:'Free limit reached — remaining listings skipped.',
+    premium_required:'Bulk upload is available only on a paid plan.',
     quota:'Quota reached', failed:'Failed', network:'Network error', price:'Price (€)', category:'Category',
     save_draft:'Save as Draft', title_price_required:'Title and price are required',
     category_missing:'Category not found — edit manually then retry', publishing:'Publishing…',
@@ -219,6 +219,7 @@ const STRINGS = {
     generate_all:'Alle generieren', results_heading:'Generierte Listings', publish_all:'Alle als Entwurf veröffentlichen',
     only_images:'Nur JPEG/PNG/WebP/GIF erlaubt', max_photos:'Maximal 20 Fotos auf einmal',
     free_limit:'Kostenloses Limit erreicht. Upgrade für mehr.', skipped:'Kostenloses Limit erreicht — übrige Listings übersprungen.',
+    premium_required:'Bulk-Upload ist nur mit einem kostenpflichtigen Plan verfügbar.',
     quota:'Kontingent erreicht', failed:'Fehlgeschlagen', network:'Netzwerkfehler', price:'Preis (€)', category:'Kategorie',
     save_draft:'Als Entwurf speichern', title_price_required:'Titel und Preis sind erforderlich',
     category_missing:'Kategorie nicht gefunden — bitte manuell bearbeiten und erneut versuchen', publishing:'Wird veröffentlicht…',
@@ -233,6 +234,7 @@ const STRINGS = {
     generate_all:'Tümünü Oluştur', results_heading:'Oluşturulan İlanlar', publish_all:'Tümünü Taslak Olarak Yayınla',
     only_images:'Yalnızca JPEG/PNG/WebP/GIF kabul edilir', max_photos:'Tek seferde en fazla 20 fotoğraf',
     free_limit:'Ücretsiz limit doldu. Daha fazlası için yükseltin.', skipped:'Ücretsiz limit doldu — kalan ilanlar atlandı.',
+    premium_required:'Toplu Yükleme sadece ücretli planlarda kullanılabilir.',
     quota:'Kota doldu', failed:'Başarısız', network:'Ağ hatası', price:'Fiyat (€)', category:'Kategori',
     save_draft:'Taslak Olarak Kaydet', title_price_required:'Başlık ve fiyat gerekli',
     category_missing:'Kategori bulunamadı — elle düzenleyip tekrar deneyin', publishing:'Yayınlanıyor…',
@@ -374,6 +376,12 @@ async function startBulk() {
           for (let j = i + 1; j < files.length; j++) {
             results.push({ error: tr('quota'), file: files[j].file, idx: j });
           }
+          break;
+        }
+        if (data.error === 'premium_required') {
+          setThumbStatus(i, '🚫');
+          results.push({ error: tr('premium_required'), file: item.file, idx: i });
+          showToast(tr('premium_required'), 4000);
           break;
         }
         setThumbStatus(i, '❌');
