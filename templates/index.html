@@ -332,6 +332,29 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
 <div id="toast" class="toast"></div>
 
 <!-- PAYWALL MODAL -->
+<div class="modal-overlay" id="magicModal">
+  <div class="modal">
+    <div id="magicStep1">
+      <h2 data-i18n="magic_title">Ücretsiz 3 ilan hakkınız hazır</h2>
+      <p data-i18n="magic_sub">E-posta adresinize bir giriş bağlantısı gönderelim.</p>
+      <input type="email" id="magicEmailInput" class="field-input" style="margin:16px 0 12px;"
+             data-i18n-placeholder="magic_placeholder" placeholder="ornek@eposta.com">
+      <div id="magicError" style="color:#EF4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+      <div class="modal-actions">
+        <button class="btn-modal-primary" id="magicSendBtn" data-i18n="magic_send">Bağlantı gönder →</button>
+        <button class="btn-modal-secondary" id="magicCloseBtn" data-i18n="magic_skip">Şimdilik geç</button>
+      </div>
+    </div>
+    <div id="magicStep2" style="display:none;text-align:center;">
+      <div style="font-size:40px;margin-bottom:12px;">📬</div>
+      <h2 data-i18n="magic_sent_title">E-postanızı kontrol edin</h2>
+      <p id="magicSentDesc" style="color:var(--muted);font-size:14px;margin-top:8px;line-height:1.6;"
+         data-i18n="magic_sent_sub">Bağlantı gönderildi. Linke tıklayınca bu sekmeye dönebilirsiniz.</p>
+      <button class="btn-modal-secondary" style="margin-top:16px;" id="magicBackBtn" data-i18n="magic_resend">Farklı e-posta dene</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="paywallModal">
   <div class="modal">
     <h2 data-i18n="paywall_title">You've used your free generations</h2>
@@ -739,6 +762,11 @@ const STRINGS = {
     paywall_title:"You've used your free generations",
     paywall_body:"Upgrade to EasyListing Pro for unlimited AI generations and bulk listing tools.",
     paywall_upgrade:"View upgrade plans", paywall_later:"Maybe later", cancel:"Cancel",
+    magic_title:"Your 3 free listings are ready", magic_sub:"We'll send a sign-in link to your email.",
+    magic_placeholder:"you@example.com", magic_send:"Send link →",
+    magic_skip:"Skip for now", magic_sent_title:"Check your email",
+    magic_sent_sub:"Link sent. Click it and you'll be brought right back.",
+    magic_resend:"Try a different email",
     tools_improve_title:"AI improve tools",
     tools_title_seo:"Make title more searchable", tools_desc_warm:"Make description warmer",
     tools_better_tags:"Generate better tags", tools_shorten_etsy:"Shorten for Etsy",
@@ -794,6 +822,11 @@ const STRINGS = {
     paywall_title:"Kostenlose Generierungen aufgebraucht",
     paywall_body:"Upgrade auf EasyListing Pro für unbegrenzte KI-Generierungen und Bulk-Listing-Tools.",
     paywall_upgrade:"Upgrade-Pläne ansehen", paywall_later:"Vielleicht später", cancel:"Abbrechen",
+    magic_title:"Deine 3 kostenlosen Listings warten", magic_sub:"Wir senden dir einen Anmelde-Link per E-Mail.",
+    magic_placeholder:"du@beispiel.de", magic_send:"Link senden →",
+    magic_skip:"Jetzt überspringen", magic_sent_title:"Prüfe deine E-Mails",
+    magic_sent_sub:"Link wurde gesendet. Klicke darauf und du wirst zurückgebracht.",
+    magic_resend:"Andere E-Mail versuchen",
     tools_improve_title:"KI-Verbesserungstools",
     tools_title_seo:"Titel suchbarer machen", tools_desc_warm:"Beschreibung wärmer gestalten",
     tools_better_tags:"Bessere Tags generieren", tools_shorten_etsy:"Für Etsy kürzen",
@@ -849,6 +882,11 @@ const STRINGS = {
     paywall_title:"Ücretsiz oluşturma hakkınız bitti",
     paywall_body:"Sınırsız yapay zeka üretimi ve toplu ilan araçları için kolaylistele Pro'ya yükseltin.",
     paywall_upgrade:"Yükseltme planlarını gör", paywall_later:"Belki daha sonra", cancel:"İptal",
+    magic_title:"3 ücretsiz ilan hakkınız hazır", magic_sub:"E-posta adresinize bir giriş bağlantısı gönderelim.",
+    magic_placeholder:"siz@ornek.com", magic_send:"Bağlantı gönder →",
+    magic_skip:"Şimdilik geç", magic_sent_title:"E-postanızı kontrol edin",
+    magic_sent_sub:"Bağlantı gönderildi. Linke tıklayınca bu sayfaya dönersiniz.",
+    magic_resend:"Farklı e-posta dene",
     tools_improve_title:"YZ iyileştirme araçları",
     tools_title_seo:"Başlığı daha aranabilir yap", tools_desc_warm:"Açıklamayı daha samimi yap",
     tools_better_tags:"Daha iyi etiketler üret", tools_shorten_etsy:"Etsy için kısalt",
@@ -982,6 +1020,39 @@ async function _sendFingerprint() {
     // so it reflects the fingerprint-based ID's actual remaining count.
     await refreshUsageBadge();
   } catch(_) {}
+}
+
+// ── Magic link modal ──────────────────────────────────────────────────────
+const EMAIL_VERIFIED = {{ 'true' if email_verified|default(false) else 'false' }};
+
+async function sendMagicLink() {
+  const email = document.getElementById('magicEmailInput')?.value?.trim();
+  const errEl = document.getElementById('magicError');
+  const btn   = document.getElementById('magicSendBtn');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (errEl) { errEl.textContent = STRINGS[currentLang]?.magic_placeholder || 'Geçerli bir e-posta girin'; errEl.style.display='block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const res  = await fetch('/api/magic-link', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email}),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      const msgs = {invalid_email: 'Geçersiz e-posta.', too_many_requests: 'Çok fazla deneme. Lütfen bekleyin.', send_failed: 'Gönderilemedi, tekrar deneyin.'};
+      if (errEl) { errEl.textContent = msgs[data.error] || data.error; errEl.style.display = 'block'; }
+      if (btn) { btn.disabled = false; btn.textContent = STRINGS[currentLang]?.magic_send || 'Bağlantı gönder →'; }
+      return;
+    }
+    document.getElementById('magicStep1').style.display = 'none';
+    document.getElementById('magicStep2').style.display = 'block';
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Bağlantı hatası.'; errEl.style.display = 'block'; }
+    if (btn) { btn.disabled = false; }
+  }
 }
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -1363,8 +1434,8 @@ async function saveTemplate() {
 // ── Generate ──────────────────────────────────────────────────────────────
 async function startGenerate() {
   if (!selectedFiles.length) return;
-  // Ensure fingerprint is registered before hitting the API so the server
-  // uses the correct (possibly exhausted) fp-based guest ID.
+  // Show email verification modal for guests who haven't verified yet
+  if (IS_GUEST && !EMAIL_VERIFIED) { openModal('magicModal'); return; }
   if (IS_GUEST) await _fpReady;
   showScreen('loading-screen');
   animateSteps();
@@ -2033,6 +2104,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Paywall close button
   document.getElementById('paywallCloseBtn')?.addEventListener('click', () => closeModal('paywallModal'));
+  document.getElementById('magicSendBtn')?.addEventListener('click', sendMagicLink);
+  document.getElementById('magicEmailInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') sendMagicLink(); });
+  document.getElementById('magicCloseBtn')?.addEventListener('click', () => closeModal('magicModal'));
+  document.getElementById('magicBackBtn')?.addEventListener('click', () => {
+    document.getElementById('magicStep1').style.display = 'block';
+    document.getElementById('magicStep2').style.display = 'none';
+    document.getElementById('magicSendBtn').disabled = false;
+    document.getElementById('magicSendBtn').textContent = STRINGS[currentLang]?.magic_send || 'Bağlantı gönder →';
+  });
 
   document.getElementById('copyAllBtn')?.addEventListener('click', copyAll);
 });

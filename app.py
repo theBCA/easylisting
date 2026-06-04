@@ -25,6 +25,7 @@ from db import (
     save_template, get_template,
     set_premium, get_shop, get_shop_by_stripe_customer,
     log_abuse_signal, get_abuse_summary,
+    get_or_create_email_shop, create_magic_link, use_magic_link, count_recent_magic_links,
 )
 
 load_dotenv()
@@ -255,6 +256,10 @@ def _get_or_create_guest_id():
     return guest_id
 
 def guest_shop_id():
+    # Email-verified ID is the most authoritative — set by /auth/magic
+    email_id = session.get("email_shop_id")
+    if email_id and isinstance(email_id, str) and email_id.startswith("guest_email_"):
+        return email_id
     # Fingerprint-based ID survives incognito resets (set by /api/fingerprint)
     fp_id = session.get("fp_guest_id")
     if fp_id and isinstance(fp_id, str) and fp_id.startswith("guest_fp_"):
@@ -262,6 +267,9 @@ def guest_shop_id():
     guest_id = _get_or_create_guest_id()
     guest_hash = hashlib.sha256(f"guest:{guest_id}".encode()).hexdigest()[:16]
     return f"guest_{guest_hash}"
+
+def is_email_verified():
+    return bool(session.get("email_verified") and session.get("email_shop_id"))
 
 def provider_chain():
     chain = ["gemini", "nvidia"]
@@ -890,6 +898,94 @@ def api_fingerprint():
 
     return jsonify({"ok": True})
 
+# ── Magic link routes ────────────────────────────────────────────────────────
+
+@app.route("/api/magic-link", methods=["POST"])
+@csrf.exempt
+@limiter.limit("5 per minute; 10 per hour")
+def api_magic_link():
+    if not is_guest():
+        return jsonify({"error": "not_guest"}), 400
+    body  = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+
+    import re
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return jsonify({"error": "invalid_email"}), 400
+
+    email_hash = hashlib.sha256(email.encode()).hexdigest()
+
+    if count_recent_magic_links(email_hash, minutes=60) >= 5:
+        return jsonify({"error": "too_many_requests"}), 429
+
+    shop_id_for_email = get_or_create_email_shop(email_hash)
+    ensure_shop(shop_id_for_email, "Guest")
+
+    # Migrate usage from current session ID so the counter stays correct
+    current_sid  = guest_shop_id()
+    if current_sid != shop_id_for_email:
+        current_shop = get_shop(current_sid)
+        email_shop   = get_shop(shop_id_for_email)
+        if (email_shop and email_shop.get("free_used", 0) == 0
+                and current_shop and current_shop.get("free_used", 0) > 0):
+            from db import _conn as _db_conn
+            with _db_conn() as con:
+                con.execute("UPDATE shops SET free_used = ? WHERE shop_id = ?",
+                            (int(current_shop["free_used"]), shop_id_for_email))
+
+    token = secrets.token_urlsafe(32)
+    create_magic_link(token, email_hash, shop_id_for_email)
+
+    base  = REDIRECT_URI.replace("/auth/callback", "")
+    link  = f"{base}/auth/magic?token={token}"
+    lang  = session.get("lang", "tr")
+
+    if lang == "tr":
+        subject  = "kolaylistele — Giriş bağlantınız"
+        greeting = "Merhaba!"
+        body_txt = f"Ücretsiz ilanlarınıza erişmek için aşağıdaki bağlantıya tıklayın:\n\n{link}\n\nBu bağlantı 15 dakika geçerlidir."
+        btn_text = "Devam Et →"
+        expire   = "Bu bağlantı 15 dakika geçerlidir."
+    else:
+        subject  = "EasyListing — Your sign-in link"
+        greeting = "Hi!"
+        body_txt = f"Click the link below to access your free listings:\n\n{link}\n\nThis link expires in 15 minutes."
+        btn_text = "Continue →"
+        expire   = "This link expires in 15 minutes."
+
+    html = f"""<!DOCTYPE html>
+<html><body style="font-family:Inter,Arial,sans-serif;background:#F6F7FB;margin:0;padding:32px 16px;">
+<div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;padding:40px 36px;box-shadow:0 2px 16px rgba(91,71,224,.1);">
+  <div style="font-size:22px;font-weight:900;color:#5B47E0;margin-bottom:24px;">{'kolay<span style="color:#111827">listele</span>' if lang=='tr' else 'Easy<span style="color:#111827">Listing</span>'}</div>
+  <p style="font-size:16px;font-weight:700;color:#111827;margin:0 0 10px;">{greeting}</p>
+  <p style="font-size:14px;color:#6B7280;line-height:1.6;margin:0 0 28px;">{"Ücretsiz 3 ilan oluşturma hakkınıza erişmek için aşağıdaki butona tıklayın." if lang=="tr" else "Click below to access your 3 free AI listing generations."}</p>
+  <a href="{link}" style="display:block;background:linear-gradient(135deg,#6B5AED,#5B47E0);color:white;text-decoration:none;text-align:center;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;">{btn_text}</a>
+  <p style="font-size:12px;color:#9CA3AF;margin:20px 0 0;text-align:center;">{expire}</p>
+</div></body></html>"""
+
+    ok = send_email(email, subject, body_txt, html)
+    if not ok:
+        return jsonify({"error": "send_failed"}), 500
+
+    return jsonify({"ok": True})
+
+
+@app.route("/auth/magic")
+@limiter.limit("20 per minute")
+def auth_magic():
+    token = request.args.get("token", "")
+    row   = use_magic_link(token) if token else None
+    if not row:
+        return render_template("connect.html",
+            error="Bu bağlantı geçersiz veya süresi dolmuş. Lütfen tekrar deneyin.")
+
+    session["guest"]         = True
+    session["email_verified"] = True
+    session["email_shop_id"]  = row["shop_id"]
+    session.permanent         = True
+    return redirect(url_for("index"))
+
+
 # ── App routes ────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -902,7 +998,8 @@ def index():
         _, remaining = can_generate(gid, GUEST_FREE_LIMIT)
         return render_template("index.html",
             shop_name=None, remaining=remaining, free_limit=GUEST_FREE_LIMIT,
-            unlimited=False, is_guest=True, has_premium=False)
+            unlimited=False, is_guest=True, has_premium=False,
+            email_verified=is_email_verified())
     sid = str(shop_id())
     _, remaining = can_generate(sid)
     from db import FREE_LIMIT
