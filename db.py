@@ -224,19 +224,19 @@ def create_magic_link(token: str, email_hash: str, shop_id: str):
 
 def use_magic_link(token: str) -> dict | None:
     with _conn() as con:
-        row = con.execute(
-            """SELECT * FROM magic_links
+        # Atomic: only marks used if not already used AND within 15-minute window
+        cur = con.execute(
+            """UPDATE magic_links SET used_at = CURRENT_TIMESTAMP
                WHERE token = ? AND used_at IS NULL
                AND created_at >= datetime('now', '-15 minutes')""",
             (token,),
-        ).fetchone()
-        if not row:
-            return None
-        con.execute(
-            "UPDATE magic_links SET used_at = CURRENT_TIMESTAMP WHERE token = ?",
-            (token,),
         )
-        return dict(row)
+        if cur.rowcount == 0:
+            return None
+        row = con.execute(
+            "SELECT * FROM magic_links WHERE token = ?", (token,)
+        ).fetchone()
+        return dict(row) if row else None
 
 
 def count_recent_magic_links(email_hash: str, minutes: int = 60) -> int:
