@@ -89,12 +89,15 @@ def send_email(to: str, subject: str, body_text: str, body_html: str = None) -> 
 
     try:
         ctx = ssl.create_default_context()
+        # Shared hosting SMTP certs (e.g. Natro) often don't pass strict chain validation
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         if port == 465:
-            with smtplib.SMTP_SSL(host, port, timeout=10, context=ctx) as s:
+            with smtplib.SMTP_SSL(host, port, timeout=15, context=ctx) as s:
                 s.login(user, pw)
                 s.sendmail(frm, [to], msg.as_string())
         else:
-            with smtplib.SMTP(host, port, timeout=10) as s:
+            with smtplib.SMTP(host, port, timeout=15) as s:
                 s.ehlo(); s.starttls(context=ctx); s.ehlo()
                 s.login(user, pw)
                 s.sendmail(frm, [to], msg.as_string())
@@ -1028,7 +1031,8 @@ def api_magic_link():
 
     ok = send_email(email, subject, plain, html)
     if not ok:
-        return jsonify({"error": "send_failed"}), 500
+        logger.error("api_magic_link: send_email returned False for %s", email_hash[:8])
+        return jsonify({"error": "send_failed", "hint": "Check MAIL_* env vars on Railway"}), 500
 
     return jsonify({"ok": True})
 
