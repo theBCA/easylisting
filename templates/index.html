@@ -268,7 +268,9 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
   <div class="nav-logo" id="navLogo">Easy<span>Listing</span></div>
   <div class="nav-links">
     <a href="/listings" data-i18n="nav_listings">My Listings</a>
+    {% if has_premium %}
     <a href="/bulk" data-i18n="nav_bulk">Bulk Upload</a>
+    {% endif %}
     <span class="nav-sep">|</span>
     {% if unlimited %}
     <span class="usage-badge unlimited">✓ Unlimited</span>
