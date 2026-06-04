@@ -31,6 +31,11 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 .nav-links a:hover { color: var(--text); }
 .usage-badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: #FFF3CD; color: #856404; }
 .usage-badge.unlimited { background: #D4EDDA; color: #155724; }
+.usage-bar-wrap { display:flex; align-items:center; gap:7px; }
+.usage-bar-track { width:60px; height:6px; background:#E5E7F0; border-radius:3px; overflow:hidden; }
+.usage-bar-fill { height:100%; border-radius:3px; background:#5B47E0; transition:width .4s; }
+.usage-bar-fill.low { background:#EF4444; }
+.usage-bar-label { font-size:12px; font-weight:700; color:#856404; white-space:nowrap; }
 .nav-sep { color: var(--border); }
 .btn-icon { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary); padding: 0; }
 .lang-switcher { display: flex; gap: 2px; }
@@ -224,7 +229,15 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     {% if unlimited %}
     <span class="usage-badge unlimited">✓ Unlimited</span>
     {% else %}
-    <span class="usage-badge" id="usageBadge">{{ remaining }} <span data-i18n="nav_free_left">free left</span></span>
+    <div class="usage-bar-wrap" id="usageBarWrap">
+      <div class="usage-bar-track">
+        <div class="usage-bar-fill {% if remaining == 0 %}low{% endif %}" id="usageBarFill"
+             style="width:{{ [(remaining / free_limit * 100)|int, 0]|max }}%"></div>
+      </div>
+      <span class="usage-bar-label" id="usageBadge">
+        {{ remaining }}/{{ free_limit }} <span data-i18n="nav_free_left">free left</span>
+      </span>
+    </div>
     {% endif %}
     <a href="/upgrade" class="btn-icon" style="text-decoration:none;" data-i18n="nav_upgrade">Upgrade</a>
     <span class="nav-sep">|</span>
@@ -1422,13 +1435,16 @@ async function refreshUsageBadge() {
     const res = await fetch('/api/status');
     const d   = await res.json();
     const badge = byId('usageBadge');
+    const fill  = byId('usageBarFill');
     if (!badge) return;
     if (d.remaining >= 999) {
-      badge.textContent = '✓ Unlimited';
-      badge.classList.add('unlimited');
+      badge.innerHTML = '✓ Unlimited';
+      badge.closest('.usage-bar-wrap') && (badge.closest('.usage-bar-wrap').innerHTML = '<span class="usage-badge unlimited">✓ Unlimited</span>');
     } else {
-      badge.textContent = d.remaining + ' ' + (STRINGS[currentLang].nav_free_left || 'free left');
-      badge.classList.remove('unlimited');
+      const limit = {{ free_limit }};
+      const pct   = Math.max(0, Math.round(d.remaining / limit * 100));
+      badge.innerHTML = d.remaining + '/' + limit + ' <span>' + (STRINGS[currentLang].nav_free_left || 'free left') + '</span>';
+      if (fill) { fill.style.width = pct + '%'; fill.classList.toggle('low', d.remaining === 0); }
     }
   } catch(_) {}
 }
