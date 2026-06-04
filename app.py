@@ -24,6 +24,7 @@ from db import (
     can_generate_photo_variants, increment_photo_variant_usage,
     save_template, get_template,
     set_premium, get_shop, get_shop_by_stripe_customer,
+    log_abuse_signal, get_abuse_summary,
 )
 
 load_dotenv()
@@ -796,6 +797,7 @@ def disconnect():
 def start_guest():
     session.clear()
     session["guest"] = True
+    log_abuse_signal("new_guest", ip_hash=_ip_hash())
     return redirect(url_for("index"))
 
 @app.route("/api/fingerprint", methods=["POST"])
@@ -826,14 +828,23 @@ def api_fingerprint():
     if current_sid != fp_guest_id:
         fp_shop      = get_shop(fp_guest_id)
         current_shop = get_shop(current_sid)
-        if (fp_shop and fp_shop.get("free_used", 0) == 0
-                and current_shop and current_shop.get("free_used", 0) > 0):
-            from db import _conn as _db_conn
-            with _db_conn() as con:
-                con.execute(
-                    "UPDATE shops SET free_used = ? WHERE shop_id = ?",
-                    (int(current_shop["free_used"]), fp_guest_id),
-                )
+        if fp_shop and current_shop:
+            if fp_shop.get("free_used", 0) == 0 and current_shop.get("free_used", 0) > 0:
+                # Migrate usage from random ID to fp ID
+                from db import _conn as _db_conn
+                with _db_conn() as con:
+                    con.execute(
+                        "UPDATE shops SET free_used = ? WHERE shop_id = ?",
+                        (int(current_shop["free_used"]), fp_guest_id),
+                    )
+            elif fp_shop.get("free_used", 0) > 0 and current_shop.get("free_used", 0) == 0:
+                # fp ID already has usage but came in with a fresh random ID —
+                # this is the incognito/cleared-cookie pattern; log it.
+                log_abuse_signal("fp_conflict", ip_hash=_ip_hash(),
+                                 guest_id=current_sid, fp_hash=fp[:24],
+                                 detail=f"fp_used={fp_shop['free_used']}")
+                logger.info("ABUSE fp_conflict ip=%s fp=%s new_guest=%s",
+                            _ip_hash(), fp[:24], current_sid)
 
     return jsonify({"ok": True})
 
@@ -909,6 +920,10 @@ def api_generate():
         sid = str(shop_id())
         allowed, remaining = can_generate(sid)
     if not allowed:
+        if is_guest():
+            log_abuse_signal("limit_hit", ip_hash=_ip_hash(), guest_id=sid,
+                             fp_hash=session.get("fp_guest_id", "")[-24:] or None)
+            logger.info("ABUSE limit_hit ip=%s guest=%s", _ip_hash(), sid)
         return jsonify({"error": "free_limit_reached", "remaining": 0}), 403
 
     images       = request.files.getlist("images")
@@ -1516,6 +1531,10 @@ _PLAN_PRICE_IDS_TRY = {
     "pro_annual":     "STRIPE_PRO_ANNUAL_PRICE_ID_TRY",
 }
 
+def _ip_hash() -> str:
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    return hashlib.sha256(ip.encode()).hexdigest()[:16]
+
 def _is_try_domain() -> bool:
     host = request.host or ""
     return "kolaylistele" in host
@@ -1589,6 +1608,29 @@ def stripe_webhook():
             logger.info("Premium deactivated for shop %s", s["shop_id"])
 
     return jsonify({"received": True})
+
+# ── Admin / abuse monitoring ─────────────────────────────────────────────────
+
+@app.route("/admin/abuse")
+def admin_abuse():
+    token = request.args.get("token", "")
+    expected = os.getenv("ADMIN_TOKEN", "")
+    if not expected or not secrets.compare_digest(token, expected):
+        return "", 404
+    days = int(request.args.get("days", 7))
+    data = get_abuse_summary(days)
+    lines = [f"<h2>Abuse signals — last {days} days</h2>"]
+    lines.append("<h3>By event</h3><pre>")
+    for event, n in data["by_event"].items():
+        lines.append(f"  {event:<25} {n:>6}")
+    lines.append("</pre><h3>Top IPs (by unique guest IDs created)</h3><pre>")
+    for r in data["top_ips"]:
+        lines.append(f"  ip={r['ip_hash']}  guests={r['guests']}  events={r['events']}")
+    lines.append("</pre><h3>Top fingerprints (by unique guest IDs)</h3><pre>")
+    for r in data["top_fps"]:
+        lines.append(f"  fp={r['fp_hash']}  guests={r['guests']}  events={r['events']}")
+    lines.append("</pre>")
+    return "\n".join(lines), 200, {"Content-Type": "text/html"}
 
 # ── Legal pages ───────────────────────────────────────────────────────────────
 
