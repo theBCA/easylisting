@@ -88,9 +88,9 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
   <a href="/" class="nav-logo" id="navLogo">Easy<span>Listing</span></a>
   <div class="nav-right">
     <div class="lang-switcher">
-      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
-      <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
-      <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="de">DE</button>
+      <button class="lang-btn" data-lang="tr">TR</button>
     </div>
     <a href="/" class="btn-back" id="t-back">← Back</a>
   </div>
@@ -157,7 +157,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       {% if current_plan == 'starter' %}
         <button class="btn-plan active-plan" id="t-start-btn">✓ Current plan</button>
       {% elif has_starter %}
-        <button class="btn-plan cta" id="t-start-btn" onclick="startCheckout('starter')">Get Starter →</button>
+        <button class="btn-plan cta" id="t-start-btn" data-checkout-plan="starter">Get Starter →</button>
       {% else %}
         <button class="btn-plan ghost" id="t-start-btn" disabled>Coming soon</button>
       {% endif %}
@@ -182,7 +182,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       {% if current_plan == 'pro' %}
         <button class="btn-plan active-plan" id="t-pro-btn">✓ Current plan</button>
       {% elif has_pro %}
-        <button class="btn-plan cta-green" id="t-pro-btn" onclick="startCheckout('pro')">Get Pro →</button>
+        <button class="btn-plan cta-green" id="t-pro-btn" data-checkout-plan="pro">Get Pro →</button>
       {% else %}
         <button class="btn-plan ghost" id="t-pro-btn" disabled>Coming soon</button>
       {% endif %}
@@ -414,6 +414,16 @@ function startCheckout() {}
 const saved = localStorage.getItem('easylisting_lang') ||
   (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
 setLang(saved);
+
+// ── Event listeners (replacing inline handlers) ────────────────────────────
+document.querySelectorAll('.lang-btn').forEach(btn =>
+  btn.addEventListener('click', () => setLang(btn.dataset.lang)));
+
+// Event delegation for server-rendered checkout buttons
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-checkout-plan]');
+  if (btn) startCheckout(btn.dataset.checkoutPlan);
+});
 </script>
 </body>
 </html>

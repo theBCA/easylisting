@@ -82,9 +82,9 @@ footer { text-align:center; padding:18px; font-size:11px; color:var(--muted); }
 <nav>
   <div class="nav-logo" id="navLogo">Easy<span>Listing</span></div>
   <div class="lang-switcher">
-    <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
-    <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
-    <button class="lang-btn" data-lang="tr" onclick="setLang('tr')">TR</button>
+    <button class="lang-btn" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="de">DE</button>
+    <button class="lang-btn" data-lang="tr">TR</button>
   </div>
 </nav>
 
@@ -102,7 +102,7 @@ footer { text-align:center; padding:18px; font-size:11px; color:var(--muted); }
     <!-- Platform picker -->
     <div class="platform-label" id="t-platform-label">Choose your marketplace</div>
     <div class="platforms">
-      <button class="platform-btn selected" id="btn-etsy" onclick="selectPlatform('etsy')">
+      <button class="platform-btn selected" id="btn-etsy" data-platform="etsy">
         <div class="platform-icon" style="background:#FFF0E9;">🛍</div>
         <span class="platform-name">Etsy</span>
         <div class="platform-check">
@@ -251,6 +251,13 @@ function selectPlatform(p) {
   const chk = el.querySelector('.platform-check');
   if (chk) chk.style.display = 'flex';
 }
+
+// ── Event listeners (replacing inline handlers) ────────────────────────────
+document.querySelectorAll('.lang-btn').forEach(btn =>
+  btn.addEventListener('click', () => setLang(btn.dataset.lang)));
+
+document.querySelectorAll('.platform-btn[data-platform]').forEach(btn =>
+  btn.addEventListener('click', () => selectPlatform(btn.dataset.platform)));
 
 // Init
 const saved = localStorage.getItem('easylisting_lang') ||
