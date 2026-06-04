@@ -751,9 +751,12 @@ def auth_start():
     challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
     state     = secrets.token_urlsafe(16)
 
+    pre_oauth_guest = guest_shop_id() if is_guest() else None
     session.clear()  # prevent session fixation
     session["pkce_verifier"] = verifier
     session["oauth_state"]   = state
+    if pre_oauth_guest:
+        session["_pre_oauth_guest_id"] = pre_oauth_guest
 
     url = "https://www.etsy.com/oauth/connect?" + urllib.parse.urlencode({
         "response_type":         "code",
@@ -891,7 +894,7 @@ def api_magic_link():
     if not is_guest():
         return jsonify({"error": "not_guest"}), 400
     if is_email_verified():
-        return jsonify({"ok": True, "already_verified": True})
+        return jsonify({"ok": True})
     body  = request.get_json(silent=True) or {}
     email = (body.get("email") or "").strip().lower()
 
@@ -1017,7 +1020,7 @@ def api_magic_link():
     ok, err_reason = send_email(email, subject, plain, html)
     if not ok:
         logger.error("api_magic_link: send_email failed for %s: %s", email_hash[:8], err_reason)
-        return jsonify({"error": "send_failed", "reason": err_reason}), 500
+        return jsonify({"error": "send_failed"}), 500
 
     return jsonify({"ok": True})
 
@@ -1069,6 +1072,8 @@ def index():
 @app.route("/api/email-verified")
 @limiter.limit("30 per minute")
 def api_email_verified():
+    if not is_authorized():
+        return jsonify({"error": "Not connected"}), 401
     return jsonify({"verified": is_email_verified()})
 
 
@@ -1518,7 +1523,9 @@ def api_generate_photos():
     if not FAL_KEY:
         return jsonify({"error": "Photo generation is not configured yet."}), 503
 
-    sid = str(shop_id())
+    sid = str(shop_id()) if shop_id() else None
+    if not sid:
+        return jsonify({"error": "Invalid shop"}), 400
     allowed, remaining = can_generate_photo_variants(sid, PHOTO_VARIANT_COUNT)
     if not allowed:
         return jsonify({"error": "photo_limit_reached", "remaining": remaining}), 403

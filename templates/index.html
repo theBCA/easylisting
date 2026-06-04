@@ -1015,13 +1015,19 @@ async function _sendFingerprint() {
     const fp = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
     await fetch('/api/fingerprint', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: csrfHeaders(),
       body: JSON.stringify({fp}),
     });
     // After fingerprint is registered server-side, refresh the usage bar
     // so it reflects the fingerprint-based ID's actual remaining count.
     await refreshUsageBadge();
   } catch(_) {}
+}
+
+// ── CSRF helper ───────────────────────────────────────────────────────────
+function csrfHeaders(extra) {
+  return Object.assign({'Content-Type':'application/json',
+    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')}, extra);
 }
 
 // ── Magic link modal ──────────────────────────────────────────────────────
@@ -1039,7 +1045,7 @@ async function sendMagicLink() {
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   try {
     const res  = await fetch('/api/magic-link', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
+      method: 'POST', headers: csrfHeaders(),
       body: JSON.stringify({email}),
     });
     const data = await res.json();
@@ -1320,8 +1326,11 @@ function buildPlatformField(f, val) {
     tbl.className = 'plt-kv-table';
     const obj = typeof val === 'object' && !Array.isArray(val) ? val : {};
     Object.entries(obj).forEach(([k, v]) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${k}</td><td><input value="${v}"></td>`;
+      const tr  = document.createElement('tr');
+      const td1 = document.createElement('td'); td1.textContent = k;
+      const td2 = document.createElement('td');
+      const inp = document.createElement('input'); inp.value = String(v ?? '');
+      td2.appendChild(inp); tr.appendChild(td1); tr.appendChild(td2);
       tbl.appendChild(tr);
     });
     card.appendChild(tbl);
@@ -1336,8 +1345,11 @@ function buildPlatformField(f, val) {
     tbl.className = 'plt-kv-table';
     const arr = Array.isArray(val) ? val : [];
     arr.forEach(row => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${row.name||row.key||''}</td><td><input value="${row.value||''}"></td>`;
+      const tr  = document.createElement('tr');
+      const td1 = document.createElement('td'); td1.textContent = row.name || row.key || '';
+      const td2 = document.createElement('td');
+      const inp = document.createElement('input'); inp.value = String(row.value ?? '');
+      td2.appendChild(inp); tr.appendChild(td1); tr.appendChild(td2);
       tbl.appendChild(tr);
     });
     card.appendChild(tbl);
@@ -1454,7 +1466,7 @@ async function saveTemplate() {
   };
   try {
     const res = await fetch('/api/template', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:csrfHeaders(),
       body: JSON.stringify(payload),
     });
     const d = await res.json();
@@ -1483,6 +1495,7 @@ async function startGenerate() {
   if (nvidiaModel) fd.append('nvidia_model', nvidiaModel.value);
 
   try {
+    fd.append('csrf_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
     const res  = await fetch('/api/generate', { method:'POST', body:fd });
     const data = await res.json();
     if (data.error === 'free_limit_reached') {
@@ -1674,7 +1687,7 @@ async function translateTo(lang) {
   btns.forEach(b => b.classList.add('loading'));
   try {
     const res = await fetch('/api/translate', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:csrfHeaders(),
       body: JSON.stringify({
         lang,
         title:       document.getElementById('r-title').value,
@@ -1704,7 +1717,7 @@ async function improveListing(action, btn) {
   btn.disabled = true;
   try {
     const res = await fetch('/api/improve-listing', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:csrfHeaders(),
       body: JSON.stringify(payload),
     });
     const d = await res.json();
@@ -1732,7 +1745,7 @@ async function generateVariants() {
     const payload = collectListingFields();
     payload.lang = document.getElementById('langSelect')?.value || currentLang;
     const res = await fetch('/api/listing-variants', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:csrfHeaders(),
       body: JSON.stringify(payload),
     });
     const d = await res.json();
@@ -1775,7 +1788,7 @@ async function generatePhotoVariants() {
   try {
     const payload = {...collectListingFields(), image};
     const res = await fetch('/api/generate-photos', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:csrfHeaders(),
       body: JSON.stringify(payload),
     });
     const d = await res.json();
@@ -1842,7 +1855,7 @@ async function publish() {
 
   try {
     const res  = await fetch('/api/publish', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:csrfHeaders(),
       body: JSON.stringify(payload),
     });
     const data = await res.json();
@@ -1976,7 +1989,9 @@ function taxonomySearch(q) {
   const dd = document.getElementById('taxonomy-dropdown');
   if (!q) { dd.style.display='none'; return; }
   taxDebounce = setTimeout(async () => {
+    try {
     const res   = await fetch('/api/taxonomy?q=' + encodeURIComponent(q));
+    if (!res.ok) return;
     const items = await res.json();
     dd.innerHTML = '';
     items.forEach(item => {
@@ -1992,6 +2007,7 @@ function taxonomySearch(q) {
       dd.appendChild(d);
     });
     dd.style.display = items.length ? 'block' : 'none';
+    } catch(_) { dd.style.display = 'none'; }
   }, 280);
 }
 document.addEventListener('click', e => {
@@ -2001,13 +2017,17 @@ document.addEventListener('click', e => {
 
 // ── Modals ─────────────────────────────────────────────────────────────────
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeModal(id) {
+  document.getElementById(id)?.classList.remove('open');
+  if (id === 'magicModal') { clearInterval(_magicPollTimer); _magicPollTimer = null; }
+}
 document.querySelectorAll('.modal-overlay').forEach(el =>
   el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); }));
 
 async function refreshUsageBadge() {
   try {
     const res = await fetch('/api/status');
+    if (res.status === 401) { window.location.href = '/connect'; return; }
     const d   = await res.json();
     const badge = byId('usageBadge');
     const fill  = byId('usageBarFill');
@@ -2138,7 +2158,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('paywallCloseBtn')?.addEventListener('click', () => closeModal('paywallModal'));
   document.getElementById('magicSendBtn')?.addEventListener('click', sendMagicLink);
   document.getElementById('magicEmailInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') sendMagicLink(); });
-  document.getElementById('magicCloseBtn')?.addEventListener('click', () => closeModal('magicModal'));
+  document.getElementById('magicCloseBtn')?.addEventListener('click', () => { clearInterval(_magicPollTimer); _magicPollTimer = null; closeModal('magicModal'); });
   document.getElementById('magicBackBtn')?.addEventListener('click', () => {
     document.getElementById('magicStep1').style.display = 'block';
     document.getElementById('magicStep2').style.display = 'none';
