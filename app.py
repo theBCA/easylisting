@@ -938,32 +938,95 @@ def api_magic_link():
 
     base  = REDIRECT_URI.replace("/auth/callback", "")
     link  = f"{base}/auth/magic?token={token}"
-    lang  = session.get("lang", "tr")
+    is_tr = "kolaylistele" in base or request.host and "kolaylistele" in request.host
 
-    if lang == "tr":
-        subject  = "kolaylistele — Giriş bağlantınız"
-        greeting = "Merhaba!"
-        body_txt = f"Ücretsiz ilanlarınıza erişmek için aşağıdaki bağlantıya tıklayın:\n\n{link}\n\nBu bağlantı 15 dakika geçerlidir."
-        btn_text = "Devam Et →"
-        expire   = "Bu bağlantı 15 dakika geçerlidir."
+    if is_tr:
+        subject   = "kolaylistele — Giriş bağlantınız"
+        pre_head  = "Ücretsiz ilanlarınıza erişmek için tıklayın"
+        headline  = "Merhaba! 👋"
+        body1     = "kolaylistele'de <strong>3 ücretsiz ilan</strong> oluşturma hakkınız için giriş bağlantınız hazır."
+        body2     = "Aşağıdaki butona tıklayarak hemen başlayabilirsiniz."
+        btn_text  = "Devam Et →"
+        expire    = "Bu bağlantı <strong>15 dakika</strong> geçerlidir ve yalnızca bir kez kullanılabilir."
+        footer1   = "Bu e-postayı siz talep etmediyseniz güvenle yok sayabilirsiniz."
+        footer2   = "© kolaylistele · info@kolaylistele.com"
+        plain     = f"Merhaba,\n\nkolaylistele ücretsiz ilan hakkınız için giriş bağlantınız:\n\n{link}\n\nBu bağlantı 15 dakika geçerlidir.\n\n—\nkolaylistele ekibi"
     else:
-        subject  = "EasyListing — Your sign-in link"
-        greeting = "Hi!"
-        body_txt = f"Click the link below to access your free listings:\n\n{link}\n\nThis link expires in 15 minutes."
-        btn_text = "Continue →"
-        expire   = "This link expires in 15 minutes."
+        subject   = "EasyListing — Your sign-in link"
+        pre_head  = "Click to access your free AI listings"
+        headline  = "Hi there! 👋"
+        body1     = "Your sign-in link for <strong>3 free AI listings</strong> on EasyListing is ready."
+        body2     = "Click the button below to get started instantly."
+        btn_text  = "Continue to EasyListing →"
+        expire    = "This link is valid for <strong>15 minutes</strong> and can only be used once."
+        footer1   = "If you didn't request this, you can safely ignore this email."
+        footer2   = "© EasyListing · info@kolaylistele.com"
+        plain     = f"Hi,\n\nYour EasyListing sign-in link:\n\n{link}\n\nExpires in 15 minutes.\n\n— EasyListing team"
+
+    brand_html = '<span style="color:#5B47E0;font-weight:900;">kolay</span><span style="color:#111827;font-weight:900;">listele</span>' if is_tr else '<span style="color:#5B47E0;font-weight:900;">Easy</span><span style="color:#111827;font-weight:900;">Listing</span>'
 
     html = f"""<!DOCTYPE html>
-<html><body style="font-family:Inter,Arial,sans-serif;background:#F6F7FB;margin:0;padding:32px 16px;">
-<div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;padding:40px 36px;box-shadow:0 2px 16px rgba(91,71,224,.1);">
-  <div style="font-size:22px;font-weight:900;color:#5B47E0;margin-bottom:24px;">{'kolay<span style="color:#111827">listele</span>' if lang=='tr' else 'Easy<span style="color:#111827">Listing</span>'}</div>
-  <p style="font-size:16px;font-weight:700;color:#111827;margin:0 0 10px;">{greeting}</p>
-  <p style="font-size:14px;color:#6B7280;line-height:1.6;margin:0 0 28px;">{"Ücretsiz 3 ilan oluşturma hakkınıza erişmek için aşağıdaki butona tıklayın." if lang=="tr" else "Click below to access your 3 free AI listing generations."}</p>
-  <a href="{link}" style="display:block;background:linear-gradient(135deg,#6B5AED,#5B47E0);color:white;text-decoration:none;text-align:center;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;">{btn_text}</a>
-  <p style="font-size:12px;color:#9CA3AF;margin:20px 0 0;text-align:center;">{expire}</p>
-</div></body></html>"""
+<html lang="{'tr' if is_tr else 'en'}">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{subject}</title>
+<!--[if mso]><style>td{{font-family:Arial,sans-serif!important}}</style><![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#F6F7FB;font-family:'Helvetica Neue',Arial,sans-serif;">
+<span style="display:none;max-height:0;overflow:hidden;">{pre_head}&nbsp;&#847;&nbsp;</span>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F6F7FB;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="100%" style="max-width:520px;" cellpadding="0" cellspacing="0">
 
-    ok = send_email(email, subject, body_txt, html)
+      <!-- Logo bar -->
+      <tr><td style="padding-bottom:24px;text-align:center;">
+        <div style="font-size:24px;letter-spacing:-.5px;">{brand_html}</div>
+      </td></tr>
+
+      <!-- Card -->
+      <tr><td style="background:#ffffff;border-radius:16px;padding:40px 40px 32px;box-shadow:0 2px 20px rgba(91,71,224,.08);">
+
+        <p style="font-size:20px;font-weight:700;color:#111827;margin:0 0 14px;">{headline}</p>
+        <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 8px;">{body1}</p>
+        <p style="font-size:14px;color:#6B7280;line-height:1.6;margin:0 0 28px;">{body2}</p>
+
+        <!-- CTA button -->
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <tr><td align="center">
+            <a href="{link}"
+               style="display:inline-block;background:linear-gradient(135deg,#6B5AED,#5B47E0);
+                      color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;
+                      padding:14px 32px;border-radius:10px;letter-spacing:.1px;">
+              {btn_text}
+            </a>
+          </td></tr>
+        </table>
+
+        <!-- Fallback link -->
+        <p style="font-size:12px;color:#9CA3AF;margin:20px 0 0;text-align:center;line-height:1.5;">
+          Buton çalışmıyorsa bu bağlantıyı kopyalayın:<br>
+          <a href="{link}" style="color:#5B47E0;word-break:break-all;">{link}</a>
+        </p>
+
+        <!-- Expiry notice -->
+        <div style="margin-top:24px;padding:12px 16px;background:#F0EEFF;border-radius:8px;
+                    font-size:12px;color:#5B47E0;line-height:1.5;text-align:center;">
+          ⏱ {expire}
+        </div>
+      </td></tr>
+
+      <!-- Footer -->
+      <tr><td style="padding:20px 0 0;text-align:center;">
+        <p style="font-size:11px;color:#9CA3AF;line-height:1.6;margin:0;">{footer1}<br>{footer2}</p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body></html>"""
+
+    plain = plain
+
+    ok = send_email(email, subject, plain, html)
     if not ok:
         return jsonify({"error": "send_failed"}), 500
 
