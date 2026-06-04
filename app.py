@@ -64,7 +64,8 @@ init_db()
 
 # ── Email helper ──────────────────────────────────────────────────────────────
 
-def send_email(to: str, subject: str, body_text: str, body_html: str = None) -> bool:
+def send_email(to: str, subject: str, body_text: str, body_html: str = None):
+    """Returns (True, None) on success, (False, reason_str) on failure."""
     import smtplib, ssl
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
@@ -75,9 +76,12 @@ def send_email(to: str, subject: str, body_text: str, body_html: str = None) -> 
     pw   = os.getenv("MAIL_PASS", "")
     frm  = os.getenv("MAIL_FROM", user)
 
+    logger.info("send_email: host=%r port=%r user=%r frm=%r to=%r", host, port, user, frm, to)
+
     if not host or not user or not pw:
-        logger.warning("send_email: MAIL_HOST/USER/PASS not configured")
-        return False
+        reason = f"MAIL env vars missing: host={bool(host)} user={bool(user)} pw={bool(pw)}"
+        logger.error("send_email: %s", reason)
+        return False, reason
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -102,10 +106,10 @@ def send_email(to: str, subject: str, body_text: str, body_html: str = None) -> 
                 s.login(user, pw)
                 s.sendmail(frm, [to], msg.as_string())
         logger.info("send_email: sent to %s subject=%r", to, subject)
-        return True
+        return True, None
     except Exception as e:
-        logger.error("send_email failed to=%s: %s", to, e)
-        return False
+        logger.error("send_email failed to=%s: %s", to, e, exc_info=True)
+        return False, str(e)
 
 _BLOCKED_PATH_PREFIXES = (
     "/.git", "/.env", "/root/", "/etc/", "/proc/",
@@ -1029,10 +1033,10 @@ def api_magic_link():
 
     plain = plain
 
-    ok = send_email(email, subject, plain, html)
+    ok, err_reason = send_email(email, subject, plain, html)
     if not ok:
-        logger.error("api_magic_link: send_email returned False for %s", email_hash[:8])
-        return jsonify({"error": "send_failed", "hint": "Check MAIL_* env vars on Railway"}), 500
+        logger.error("api_magic_link: send_email failed for %s: %s", email_hash[:8], err_reason)
+        return jsonify({"error": "send_failed", "reason": err_reason}), 500
 
     return jsonify({"ok": True})
 
