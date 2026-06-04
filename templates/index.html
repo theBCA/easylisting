@@ -146,6 +146,30 @@ textarea.field-input { resize: vertical; min-height: 120px; line-height: 1.6; }
 .btn-save-template:hover { border-color: var(--primary); color: var(--primary); }
 .manual-hint-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 5px 0; border-bottom: 1px solid #F0F0F0; }
 .manual-hint-row:last-child { border-bottom: none; }
+.score-panel { margin-top: 12px; background: white; border: 1px solid var(--border); border-radius: 10px; padding: 12px; box-shadow: var(--shadow); }
+.score-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.score-num { font-size: 28px; font-weight: 900; color: var(--primary); line-height: 1; }
+.score-label { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.score-bar { height: 7px; background: #E5E7F0; border-radius: 999px; overflow: hidden; }
+.score-fill { height: 100%; background: var(--green); border-radius: 999px; transition: width .2s; }
+.score-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.score-item { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.score-item.good { color: var(--green); }
+.tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tool-btn { border: 1.5px solid var(--border); background: #FAFAFA; border-radius: 9px; padding: 10px 12px; cursor: pointer; font-size: 12px; font-weight: 800; color: var(--text); text-align: left; }
+.tool-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.tool-btn[disabled] { opacity: .55; cursor: wait; }
+.tool-note { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 10px; }
+.variant-list, .photo-variant-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.variant-card { border: 1px solid var(--border); background: #FAFAFA; border-radius: 10px; padding: 12px; }
+.variant-card h4 { font-size: 13px; margin-bottom: 6px; }
+.variant-card p { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 8px; }
+.photo-variant-list { flex-direction: row; flex-wrap: wrap; }
+.photo-variant { width: 96px; }
+.photo-variant img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 2px solid var(--border); display: block; margin-bottom: 6px; }
+.export-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.style-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.style-grid textarea { min-height: 70px; }
 
 /* PLATFORM SELECTOR */
 .platform-row { margin-bottom: 20px; }
@@ -333,43 +357,35 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
           <span class="platform-icon">🛍️</span>
           <span class="platform-name">Etsy</span>
         </div>
-        <div class="platform-card coming-soon" data-platform="shopify">
-          <span class="coming-soon-badge">Yakında</span>
+        <div class="platform-card" data-platform="shopify">
           <span class="platform-icon">🛒</span>
           <span class="platform-name">Shopify</span>
         </div>
-        <div class="platform-card coming-soon" data-platform="amazon">
-          <span class="coming-soon-badge">Yakında</span>
+        <div class="platform-card" data-platform="amazon">
           <span class="platform-icon">📦</span>
           <span class="platform-name">Amazon</span>
         </div>
-        <div class="platform-card coming-soon" data-platform="trendyol">
-          <span class="coming-soon-badge">Yakında</span>
+        <div class="platform-card" data-platform="trendyol">
           <span class="platform-icon">🇹🇷</span>
           <span class="platform-name">Trendyol</span>
         </div>
-        <div class="platform-card coming-soon" data-platform="hepsiburada">
-          <span class="coming-soon-badge">Yakında</span>
+        <div class="platform-card" data-platform="hepsiburada">
           <span class="platform-icon">🏪</span>
           <span class="platform-name">Hepsiburada</span>
         </div>
-        <div class="platform-card coming-soon" data-platform="n11">
-          <span class="coming-soon-badge">Yakında</span>
+        <div class="platform-card" data-platform="n11">
           <span class="platform-icon">🔖</span>
           <span class="platform-name">n11</span>
         </div>
-        <div class="platform-card coming-soon" data-platform="ebay">
-          <span class="coming-soon-badge">Yakında</span>
+        <div class="platform-card" data-platform="ebay">
           <span class="platform-icon">🔨</span>
           <span class="platform-name">eBay</span>
         </div>
-        <div class="platform-card coming-soon" data-platform="woocommerce">
-          <span class="coming-soon-badge">Yakında</span>
+        <div class="platform-card" data-platform="woocommerce">
           <span class="platform-icon">🌐</span>
           <span class="platform-name">WooCommerce</span>
         </div>
-        <div class="platform-card coming-soon" data-platform="pinterest">
-          <span class="coming-soon-badge">Yakında</span>
+        <div class="platform-card" data-platform="pinterest">
           <span class="platform-icon">📌</span>
           <span class="platform-name">Pinterest</span>
         </div>
@@ -446,6 +462,16 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
         <div class="ai-badge">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
           <span data-i18n="ai_badge">AI-generated — review before publishing</span>
+        </div>
+        <div class="score-panel" id="qualityScorePanel">
+          <div class="score-top">
+            <div>
+              <div class="score-label">Sellability score</div>
+              <div class="score-num"><span id="qualityScoreNum">0</span>/100</div>
+            </div>
+          </div>
+          <div class="score-bar"><div class="score-fill" id="qualityScoreFill" style="width:0%"></div></div>
+          <div class="score-list" id="qualityScoreList"></div>
         </div>
       </div>
 
@@ -531,6 +557,74 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
             <button class="copy-btn" id="copyInstagramBtn" data-i18n="btn_copy">Copy</button>
           </div>
           <div class="instagram-preview" id="instagram-caption"></div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title">AI improve tools</div>
+          <div class="tool-grid">
+            <button class="tool-btn improve-btn" data-action="title_seo">Make title more searchable</button>
+            <button class="tool-btn improve-btn" data-action="description_warm">Make description warmer</button>
+            <button class="tool-btn improve-btn" data-action="tags">Generate better tags</button>
+            <button class="tool-btn improve-btn" data-action="shorten_etsy">Shorten for Etsy</button>
+          </div>
+          <div class="tool-note">Free users get 1 AI improve or translation. More AI edits require a paid plan.</div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title">Listing variants</div>
+          <button class="tool-btn" id="generateVariantsBtn" style="width:100%;">Generate 3 paid variants</button>
+          <div class="variant-list" id="variantList"></div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title">Pro photo variants</div>
+          <button class="tool-btn" id="generatePhotosBtn" style="width:100%;">Generate white, lifestyle, seasonal photos</button>
+          <div class="tool-note">Pro only. Uses paid image API with a monthly cap.</div>
+          <div class="photo-variant-list" id="photoVariantList"></div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title">Product pack export</div>
+          <div class="export-grid">
+            <button class="tool-btn export-btn" data-export="etsy">Etsy text</button>
+            <button class="tool-btn export-btn" data-export="shopify">Shopify</button>
+            <button class="tool-btn export-btn" data-export="amazon">Amazon</button>
+            <button class="tool-btn export-btn" data-export="pinterest">Pinterest</button>
+            <button class="tool-btn export-btn" data-export="woocommerce">WooCommerce</button>
+            <button class="tool-btn export-btn" data-export="csv">CSV</button>
+          </div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-card-title">Brand voice / shop style</div>
+          <div class="style-grid">
+            <div>
+              <label class="field-card-title" for="style-tone">Tone</label>
+              <select id="style-tone" class="field-input">
+                <option value="">Default</option>
+                <option value="warm handmade">Warm handmade</option>
+                <option value="premium minimal">Premium minimal</option>
+                <option value="playful giftable">Playful giftable</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-card-title" for="style-production">Production time</label>
+              <input id="style-production" class="field-input" placeholder="Made to order in 3-5 days">
+            </div>
+            <div>
+              <label class="field-card-title" for="style-materials">Material phrases</label>
+              <textarea id="style-materials" class="field-input" placeholder="soft cotton yarn, handmade knit detailing"></textarea>
+            </div>
+            <div>
+              <label class="field-card-title" for="style-shipping">Shipping note</label>
+              <textarea id="style-shipping" class="field-input" placeholder="Ships carefully packaged with tracking."></textarea>
+            </div>
+            <div style="grid-column:1/-1;">
+              <label class="field-card-title" for="style-cta">Default CTA</label>
+              <input id="style-cta" class="field-input" placeholder="Message me before ordering for custom colors or sizing.">
+            </div>
+          </div>
+          <div class="tool-note">These defaults are saved with your template and included in future AI prompts.</div>
         </div>
 
         {% if not is_guest %}
@@ -1144,6 +1238,11 @@ async function saveTemplate() {
     materials: getChips('materials-wrap'),
     tags:      getChips('tags-wrap'),
     personalization_instructions: document.getElementById('r-personalization').value,
+    brand_tone: document.getElementById('style-tone')?.value || '',
+    material_phrases: document.getElementById('style-materials')?.value || '',
+    production_time: document.getElementById('style-production')?.value || '',
+    shipping_note: document.getElementById('style-shipping')?.value || '',
+    brand_cta: document.getElementById('style-cta')?.value || '',
   };
   try {
     const res = await fetch('/api/template', {
@@ -1203,6 +1302,11 @@ function applyTemplate(t) {
   if (t.price && !document.getElementById('r-price').value) setVal('r-price', t.price);
   if (t.personalization_instructions && !document.getElementById('r-personalization').value)
     setVal('r-personalization', t.personalization_instructions);
+  setValue('style-tone', t.brand_tone || '');
+  setValue('style-materials', t.material_phrases || '');
+  setValue('style-production', t.production_time || '');
+  setValue('style-shipping', t.shipping_note || '');
+  setValue('style-cta', t.brand_cta || '');
 }
 
 function animateSteps() {
@@ -1292,6 +1396,60 @@ function populateReview(data) {
   // Instagram caption
   const igEl = byId('instagram-caption');
   if (igEl) igEl.textContent = data.instagram_caption || '';
+  updateQualityScore();
+}
+
+function collectListingFields() {
+  return {
+    title: document.getElementById('r-title')?.value || '',
+    description: document.getElementById('r-description')?.value || '',
+    tags: getChips('tags-wrap'),
+    materials: getChips('materials-wrap'),
+    colors: getChips('colors-wrap'),
+    sizes: getChips('sizes-wrap'),
+    price: document.getElementById('r-price')?.value || '',
+    category: document.getElementById('taxonomy-search')?.value || '',
+    personalization: document.getElementById('r-personalization')?.value || '',
+    shipping_profile_id: document.getElementById('r-shipping')?.value || '',
+    instagram_caption: document.getElementById('instagram-caption')?.textContent || '',
+    image_previews: aiData.image_previews || [],
+  };
+}
+
+function qualityChecks() {
+  const f = collectListingFields();
+  const titleLen = f.title.trim().length;
+  const descLen = f.description.trim().length;
+  const price = Number(f.price);
+  return [
+    {label:'Title has strong Etsy length', ok:titleLen >= 70 && titleLen <= 140, points:16},
+    {label:'Description is detailed', ok:descLen >= 700, points:16},
+    {label:'Uses all 13 tags', ok:f.tags.length >= 13, points:16},
+    {label:'Tags are Etsy-safe length', ok:f.tags.length > 0 && f.tags.every(t => t.length <= 20), points:12},
+    {label:'Price is valid', ok:Number.isFinite(price) && price >= 0.2 && price <= 50000, points:12},
+    {label:'Multiple photos attached', ok:f.image_previews.length >= 2, points:10},
+    {label:'Personalization guidance present', ok:f.personalization.trim().length >= 20, points:9},
+    {label:'Shipping profile selected', ok:IS_GUEST || !!f.shipping_profile_id, points:9},
+  ];
+}
+
+function updateQualityScore() {
+  const checks = qualityChecks();
+  const score = checks.reduce((sum, c) => sum + (c.ok ? c.points : 0), 0);
+  const num = byId('qualityScoreNum');
+  const fill = byId('qualityScoreFill');
+  const list = byId('qualityScoreList');
+  if (!num || !fill || !list) return;
+  num.textContent = score;
+  fill.style.width = score + '%';
+  fill.style.background = score >= 80 ? 'var(--green)' : score >= 55 ? '#F59E0B' : '#EF4444';
+  list.innerHTML = '';
+  checks.forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'score-item' + (c.ok ? ' good' : '');
+    item.textContent = (c.ok ? '✓ ' : '○ ') + c.label;
+    list.appendChild(item);
+  });
 }
 
 // ── Translate ─────────────────────────────────────────────────────────────
@@ -1309,15 +1467,125 @@ async function translateTo(lang) {
       }),
     });
     const d = await res.json();
+    if (d.error === 'premium_required') { openModal('paywallModal'); return; }
     if (d.error) { showToast('Translation failed: ' + d.error, 'error'); return; }
     if (d.title)       { setVal('r-title', d.title); updateCharCount(document.getElementById('r-title'),'title-count',140); }
     if (d.description) setVal('r-description', d.description);
     if (d.tags)        setChips('tags-wrap','tag-input', d.tags, 13, 'tag-count-label');
+    updateQualityScore();
     showToast('Translated!', 'success');
   } catch(e) {
     showToast('Translation failed', 'error');
   } finally {
     btns.forEach(b => b.classList.remove('loading'));
+  }
+}
+
+async function improveListing(action, btn) {
+  const payload = collectListingFields();
+  payload.action = action;
+  payload.lang = document.getElementById('langSelect')?.value || currentLang;
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/improve-listing', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+    if (d.error === 'premium_required') { openModal('paywallModal'); return; }
+    if (d.error) { showToast(d.error, 'error'); return; }
+    if (d.title) { setVal('r-title', d.title); updateCharCount(document.getElementById('r-title'), 'title-count', 140); }
+    if (d.description) setVal('r-description', d.description);
+    if (d.tags) setChips('tags-wrap', 'tag-input', d.tags, 13, 'tag-count-label');
+    updateQualityScore();
+    showToast('Listing improved', 'success');
+  } catch(e) {
+    showToast('Improve failed', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function generateVariants() {
+  const btn = byId('generateVariantsBtn');
+  const list = byId('variantList');
+  if (!btn || !list) return;
+  btn.disabled = true;
+  list.innerHTML = '';
+  try {
+    const payload = collectListingFields();
+    payload.lang = document.getElementById('langSelect')?.value || currentLang;
+    const res = await fetch('/api/listing-variants', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+    if (d.error === 'premium_required') { openModal('paywallModal'); return; }
+    if (d.error) { showToast(d.error, 'error'); return; }
+    (d.variants || []).forEach(v => {
+      const card = document.createElement('div');
+      card.className = 'variant-card';
+      const h = document.createElement('h4');
+      h.textContent = v.name || 'Variant';
+      const p = document.createElement('p');
+      p.textContent = v.title || '';
+      const b = document.createElement('button');
+      b.className = 'copy-btn';
+      b.textContent = 'Apply';
+      b.addEventListener('click', () => {
+        if (v.title) { setVal('r-title', v.title); updateCharCount(document.getElementById('r-title'), 'title-count', 140); }
+        if (v.description) setVal('r-description', v.description);
+        if (v.tags) setChips('tags-wrap', 'tag-input', v.tags, 13, 'tag-count-label');
+        updateQualityScore();
+      });
+      card.appendChild(h); card.appendChild(p); card.appendChild(b);
+      list.appendChild(card);
+    });
+  } catch(e) {
+    showToast('Could not generate variants', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function generatePhotoVariants() {
+  const btn = byId('generatePhotosBtn');
+  const list = byId('photoVariantList');
+  if (!btn || !list) return;
+  const image = (aiData.image_previews || [])[0];
+  if (!image) { showToast('Generate a listing with a photo first', 'error'); return; }
+  btn.disabled = true;
+  list.innerHTML = '';
+  try {
+    const payload = {...collectListingFields(), image};
+    const res = await fetch('/api/generate-photos', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+    if (d.error === 'pro_required') { openModal('paywallModal'); return; }
+    if (d.error) { showToast(d.error, 'error'); return; }
+    (d.variants || []).forEach(v => {
+      const wrap = document.createElement('div');
+      wrap.className = 'photo-variant';
+      const img = document.createElement('img');
+      img.src = v.image;
+      const add = document.createElement('button');
+      add.className = 'copy-btn';
+      add.textContent = 'Add';
+      add.addEventListener('click', () => {
+        aiData.image_previews = aiData.image_previews || [];
+        aiData.image_previews.push(v.image);
+        populateReview(aiData);
+      });
+      wrap.appendChild(img); wrap.appendChild(add);
+      list.appendChild(wrap);
+    });
+    showToast('Photo variants ready', 'success');
+  } catch(e) {
+    showToast('Photo generation failed', 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -1387,6 +1655,49 @@ function copyAll() {
   navigator.clipboard.writeText(text).then(() => showToast('✓ Tüm içerik kopyalandı!', 'success'));
 }
 
+function exportPack(kind) {
+  const f = collectListingFields();
+  const title = f.title;
+  const desc = f.description;
+  const tags = f.tags.join(', ');
+  const price = f.price;
+  const productType = f.category || (f.tags[0] || 'Handmade product');
+  const bullets = [
+    `Handmade ${productType} designed for everyday use or gifting`,
+    `Materials: ${(f.materials || []).join(', ') || 'quality handmade materials'}`,
+    `Available colors: ${(f.colors || []).join(', ') || 'custom options available'}`,
+    `Made to order with personalization support`,
+    `Message before ordering for custom size, color, or timing`,
+  ];
+  const packs = {
+    etsy: `ETSY\n\nTITLE\n${title}\n\nDESCRIPTION\n${desc}\n\nPRICE\n€${price}\n\nTAGS\n${tags}\n\nPERSONALIZATION\n${f.personalization}`,
+    shopify: `SHOPIFY\n\nProduct title:\n${title}\n\nHTML description:\n<p>${desc.replace(/\n+/g, '</p><p>')}</p>\n\nSEO title:\n${title.slice(0, 60)}\n\nSEO meta:\n${desc.slice(0, 155)}\n\nTags:\n${tags}\n\nProduct type:\n${productType}`,
+    amazon: `AMAZON\n\nProduct title:\n${title.slice(0, 200)}\n\nBullet points:\n${bullets.map(b => '- ' + b).join('\n')}\n\nDescription:\n${desc}\n\nBackend keywords:\n${f.tags.join(' ')}\n\nImage checklist:\nMain image on white background, lifestyle image, detail image, scale image, personalization/options image.`,
+    pinterest: `PINTEREST\n\nPin title:\n${title.slice(0, 60)}\n\nPin description:\n${(f.instagram_caption || desc).slice(0, 300)}\n\nAlt text:\n${title.slice(0, 125)}\n\nSuggested board:\nHandmade Gifts\n\nHashtags:\n${f.tags.slice(0, 5).map(t => '#' + t.replace(/\s+/g, '')).join(' ')}`,
+    woocommerce: `WOOCOMMERCE\n\nProduct name:\n${title.slice(0, 60)}\n\nShort description:\n${desc.slice(0, 300)}\n\nFull description:\n${desc}\n\nSEO title:\n${title.slice(0, 60)}\n\nSEO meta:\n${desc.slice(0, 155)}\n\nTags:\n${tags}`,
+  };
+  if (kind === 'csv') {
+    const csv = [
+      ['platform','title','description','price','tags'].join(','),
+      ['Etsy', title, desc, price, tags].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','),
+      ['Shopify', title, desc, price, tags].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','),
+      ['WooCommerce', title, desc, price, tags].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','),
+    ].join('\n');
+    downloadText('product-pack.csv', csv, 'text/csv');
+    return;
+  }
+  downloadText(`${kind}-product-pack.txt`, packs[kind] || packs.etsy);
+}
+
+function downloadText(filename, text, type='text/plain') {
+  const blob = new Blob([text], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 // ── Instagram copy ─────────────────────────────────────────────────────────
 function copyInstagram() {
   const text = document.getElementById('instagram-caption').textContent;
@@ -1409,10 +1720,11 @@ function addChip(wrap, input, text, max, countId, chipClass) {
   const textNode = document.createTextNode(text.trim());
   const rm = document.createElement('span');
   rm.className = 'remove'; rm.textContent = '×';
-  rm.onclick = () => { chip.remove(); updateChipCount(wrap.id, max, countId); };
+  rm.onclick = () => { chip.remove(); updateChipCount(wrap.id, max, countId); updateQualityScore(); };
   chip.appendChild(textNode); chip.appendChild(rm);
   wrap.insertBefore(chip, input);
   updateChipCount(wrap.id, max, countId);
+  updateQualityScore();
 }
 
 function updateChipCount(wrapId, max, countId) {
@@ -1458,6 +1770,7 @@ function taxonomySearch(q) {
         document.getElementById('r-taxonomy-id').value   = item.id;
         document.getElementById('taxonomy-search').value = item.path;
         setText('taxonomy-selected', 'ID: ' + item.id);
+        updateQualityScore();
         dd.style.display = 'none';
       };
       dd.appendChild(d);
@@ -1562,7 +1875,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Title char count
   document.getElementById('r-title')?.addEventListener('input', function() {
     updateCharCount(this, 'title-count', 140);
+    updateQualityScore();
   });
+  ['r-description','r-price','r-shipping','r-personalization'].forEach(id =>
+    document.getElementById(id)?.addEventListener('input', updateQualityScore));
 
   // Chip wrap click-to-focus
   document.getElementById('tags-wrap')?.addEventListener('click', () => focusChipInput('tag-input'));
@@ -1593,6 +1909,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Save template button
   document.getElementById('saveTemplateBtn')?.addEventListener('click', () => saveTemplate());
+
+  document.querySelectorAll('.improve-btn').forEach(btn =>
+    btn.addEventListener('click', () => improveListing(btn.dataset.action, btn)));
+  document.getElementById('generateVariantsBtn')?.addEventListener('click', generateVariants);
+  document.getElementById('generatePhotosBtn')?.addEventListener('click', generatePhotoVariants);
+  document.querySelectorAll('.export-btn').forEach(btn =>
+    btn.addEventListener('click', () => exportPack(btn.dataset.export)));
 
   // Paywall close button
   document.getElementById('paywallCloseBtn')?.addEventListener('click', () => closeModal('paywallModal'));

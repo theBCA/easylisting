@@ -4,9 +4,12 @@ SQLite store for per-shop usage, templates, and billing.
 import json
 import sqlite3
 import os
+from datetime import datetime, timezone
 
 DB_PATH   = os.getenv("DB_PATH", "easylisting.sqlite")
 FREE_LIMIT = 3
+FREE_IMPROVE_LIMIT = 1
+PHOTO_VARIANT_MONTHLY_LIMIT = int(os.getenv("PHOTO_VARIANT_MONTHLY_LIMIT", "30"))
 
 
 def _conn():
@@ -41,6 +44,9 @@ def init_db():
             "ALTER TABLE shops ADD COLUMN stripe_customer_id TEXT DEFAULT NULL",
             "ALTER TABLE shops ADD COLUMN stripe_subscription_id TEXT DEFAULT NULL",
             "ALTER TABLE shops ADD COLUMN plan TEXT DEFAULT 'free'",
+            "ALTER TABLE shops ADD COLUMN free_improve_used INTEGER DEFAULT 0",
+            "ALTER TABLE shops ADD COLUMN photo_variant_used INTEGER DEFAULT 0",
+            "ALTER TABLE shops ADD COLUMN photo_variant_period TEXT DEFAULT NULL",
         ):
             try:
                 con.execute(ddl)
@@ -72,6 +78,14 @@ def increment_usage(shop_id: str):
         )
 
 
+def increment_improve_usage(shop_id: str):
+    with _conn() as con:
+        con.execute(
+            "UPDATE shops SET free_improve_used = free_improve_used + 1 WHERE shop_id = ?",
+            (str(shop_id),),
+        )
+
+
 def can_generate(shop_id: str, limit: int = FREE_LIMIT) -> tuple[bool, int]:
     shop = get_shop(shop_id)
     if not shop:
@@ -80,6 +94,47 @@ def can_generate(shop_id: str, limit: int = FREE_LIMIT) -> tuple[bool, int]:
         return True, 999
     remaining = max(0, limit - shop["free_used"])
     return remaining > 0, remaining
+
+
+def can_improve(shop_id: str, limit: int = FREE_IMPROVE_LIMIT) -> tuple[bool, int]:
+    shop = get_shop(shop_id)
+    if not shop:
+        return True, limit
+    if shop["has_premium"]:
+        return True, 999
+    remaining = max(0, limit - shop.get("free_improve_used", 0))
+    return remaining > 0, remaining
+
+
+def can_generate_photo_variants(shop_id: str, count: int,
+                                limit: int = PHOTO_VARIANT_MONTHLY_LIMIT) -> tuple[bool, int]:
+    shop = get_shop(shop_id)
+    if not shop or shop.get("plan") != "pro":
+        return False, 0
+
+    period = datetime.now(timezone.utc).strftime("%Y-%m")
+    used = shop.get("photo_variant_used", 0) if shop.get("photo_variant_period") == period else 0
+    remaining = max(0, limit - used)
+    return remaining >= count, remaining
+
+
+def increment_photo_variant_usage(shop_id: str, count: int):
+    period = datetime.now(timezone.utc).strftime("%Y-%m")
+    with _conn() as con:
+        row = con.execute(
+            "SELECT photo_variant_period, photo_variant_used FROM shops WHERE shop_id = ?",
+            (str(shop_id),),
+        ).fetchone()
+        if row and row["photo_variant_period"] == period:
+            con.execute(
+                "UPDATE shops SET photo_variant_used = photo_variant_used + ? WHERE shop_id = ?",
+                (int(count), str(shop_id)),
+            )
+        else:
+            con.execute(
+                "UPDATE shops SET photo_variant_period = ?, photo_variant_used = ? WHERE shop_id = ?",
+                (period, int(count), str(shop_id)),
+            )
 
 
 # ── Templates ─────────────────────────────────────────────────────────────────

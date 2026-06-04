@@ -183,9 +183,12 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 
   <!-- Results -->
   <div class="results" id="results">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:10px;flex-wrap:wrap;">
       <h2 id="resultsHeading" data-i18n="results_heading">Generated Listings</h2>
-      <button class="btn-pub-all" id="btnPubAll" data-i18n="publish_all">Publish All as Draft</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-outline" id="btnExportCsv">Export CSV</button>
+        <button class="btn-pub-all" id="btnPubAll" data-i18n="publish_all">Publish Selected as Draft</button>
+      </div>
     </div>
     <div class="result-grid" id="resultGrid"></div>
   </div>
@@ -201,7 +204,7 @@ const STRINGS = {
     drop_title:'Drop product photos here', drop_sub:'Up to 20 photos — one listing generated per photo',
     hint_label:'Hint (optional, applies to all)', hint_placeholder:'e.g. handmade ceramic mugs',
     provider_label:'AI Provider', provider_gemini:'Gemini (free)', provider_nvidia:'NVIDIA (free)',
-    generate_all:'Generate All', results_heading:'Generated Listings', publish_all:'Publish All as Draft',
+    generate_all:'Generate All', results_heading:'Generated Listings', publish_all:'Publish Selected as Draft',
     only_images:'Only JPEG/PNG/WebP/GIF allowed', max_photos:'Max 20 photos at a time',
     free_limit:'Free limit reached. Upgrade for more.', skipped:'Free limit reached — remaining listings skipped.',
     premium_required:'Bulk upload is available only on a paid plan.',
@@ -216,7 +219,7 @@ const STRINGS = {
     drop_title:'Produktfotos hier ablegen', drop_sub:'Bis zu 20 Fotos — ein Listing pro Foto',
     hint_label:'Hinweis (optional, gilt für alle)', hint_placeholder:'z.B. handgemachte Keramiktassen',
     provider_label:'KI-Anbieter', provider_gemini:'Gemini (kostenlos)', provider_nvidia:'NVIDIA (kostenlos)',
-    generate_all:'Alle generieren', results_heading:'Generierte Listings', publish_all:'Alle als Entwurf veröffentlichen',
+    generate_all:'Alle generieren', results_heading:'Generierte Listings', publish_all:'Ausgewählte als Entwurf veröffentlichen',
     only_images:'Nur JPEG/PNG/WebP/GIF erlaubt', max_photos:'Maximal 20 Fotos auf einmal',
     free_limit:'Kostenloses Limit erreicht. Upgrade für mehr.', skipped:'Kostenloses Limit erreicht — übrige Listings übersprungen.',
     premium_required:'Bulk-Upload ist nur mit einem kostenpflichtigen Plan verfügbar.',
@@ -231,7 +234,7 @@ const STRINGS = {
     drop_title:'Ürün fotoğraflarını buraya bırakın', drop_sub:'20 fotoğrafa kadar — her fotoğraf için bir ilan',
     hint_label:'İpucu (opsiyonel, tümüne uygulanır)', hint_placeholder:'örn. el yapımı seramik kupalar',
     provider_label:'YZ Sağlayıcısı', provider_gemini:'Gemini (ücretsiz)', provider_nvidia:'NVIDIA (ücretsiz)',
-    generate_all:'Tümünü Oluştur', results_heading:'Oluşturulan İlanlar', publish_all:'Tümünü Taslak Olarak Yayınla',
+    generate_all:'Tümünü Oluştur', results_heading:'Oluşturulan İlanlar', publish_all:'Seçilenleri Taslak Olarak Yayınla',
     only_images:'Yalnızca JPEG/PNG/WebP/GIF kabul edilir', max_photos:'Tek seferde en fazla 20 fotoğraf',
     free_limit:'Ücretsiz limit doldu. Daha fazlası için yükseltin.', skipped:'Ücretsiz limit doldu — kalan ilanlar atlandı.',
     premium_required:'Toplu Yükleme sadece ücretli planlarda kullanılabilir.',
@@ -434,6 +437,10 @@ function renderResults() {
 
     card.innerHTML = `
       <div class="rc-top">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--muted);">
+          <input type="checkbox" class="bulk-select" data-ri="${ri}" checked>
+          Select
+        </label>
         <div class="rc-img"><img src="${imgSrc}" alt=""></div>
         <div class="rc-main">
           <div class="rc-title">
@@ -527,6 +534,8 @@ async function publishAll() {
   let ok = 0, fail = 0;
   for (let ri = 0; ri < results.length; ri++) {
     if (results[ri].error || results[ri].published) continue;
+    const checked = document.querySelector(`.bulk-select[data-ri="${ri}"]`)?.checked;
+    if (!checked) continue;
     await publishOne(ri);
     if (results[ri].published) ok++; else fail++;
     await new Promise(r => setTimeout(r, 300));
@@ -534,6 +543,31 @@ async function publishAll() {
   btn.disabled = false;
   btn.textContent = tr('publish_all');
   showToast(tr('done', ok, fail));
+}
+
+function exportBulkCsv() {
+  const rows = [['title','description','price','tags','materials','category']];
+  results.forEach((r, ri) => {
+    if (r.error || !r.data) return;
+    const checked = document.querySelector(`.bulk-select[data-ri="${ri}"]`)?.checked;
+    if (!checked) return;
+    const d = r.data;
+    rows.push([
+      document.getElementById('rc-title-' + ri)?.value || d.title || '',
+      d.description || '',
+      document.getElementById('rc-price-' + ri)?.value || d.suggested_price_eur || '',
+      (d.tags || []).join('|'),
+      (d.materials || []).join('|'),
+      d.taxonomy_path || d.taxonomy_query || '',
+    ]);
+  });
+  const csv = rows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bulk-listings.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 setLang(currentLang);
 
@@ -547,6 +581,7 @@ document.getElementById('dropZone')?.addEventListener('click', () =>
 document.getElementById('btnGen')?.addEventListener('click', () => startBulk());
 
 document.getElementById('btnPubAll')?.addEventListener('click', () => publishAll());
+document.getElementById('btnExportCsv')?.addEventListener('click', () => exportBulkCsv());
 
 // Event delegation for dynamically-created publish buttons
 document.getElementById('resultGrid')?.addEventListener('click', e => {

@@ -20,6 +20,8 @@ from itsdangerous import BadSignature, URLSafeSerializer
 from dotenv import load_dotenv
 from db import (
     init_db, ensure_shop, can_generate, increment_usage,
+    can_improve, increment_improve_usage,
+    can_generate_photo_variants, increment_photo_variant_usage,
     save_template, get_template,
     set_premium, get_shop, get_shop_by_stripe_customer,
 )
@@ -57,6 +59,28 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 init_db()
+
+_BLOCKED_PATH_PREFIXES = (
+    "/.git", "/.env", "/root/", "/etc/", "/proc/",
+    "/wp-", "//wp-", "//sito/",
+    "/backend/", "/API/config", "/api/config",
+    "/_next/", "/_react/", "/_layouts/",
+    "/attacker/", "/aws-codecommit/",
+    "/docker-compose", "/config.ts", "/config.js",
+)
+
+_BLOCKED_PATH_SUFFIXES = (
+    ".git-credentials", "/.git-credentials",
+    "/wlwmanifest.xml", "/xmlrpc.php",
+)
+
+@app.before_request
+def block_probe_paths():
+    path = request.path.lower()
+    if any(path.startswith(p) for p in _BLOCKED_PATH_PREFIXES):
+        return "", 404
+    if any(path.endswith(s) for s in _BLOCKED_PATH_SUFFIXES):
+        return "", 404
 
 @app.before_request
 def setup_request():
@@ -118,6 +142,8 @@ GUEST_FREE_LIMIT    = 3
 GUEST_ID_COOKIE     = "easylisting_guest_id"
 GUEST_ID_MAX_AGE    = 60 * 60 * 24 * 180  # 180 days
 ALLOW_PAID_OPENAI   = os.getenv("ALLOW_PAID_OPENAI", "").lower() in {"1", "true", "yes"}
+PHOTO_VARIANT_COUNT = 3
+FAL_KEY             = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_TITLE_LEN       = 140
@@ -201,6 +227,19 @@ def has_premium_access():
         return False
     shop = get_shop(str(shop_id()))
     return bool(shop and shop.get("has_premium"))
+
+def has_pro_access():
+    if is_guest() or not shop_id():
+        return False
+    shop = get_shop(str(shop_id()))
+    return bool(shop and shop.get("has_premium") and shop.get("plan") == "pro")
+
+def usage_shop_id():
+    if is_guest():
+        sid = guest_shop_id()
+        ensure_shop(sid, "Guest")
+        return sid
+    return str(shop_id())
 
 def require_connection():
     if not is_authorized():
@@ -475,6 +514,29 @@ def _build_prompt(hint: str, lang: str = "en", platform: str = "etsy") -> str:
         base += f"\n\nSeller hint: {hint}"
     return base
 
+def _style_hint_for_shop(sid: str) -> str:
+    template = get_template(sid)
+    parts = []
+    for label, key in (
+        ("Brand tone", "brand_tone"),
+        ("Material phrases", "material_phrases"),
+        ("Production time", "production_time"),
+        ("Shipping note", "shipping_note"),
+        ("Call to action", "brand_cta"),
+    ):
+        value = str(template.get(key, "")).strip()
+        if value:
+            parts.append(f"{label}: {value[:240]}")
+    return "\n".join(parts)
+
+def _merge_hint_with_style(hint: str, sid: str | None) -> str:
+    if not sid:
+        return hint
+    style = _style_hint_for_shop(sid)
+    if not style:
+        return hint
+    return (hint + "\n\n" if hint else "") + "Saved shop style:\n" + style
+
 def _parse_ai_json(text):
     import re
     if not text:
@@ -581,6 +643,28 @@ def _run_provider(provider, image_bytes, hint, nvidia_model, api_key=None, lang=
         return _nvidia_generate(image_bytes, hint, nvidia_model, api_key, lang, platform)
     else:
         return _openai_generate(image_bytes, hint, api_key, lang, platform)
+
+def _run_text_json(prompt: str):
+    if os.getenv("GEMINI_API_KEY"):
+        try:
+            from google import genai as ggenai
+            from google.genai.errors import ClientError
+            client = ggenai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+            resp = client.models.generate_content(model="gemini-2.5-flash", contents=[prompt])
+            return _parse_ai_json(resp.text)
+        except ClientError as e:
+            if "429" not in str(e) and "RESOURCE_EXHAUSTED" not in str(e):
+                raise
+    if ALLOW_PAID_OPENAI and os.getenv("OPENAI_API_KEY"):
+        from openai import OpenAI
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+        )
+        return json.loads(resp.choices[0].message.content)
+    raise RuntimeError("no_text_ai_provider")
 
 def _find_taxonomy_id(query):
     r = requests.get(
@@ -786,6 +870,7 @@ def api_generate():
 
     images       = request.files.getlist("images")
     hint         = str(request.form.get("hint", "")).strip()[:200]
+    hint         = _merge_hint_with_style(hint, None if is_guest() else sid)
     provider     = request.form.get("provider", "gemini")
     nvidia_model = request.form.get("nvidia_model", "llama-90b")
     lang         = request.form.get("lang", "en")
@@ -1018,8 +1103,186 @@ def api_template():
         "materials":           [str(m)[:45]  for m in body.get("materials",  [])[:13]],
         "tags":                [str(t)[:20]  for t in body.get("tags",       [])[:13]],
         "personalization_instructions": str(body.get("personalization_instructions", ""))[:256],
+        "brand_tone":          str(body.get("brand_tone", ""))[:80],
+        "material_phrases":    str(body.get("material_phrases", ""))[:500],
+        "production_time":     str(body.get("production_time", ""))[:120],
+        "shipping_note":       str(body.get("shipping_note", ""))[:240],
+        "brand_cta":           str(body.get("brand_cta", ""))[:160],
     })
     return jsonify({"success": True})
+
+# ── Sellability AI tools ──────────────────────────────────────────────────────
+
+def _consume_improve_allowance():
+    sid = usage_shop_id()
+    allowed, remaining = can_improve(sid)
+    if not allowed:
+        return sid, jsonify({"error": "premium_required", "remaining": 0}), 403
+    return sid, None, None
+
+def _listing_fields_from_body(body: dict) -> dict:
+    return {
+        "title":       str(body.get("title", ""))[:140],
+        "description": str(body.get("description", ""))[:5000],
+        "tags":        [str(t)[:20] for t in body.get("tags", [])[:13]],
+        "materials":   [str(m)[:45] for m in body.get("materials", [])[:13]],
+        "price":       str(body.get("price", ""))[:30],
+        "category":    str(body.get("category", ""))[:160],
+    }
+
+@app.route("/api/improve-listing", methods=["POST"])
+@limiter.limit("20 per minute")
+def api_improve_listing():
+    if not is_authorized():
+        return jsonify({"error": "Not connected"}), 401
+    sid, err_resp, err_code = _consume_improve_allowance()
+    if err_resp is not None:
+        return err_resp, err_code
+
+    body = request.get_json(silent=True) or {}
+    action = body.get("action", "title_seo")
+    lang = body.get("lang", "en")
+    if lang not in _LANG_NAMES:
+        lang = "en"
+    fields = _listing_fields_from_body(body)
+
+    actions = {
+        "title_seo": "Rewrite only the title to be more searchable for Etsy while staying under 140 characters.",
+        "description_warm": "Rewrite only the description with a warmer handmade seller tone. Keep it factual and buyer-friendly.",
+        "tags": "Generate exactly 13 Etsy tags, each 20 characters or fewer, focused on buyer search phrases.",
+        "shorten_etsy": "Shorten title and description for Etsy clarity while preserving important keywords.",
+    }
+    if action not in actions:
+        return jsonify({"error": "Invalid action"}), 400
+
+    prompt = (
+        "You are improving an Etsy listing. "
+        f"Write output in {_LANG_NAMES[lang]}. "
+        f"Task: {actions[action]}\n\n"
+        "Return ONLY valid JSON with keys title, description, tags. "
+        "Keep unchanged fields identical where the task does not affect them.\n\n"
+        + json.dumps(fields, ensure_ascii=False)
+    )
+    try:
+        data = _run_text_json(prompt)
+    except RuntimeError as e:
+        if "no_text_ai_provider" in str(e):
+            return jsonify({"error": "No AI provider configured for improvements."}), 503
+        raise
+    except Exception as e:
+        logger.exception("Improve error: %s", e)
+        return jsonify({"error": safe_error(str(e))}), 500
+
+    if not has_premium_access():
+        increment_improve_usage(sid)
+    return jsonify(data)
+
+@app.route("/api/listing-variants", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_listing_variants():
+    if not is_authorized():
+        return jsonify({"error": "Not connected"}), 401
+    if not has_premium_access():
+        return jsonify({"error": "premium_required"}), 403
+
+    body = request.get_json(silent=True) or {}
+    lang = body.get("lang", "en")
+    if lang not in _LANG_NAMES:
+        lang = "en"
+    fields = _listing_fields_from_body(body)
+    prompt = (
+        "Create three distinct Etsy listing variants from the current listing. "
+        f"Write output in {_LANG_NAMES[lang]}. "
+        "Return ONLY valid JSON in this shape: "
+        "{\"variants\":[{\"name\":\"SEO-focused\",\"title\":\"...\",\"description\":\"...\",\"tags\":[\"13 tags\"]},"
+        "{\"name\":\"Emotional handmade\",\"title\":\"...\",\"description\":\"...\",\"tags\":[\"13 tags\"]},"
+        "{\"name\":\"Gift-focused\",\"title\":\"...\",\"description\":\"...\",\"tags\":[\"13 tags\"]}]}.\n\n"
+        + json.dumps(fields, ensure_ascii=False)
+    )
+    try:
+        return jsonify(_run_text_json(prompt))
+    except RuntimeError as e:
+        if "no_text_ai_provider" in str(e):
+            return jsonify({"error": "No AI provider configured for variants."}), 503
+        raise
+    except Exception as e:
+        logger.exception("Variant error: %s", e)
+        return jsonify({"error": safe_error(str(e))}), 500
+
+def _photo_variant_prompts(meta: dict) -> list[str]:
+    name = str(meta.get("title") or "handmade product")[:120]
+    material = ", ".join(meta.get("materials") or [])[:160] or "visible handmade materials"
+    colors = ", ".join(meta.get("colors") or [])[:120] or "visible colors"
+    category = str(meta.get("category") or meta.get("taxonomy_path") or "e-commerce")[:120]
+    return [
+        f"Professional product photography, {name}, {colors}, {material}, 85mm lens, soft diffused studio lighting, pure white background, centered product, sharp commercial e-commerce photo.",
+        f"Professional lifestyle product photography, {name}, {material}, warm natural window light, minimalist {category} themed interior, product remains the clear hero, shallow depth of field.",
+        f"E-commerce product photography, {name}, seasonal gift-ready scene, soft golden-hour lighting, tasteful background bokeh, product centered and unchanged, high resolution commercial shot.",
+    ]
+
+def _fal_generate_variant(image_url: str, prompt: str) -> str:
+    resp = requests.post(
+        "https://fal.run/fal-ai/flux-pro/kontext",
+        headers={"Authorization": f"Key {FAL_KEY}", "Content-Type": "application/json"},
+        json={
+            "prompt": prompt,
+            "image_url": image_url,
+            "num_images": 1,
+            "sync_mode": True,
+            "output_format": "jpeg",
+            "aspect_ratio": "1:1",
+            "guidance_scale": 3.5,
+            "safety_tolerance": "2",
+        },
+        timeout=(10, 90),
+    )
+    if not resp.ok:
+        logger.error("fal.ai image error: %s", resp.text[:500])
+        raise RuntimeError("Photo generation provider failed.")
+    data = resp.json()
+    images = data.get("images") or []
+    if not images:
+        raise RuntimeError("Photo generation returned no images.")
+    url = images[0].get("url", "")
+    if url.startswith("data:image/"):
+        return url
+    img_resp = requests.get(url, timeout=HTTP_TIMEOUT)
+    if not img_resp.ok:
+        raise RuntimeError("Could not fetch generated photo.")
+    return "data:image/jpeg;base64," + base64.b64encode(img_resp.content).decode()
+
+@app.route("/api/generate-photos", methods=["POST"])
+@limiter.limit("5 per minute")
+def api_generate_photos():
+    if not is_authorized():
+        return jsonify({"error": "Not connected"}), 401
+    if not has_pro_access():
+        return jsonify({"error": "pro_required"}), 403
+    if not FAL_KEY:
+        return jsonify({"error": "Photo generation is not configured yet."}), 503
+
+    sid = str(shop_id())
+    allowed, remaining = can_generate_photo_variants(sid, PHOTO_VARIANT_COUNT)
+    if not allowed:
+        return jsonify({"error": "photo_limit_reached", "remaining": remaining}), 403
+
+    body = request.get_json(silent=True) or {}
+    image_url = str(body.get("image", ""))
+    if not image_url.startswith("data:image/"):
+        return jsonify({"error": "A generated or uploaded product image is required."}), 400
+
+    prompts = _photo_variant_prompts(body)
+    try:
+        variants = [
+            {"label": label, "image": _fal_generate_variant(image_url, prompt)}
+            for label, prompt in zip(("White background", "Lifestyle", "Seasonal gift"), prompts)
+        ]
+    except Exception as e:
+        logger.exception("Photo variant error: %s", e)
+        return jsonify({"error": safe_error(str(e))}), 500
+
+    increment_photo_variant_usage(sid, len(variants))
+    return jsonify({"variants": variants, "remaining": max(0, remaining - len(variants))})
 
 # ── Translation ───────────────────────────────────────────────────────────────
 
@@ -1057,6 +1320,9 @@ def _translate_ai(fields: dict, target_lang: str) -> dict:
 def api_translate():
     redir = require_connection()
     if redir: return jsonify({"error": "Not connected"}), 401
+    sid, err_resp, err_code = _consume_improve_allowance()
+    if err_resp is not None:
+        return err_resp, err_code
     body = request.get_json(silent=True) or {}
     lang = body.get("lang", "de")
     if lang not in ("de", "tr", "en"):
@@ -1067,7 +1333,10 @@ def api_translate():
         "tags":        [str(t)[:20] for t in body.get("tags", [])[:13]],
     }
     try:
-        return jsonify(_translate_ai(fields, lang))
+        data = _translate_ai(fields, lang)
+        if not has_premium_access():
+            increment_improve_usage(sid)
+        return jsonify(data)
     except Exception as e:
         logger.exception("Translate error: %s", e)
         return jsonify({"error": safe_error(str(e))}), 500
@@ -1096,6 +1365,7 @@ def api_bulk_generate():
 
     images   = request.files.getlist("images")
     hint     = str(request.form.get("hint", "")).strip()[:200]
+    hint     = _merge_hint_with_style(hint, sid)
     provider = request.form.get("provider", "gemini")
     lang     = request.form.get("lang", "en")
     platform = request.form.get("platform", "etsy")
