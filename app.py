@@ -212,6 +212,10 @@ def _get_or_create_guest_id():
     return guest_id
 
 def guest_shop_id():
+    # Fingerprint-based ID survives incognito resets (set by /api/fingerprint)
+    fp_id = session.get("fp_guest_id")
+    if fp_id and isinstance(fp_id, str) and fp_id.startswith("guest_fp_"):
+        return fp_id
     guest_id = _get_or_create_guest_id()
     guest_hash = hashlib.sha256(f"guest:{guest_id}".encode()).hexdigest()[:16]
     return f"guest_{guest_hash}"
@@ -793,6 +797,23 @@ def start_guest():
     session.clear()
     session["guest"] = True
     return redirect(url_for("index"))
+
+@app.route("/api/fingerprint", methods=["POST"])
+@csrf.exempt
+@limiter.limit("30 per minute")
+def api_fingerprint():
+    if not is_guest():
+        return jsonify({"ok": False}), 400
+    body = request.get_json(silent=True) or {}
+    fp = body.get("fp", "").strip().lower()
+    # Must be 16–64 lowercase hex chars (SHA-256 slice from client)
+    if not fp or not (16 <= len(fp) <= 64) or not all(c in "0123456789abcdef" for c in fp):
+        return jsonify({"ok": False}), 400
+    fp_guest_id = f"guest_fp_{fp[:24]}"
+    session["fp_guest_id"] = fp_guest_id
+    session.permanent = True
+    g.set_guest_id_cookie = fp_guest_id
+    return jsonify({"ok": True})
 
 # ── App routes ────────────────────────────────────────────────────────────────
 
@@ -1446,6 +1467,7 @@ def upgrade():
     _, remaining = can_generate(sid)
     from db import get_shop
     s = get_shop(sid) or {}
+    use_try = _is_try_domain()
     return render_template(
         "upgrade.html",
         shop_name=session.get("shop_name"),
@@ -1456,6 +1478,7 @@ def upgrade():
         has_pro=bool(os.getenv("STRIPE_PRO_PRICE_ID") or os.getenv("STRIPE_PRICE_ID")),
         has_starter_annual=bool(os.getenv("STRIPE_STARTER_ANNUAL_PRICE_ID")),
         has_pro_annual=bool(os.getenv("STRIPE_PRO_ANNUAL_PRICE_ID")),
+        use_try=use_try,
     )
 
 _PLAN_PRICE_IDS = {
@@ -1464,6 +1487,16 @@ _PLAN_PRICE_IDS = {
     "starter_annual": "STRIPE_STARTER_ANNUAL_PRICE_ID",
     "pro_annual":     "STRIPE_PRO_ANNUAL_PRICE_ID",
 }
+_PLAN_PRICE_IDS_TRY = {
+    "starter":        "STRIPE_STARTER_PRICE_ID_TRY",
+    "pro":            "STRIPE_PRO_PRICE_ID_TRY",
+    "starter_annual": "STRIPE_STARTER_ANNUAL_PRICE_ID_TRY",
+    "pro_annual":     "STRIPE_PRO_ANNUAL_PRICE_ID_TRY",
+}
+
+def _is_try_domain() -> bool:
+    host = request.host or ""
+    return "kolaylistele" in host
 
 @app.route("/stripe/checkout", methods=["POST"])
 @limiter.limit("10 per minute")
@@ -1476,7 +1509,8 @@ def stripe_checkout():
     plan = body.get("plan", "pro")
     if plan not in _PLAN_PRICE_IDS:
         plan = "pro"
-    price_env = _PLAN_PRICE_IDS.get(plan, "STRIPE_PRO_PRICE_ID")
+    price_map = _PLAN_PRICE_IDS_TRY if _is_try_domain() else _PLAN_PRICE_IDS
+    price_env = price_map.get(plan, "STRIPE_PRO_PRICE_ID")
     price_id  = os.getenv(price_env) or os.getenv("STRIPE_PRICE_ID")
     base_plan = plan.replace("_annual", "")
     if not price_id:

@@ -143,7 +143,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat1">manuel ilan süresi</div>
       </div>
       <div style="text-align:center;">
-        <div style="font-size:28px;font-weight:900;color:var(--primary);">€5</div>
+        <div style="font-size:28px;font-weight:900;color:var(--primary);">{% if use_try %}₺260{% else %}€5{% endif %}</div>
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat2">kazanılan zaman değeri</div>
       </div>
       <div style="text-align:center;">
@@ -192,7 +192,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
     <div class="plan {% if current_plan == 'starter' %}highlight{% endif %}">
       <span class="plan-badge" id="t-start-badge">⭐ Best Value</span>
       <div class="plan-name" id="t-start-name">Starter</div>
-      <div class="plan-price" id="starter-price"><sup>€</sup>4<span style="font-size:22px;font-weight:700">.99</span></div>
+      <div class="plan-price" id="starter-price">{% if use_try %}<sup>₺</sup>249{% else %}<sup>€</sup>4<span style="font-size:22px;font-weight:700">.99</span>{% endif %}</div>
       <div class="plan-period" id="t-start-period">per month · cancel anytime</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> <span id="t-s1"><strong>100 generations</strong> per month</span></li>
@@ -211,14 +211,14 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       {% else %}
         <button class="btn-plan ghost" id="t-start-btn" disabled>Coming soon</button>
       {% endif %}
-      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;" id="starter-annual-note" style="display:none;">veya <strong>€49.99/yıl</strong> — 2 ay bedava</div>
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;display:none;" id="starter-annual-note">veya <strong id="starter-annual-price">{% if use_try %}₺2.490/yıl{% else %}€49.99/yıl{% endif %}</strong> — 2 ay bedava</div>
     </div>
 
     <!-- PRO -->
     <div class="plan {% if current_plan == 'pro' %}highlight{% endif %}">
       <span class="plan-badge green" id="t-pro-badge">🚀 Unlimited</span>
       <div class="plan-name" id="t-pro-name">Pro</div>
-      <div class="plan-price" id="pro-price"><sup>€</sup>9<span style="font-size:22px;font-weight:700">.99</span></div>
+      <div class="plan-price" id="pro-price">{% if use_try %}<sup>₺</sup>499{% else %}<sup>€</sup>9<span style="font-size:22px;font-weight:700">.99</span>{% endif %}</div>
       <div class="plan-period" id="t-pro-period">per month · cancel anytime</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> <span id="t-p1"><strong>Unlimited</strong> AI generations</span></li>
@@ -237,7 +237,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       {% else %}
         <button class="btn-plan ghost" id="t-pro-btn" disabled>Coming soon</button>
       {% endif %}
-      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;" id="pro-annual-note">veya <strong>€99/yıl</strong> — 2 ay bedava</div>
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;" id="pro-annual-note">veya <strong id="pro-annual-price">{% if use_try %}₺4.990/yıl{% else %}€99/yıl{% endif %}</strong> — 2 ay bedava</div>
     </div>
 
   </div>
@@ -438,6 +438,7 @@ function setLang(lang) {
 const currentPlan = '{{ current_plan }}';
 const HAS_STARTER_ANNUAL = {{ 'true' if has_starter_annual else 'false' }};
 const HAS_PRO_ANNUAL     = {{ 'true' if has_pro_annual else 'false' }};
+const USE_TRY            = {{ 'true' if use_try else 'false' }};
 
 let billingAnnual = false;
 
@@ -448,13 +449,17 @@ function setBilling(annual) {
 
   // Update starter price display
   const sp = document.getElementById('starter-price');
-  if (sp) sp.innerHTML = annual ? '<sup>€</sup>4<span style="font-size:22px;font-weight:700">.17</span>' : '<sup>€</sup>4<span style="font-size:22px;font-weight:700">.99</span>';
+  if (sp) sp.innerHTML = USE_TRY
+    ? (annual ? '<sup>₺</sup>208' : '<sup>₺</sup>249')
+    : (annual ? '<sup>€</sup>4<span style="font-size:22px;font-weight:700">.17</span>' : '<sup>€</sup>4<span style="font-size:22px;font-weight:700">.99</span>');
   const sn = document.getElementById('starter-annual-note');
   if (sn) sn.style.display = annual ? 'block' : 'none';
 
   // Update pro price display
   const pp = document.getElementById('pro-price');
-  if (pp) pp.innerHTML = annual ? '<sup>€</sup>8<span style="font-size:22px;font-weight:700">.25</span>' : '<sup>€</sup>9<span style="font-size:22px;font-weight:700">.99</span>';
+  if (pp) pp.innerHTML = USE_TRY
+    ? (annual ? '<sup>₺</sup>416' : '<sup>₺</sup>499')
+    : (annual ? '<sup>€</sup>8<span style="font-size:22px;font-weight:700">.25</span>' : '<sup>€</sup>9<span style="font-size:22px;font-weight:700">.99</span>');
   const pn = document.getElementById('pro-annual-note');
   if (pn) pn.style.display = annual ? 'none' : 'block';
 
@@ -465,10 +470,12 @@ function setBilling(annual) {
   if (pb && pb.dataset.checkoutPlan) pb.dataset.checkoutPlan = annual ? 'pro_annual' : 'pro';
 
   // Period text
+  const startAnnualLabel = USE_TRY ? '₺2.490/yıl · 2 ay bedava' : '€49.99/yıl · 2 ay bedava';
+  const proAnnualLabel   = USE_TRY ? '₺4.990/yıl · 2 ay bedava' : '€99/yıl · 2 ay bedava';
   const sp2 = document.getElementById('t-start-period');
-  if (sp2) sp2.textContent = annual ? '€49.99/yıl · 2 ay bedava' : (T[currentLang]?.startPeriod || 'per month · cancel anytime');
+  if (sp2) sp2.textContent = annual ? startAnnualLabel : (T[currentLang]?.startPeriod || 'per month · cancel anytime');
   const pp2 = document.getElementById('t-pro-period');
-  if (pp2) pp2.textContent = annual ? '€99/yıl · 2 ay bedava' : (T[currentLang]?.proPeriod || 'per month · cancel anytime');
+  if (pp2) pp2.textContent = annual ? proAnnualLabel : (T[currentLang]?.proPeriod || 'per month · cancel anytime');
 }
 
 document.getElementById('billingToggle')?.addEventListener('click', () => setBilling(!billingAnnual));
