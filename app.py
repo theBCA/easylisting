@@ -61,6 +61,48 @@ logger = logging.getLogger(__name__)
 
 init_db()
 
+# ── Email helper ──────────────────────────────────────────────────────────────
+
+def send_email(to: str, subject: str, body_text: str, body_html: str = None) -> bool:
+    import smtplib, ssl
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    host = os.getenv("MAIL_HOST", "")
+    port = int(os.getenv("MAIL_PORT", "587"))
+    user = os.getenv("MAIL_USER", "")
+    pw   = os.getenv("MAIL_PASS", "")
+    frm  = os.getenv("MAIL_FROM", user)
+
+    if not host or not user or not pw:
+        logger.warning("send_email: MAIL_HOST/USER/PASS not configured")
+        return False
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"]    = frm
+    msg["To"]      = to
+    msg.attach(MIMEText(body_text, "plain", "utf-8"))
+    if body_html:
+        msg.attach(MIMEText(body_html, "html", "utf-8"))
+
+    try:
+        ctx = ssl.create_default_context()
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=10, context=ctx) as s:
+                s.login(user, pw)
+                s.sendmail(frm, [to], msg.as_string())
+        else:
+            with smtplib.SMTP(host, port, timeout=10) as s:
+                s.ehlo(); s.starttls(context=ctx); s.ehlo()
+                s.login(user, pw)
+                s.sendmail(frm, [to], msg.as_string())
+        logger.info("send_email: sent to %s subject=%r", to, subject)
+        return True
+    except Exception as e:
+        logger.error("send_email failed to=%s: %s", to, e)
+        return False
+
 _BLOCKED_PATH_PREFIXES = (
     "/.git", "/.env", "/root/", "/etc/", "/proc/",
     "/wp-", "//wp-", "//sito/",
