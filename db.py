@@ -40,6 +40,20 @@ def init_db():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS abuse_signals (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                event       TEXT NOT NULL,
+                ip_hash     TEXT,
+                guest_id    TEXT,
+                fp_hash     TEXT,
+                detail      TEXT,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_ip   ON abuse_signals(ip_hash)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_fp   ON abuse_signals(fp_hash)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_time ON abuse_signals(created_at)")
         for ddl in (
             "ALTER TABLE shops ADD COLUMN stripe_customer_id TEXT DEFAULT NULL",
             "ALTER TABLE shops ADD COLUMN stripe_subscription_id TEXT DEFAULT NULL",
@@ -160,6 +174,51 @@ def get_template(shop_id: str) -> dict:
             return json.loads(row["data"])
         except Exception:
             return {}
+
+
+# ── Abuse tracking ───────────────────────────────────────────────────────────
+
+def log_abuse_signal(event: str, ip_hash: str = None, guest_id: str = None,
+                     fp_hash: str = None, detail: str = None):
+    try:
+        with _conn() as con:
+            con.execute(
+                "INSERT INTO abuse_signals (event, ip_hash, guest_id, fp_hash, detail) VALUES (?,?,?,?,?)",
+                (event, ip_hash, guest_id, fp_hash, detail),
+            )
+    except Exception:
+        pass  # never let tracking break the main flow
+
+
+def get_abuse_summary(days: int = 7) -> dict:
+    with _conn() as con:
+        rows = con.execute("""
+            SELECT event, COUNT(*) as n
+            FROM abuse_signals
+            WHERE created_at >= datetime('now', ? || ' days')
+            GROUP BY event ORDER BY n DESC
+        """, (f"-{days}",)).fetchall()
+        by_event = {r["event"]: r["n"] for r in rows}
+
+        top_ips = con.execute("""
+            SELECT ip_hash, COUNT(DISTINCT guest_id) as guests, COUNT(*) as events
+            FROM abuse_signals
+            WHERE created_at >= datetime('now', ? || ' days') AND ip_hash IS NOT NULL
+            GROUP BY ip_hash ORDER BY guests DESC LIMIT 20
+        """, (f"-{days}",)).fetchall()
+
+        top_fps = con.execute("""
+            SELECT fp_hash, COUNT(DISTINCT guest_id) as guests, COUNT(*) as events
+            FROM abuse_signals
+            WHERE created_at >= datetime('now', ? || ' days') AND fp_hash IS NOT NULL
+            GROUP BY fp_hash ORDER BY guests DESC LIMIT 20
+        """, (f"-{days}",)).fetchall()
+
+    return {
+        "by_event":  by_event,
+        "top_ips":   [dict(r) for r in top_ips],
+        "top_fps":   [dict(r) for r in top_fps],
+    }
 
 
 # ── Stripe / premium ──────────────────────────────────────────────────────────
