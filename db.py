@@ -72,13 +72,13 @@ def increment_usage(shop_id: str):
         )
 
 
-def can_generate(shop_id: str) -> tuple[bool, int]:
+def can_generate(shop_id: str, limit: int = FREE_LIMIT) -> tuple[bool, int]:
     shop = get_shop(shop_id)
     if not shop:
-        return True, FREE_LIMIT
+        return True, limit
     if shop["has_premium"]:
         return True, 999
-    remaining = max(0, FREE_LIMIT - shop["free_used"])
+    remaining = max(0, limit - shop["free_used"])
     return remaining > 0, remaining
 
 

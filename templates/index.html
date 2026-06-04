@@ -139,6 +139,8 @@ textarea.field-input { resize: vertical; min-height: 120px; line-height: 1.6; }
 .btn-publish:disabled { background: #D1D5DB; box-shadow: none; cursor: not-allowed; opacity: 1; }
 .btn-save-template { width: 100%; padding: 12px; background: none; border: 2px solid var(--border); border-radius: 11px; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--muted); margin-top: 6px; }
 .btn-save-template:hover { border-color: var(--primary); color: var(--primary); }
+.manual-hint-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 5px 0; border-bottom: 1px solid #F0F0F0; }
+.manual-hint-row:last-child { border-bottom: none; }
 
 /* PLATFORM SELECTOR */
 .platform-row { margin-bottom: 20px; }
@@ -236,6 +238,13 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     <a href="/disconnect" style="font-size:13px;color:var(--muted);" data-i18n="nav_disconnect">Disconnect</a>
   </div>
 </nav>
+
+{% if is_guest %}
+<div id="guestBanner" style="background:#FFF8E7;border-bottom:1px solid #F59E0B;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <span style="font-size:13px;font-weight:600;color:#92400E;">⚡ Misafir modundasınız — içerik oluşturabilir, kopyalayabilirsiniz. Etsy'ye göndermek için mağazanızı bağlayın.</span>
+  <a href="/connect" style="font-size:12px;font-weight:800;color:#5B47E0;white-space:nowrap;text-decoration:none;">Mağazanı Bağla →</a>
+</div>
+{% endif %}
 
 <div id="toast" class="toast"></div>
 
@@ -465,12 +474,47 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
           <div class="instagram-preview" id="instagram-caption"></div>
         </div>
 
+        {% if not is_guest %}
         <button class="btn-publish" id="publishBtn" data-i18n="btn_publish">
           Create Draft on Etsy →
         </button>
+        {% else %}
+        <button class="btn-copy-all" id="copyAllBtn" style="width:100%;padding:16px;background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:11px;font-size:16px;font-weight:800;cursor:pointer;margin-top:8px;">
+          📋 Tüm İçeriği Kopyala
+        </button>
+        <a href="/connect" style="display:block;text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#5B47E0;text-decoration:none;">Etsy'ye göndermek için mağazanı bağla →</a>
+        {% endif %}
         <button class="btn-save-template" id="saveTemplateBtn" data-i18n="btn_save_template">
           💾 Save as default template
         </button>
+
+        {% if not is_guest %}
+        <div id="manual-hints" style="margin-top:18px;padding:14px 16px;background:#F8F9FF;border:1px solid #E5E7F0;border-radius:12px;display:none;">
+          <div style="font-size:12px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">⚠️ Etsy'de manuel eklenecekler</div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div class="manual-hint-row" id="hint-colors" style="display:none;">
+              <span style="font-size:13px;color:#374151;">🎨 <strong>Renkler / Varyasyonlar:</strong> <span id="hint-colors-val" style="color:#5B47E0;font-weight:600;"></span></span>
+              <span style="font-size:11px;color:#9CA3AF;margin-left:6px;">→ Etsy &gt; Ürün Seçenekleri</span>
+            </div>
+            <div class="manual-hint-row">
+              <span style="font-size:13px;color:#374151;">📝 <strong>Alışveriş sepeti özeti</strong> <span style="color:#9CA3AF;">(0/200)</span></span>
+              <span style="font-size:11px;color:#9CA3AF;margin-left:6px;">→ Etsy &gt; Ürün Detayları</span>
+            </div>
+            <div class="manual-hint-row" id="hint-sizes" style="display:none;">
+              <span style="font-size:13px;color:#374151;">📐 <strong>Bedenler:</strong> <span id="hint-sizes-val" style="color:#5B47E0;font-weight:600;"></span></span>
+              <span style="font-size:11px;color:#9CA3AF;margin-left:6px;">→ Etsy &gt; Ürün Seçenekleri</span>
+            </div>
+            <div class="manual-hint-row">
+              <span style="font-size:13px;color:#374151;">🏷️ <strong>Birincil renk özelliği</strong></span>
+              <span style="font-size:11px;color:#9CA3AF;margin-left:6px;">→ Etsy &gt; Nitelikler</span>
+            </div>
+            <div class="manual-hint-row">
+              <span style="font-size:13px;color:#374151;">🏪 <strong>Mağaza bölümü</strong></span>
+              <span style="font-size:11px;color:#9CA3AF;margin-left:6px;">→ Etsy &gt; Ayarlar</span>
+            </div>
+          </div>
+        </div>
+        {% endif %}
 
       </div>
     </div>
@@ -683,6 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── State ──────────────────────────────────────────────────────────────────
+const IS_GUEST = {{ 'true' if is_guest else 'false' }};
 let selectedFiles = [], selectedProvider = 'gemini', aiData = {}, selectedPlatform = 'etsy';
 const PROVIDER = 'gemini';
 
@@ -1145,7 +1190,23 @@ function populateReview(data) {
   setChips('tags-wrap',      'tag-input',      data.tags      || [], 13, 'tag-count-label');
   setChips('materials-wrap', 'material-input', data.materials || [], 13, null);
   setChips('colors-wrap',    'color-input',    data.colors    || [], 20, null, 'color-chip');
-  setChips('sizes-wrap',     'size-input',     [],                  20, null, 'size-chip');
+  setChips('sizes-wrap',     'size-input',     data.sizes     || [], 20, null, 'size-chip');
+
+  // Manual hints panel
+  const hintsPanel = byId('manual-hints');
+  if (hintsPanel) {
+    const colors = data.colors || [];
+    const sizes  = data.sizes  || [];
+    const hc = byId('hint-colors');
+    if (hc) { hc.style.display = colors.length ? 'flex' : 'none'; }
+    const hcv = byId('hint-colors-val');
+    if (hcv) hcv.textContent = colors.join(', ');
+    const hs = byId('hint-sizes');
+    if (hs) { hs.style.display = sizes.length ? 'flex' : 'none'; }
+    const hsv = byId('hint-sizes-val');
+    if (hsv) hsv.textContent = sizes.join(', ');
+    hintsPanel.style.display = 'block';
+  }
 
   if (data.taxonomy_id) {
     setValue('r-taxonomy-id', data.taxonomy_id);
@@ -1253,6 +1314,18 @@ async function publish() {
     showToast('Publish failed', 'error');
     btn.disabled = false; btn.textContent = STRINGS[currentLang].btn_publish || 'Create Draft on Etsy →';
   }
+}
+
+// ── Copy All (guest mode) ──────────────────────────────────────────────────
+function copyAll() {
+  const title = document.getElementById('r-title')?.value || '';
+  const desc  = document.getElementById('r-description')?.value || '';
+  const price = document.getElementById('r-price')?.value || '';
+  const tags  = Array.from(document.querySelectorAll('#tags-wrap .chip')).map(c => c.dataset.value || c.textContent.replace('×','').trim()).join(', ');
+  const mats  = Array.from(document.querySelectorAll('#materials-wrap .chip')).map(c => c.dataset.value || c.textContent.replace('×','').trim()).join(', ');
+  const ig    = document.getElementById('instagram-caption')?.textContent || '';
+  const text  = `BAŞLIK:\n${title}\n\nAÇIKLAMA:\n${desc}\n\nFİYAT: €${price}\n\nETİKETLER:\n${tags}\n\nMALZEMELER:\n${mats}\n\nINSTAGRAM:\n${ig}`;
+  navigator.clipboard.writeText(text).then(() => showToast('✓ Tüm içerik kopyalandı!', 'success'));
 }
 
 // ── Instagram copy ─────────────────────────────────────────────────────────
@@ -1461,6 +1534,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Paywall close button
   document.getElementById('paywallCloseBtn')?.addEventListener('click', () => closeModal('paywallModal'));
+
+  document.getElementById('copyAllBtn')?.addEventListener('click', copyAll);
 });
 </script>
 </body>
