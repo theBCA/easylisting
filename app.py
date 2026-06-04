@@ -66,46 +66,23 @@ init_db()
 
 def send_email(to: str, subject: str, body_text: str, body_html: str = None):
     """Returns (True, None) on success, (False, reason_str) on failure."""
-    import smtplib, ssl
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
+    import resend as _resend
+    api_key = os.getenv("RESEND_API_KEY", "")
+    frm     = os.getenv("MAIL_FROM", "info@kolaylistele.com")
 
-    host = os.getenv("MAIL_HOST", "")
-    port = int(os.getenv("MAIL_PORT", "587"))
-    user = os.getenv("MAIL_USER", "")
-    pw   = os.getenv("MAIL_PASS", "")
-    frm  = os.getenv("MAIL_FROM", user)
-
-    logger.info("send_email: host=%r port=%r user=%r frm=%r to=%r", host, port, user, frm, to)
-
-    if not host or not user or not pw:
-        reason = f"MAIL env vars missing: host={bool(host)} user={bool(user)} pw={bool(pw)}"
+    if not api_key:
+        reason = "RESEND_API_KEY not set"
         logger.error("send_email: %s", reason)
         return False, reason
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"]    = frm
-    msg["To"]      = to
-    msg.attach(MIMEText(body_text, "plain", "utf-8"))
+    _resend.api_key = api_key
+    payload = {"from": frm, "to": [to], "subject": subject, "text": body_text}
     if body_html:
-        msg.attach(MIMEText(body_html, "html", "utf-8"))
+        payload["html"] = body_html
 
     try:
-        ctx = ssl.create_default_context()
-        # Shared hosting SMTP certs (e.g. Natro) often don't pass strict chain validation
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        if port == 465:
-            with smtplib.SMTP_SSL(host, port, timeout=15, context=ctx) as s:
-                s.login(user, pw)
-                s.sendmail(frm, [to], msg.as_string())
-        else:
-            with smtplib.SMTP(host, port, timeout=15) as s:
-                s.ehlo(); s.starttls(context=ctx); s.ehlo()
-                s.login(user, pw)
-                s.sendmail(frm, [to], msg.as_string())
-        logger.info("send_email: sent to %s subject=%r", to, subject)
+        r = _resend.Emails.send(payload)
+        logger.info("send_email: sent id=%s to=%s subject=%r", r.get("id"), to, subject)
         return True, None
     except Exception as e:
         logger.error("send_email failed to=%s: %s", to, e, exc_info=True)
