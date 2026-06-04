@@ -54,6 +54,7 @@ def init_db():
         con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_ip   ON abuse_signals(ip_hash)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_fp   ON abuse_signals(fp_hash)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_time ON abuse_signals(created_at)")
+        init_magic_tables(con)
         for ddl in (
             "ALTER TABLE shops ADD COLUMN stripe_customer_id TEXT DEFAULT NULL",
             "ALTER TABLE shops ADD COLUMN stripe_subscription_id TEXT DEFAULT NULL",
@@ -174,6 +175,79 @@ def get_template(shop_id: str) -> dict:
             return json.loads(row["data"])
         except Exception:
             return {}
+
+
+# ── Magic link auth ──────────────────────────────────────────────────────────
+
+def init_magic_tables(con):
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS magic_links (
+            token      TEXT PRIMARY KEY,
+            email_hash TEXT NOT NULL,
+            shop_id    TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            used_at    TIMESTAMP DEFAULT NULL
+        )
+    """)
+    con.execute("CREATE INDEX IF NOT EXISTS idx_ml_email ON magic_links(email_hash)")
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS verified_emails (
+            email_hash TEXT PRIMARY KEY,
+            shop_id    TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+
+def get_or_create_email_shop(email_hash: str) -> str:
+    with _conn() as con:
+        row = con.execute(
+            "SELECT shop_id FROM verified_emails WHERE email_hash = ?", (email_hash,)
+        ).fetchone()
+        if row:
+            return row["shop_id"]
+        shop_id = f"guest_email_{email_hash[:20]}"
+        con.execute(
+            "INSERT OR IGNORE INTO verified_emails (email_hash, shop_id) VALUES (?,?)",
+            (email_hash, shop_id),
+        )
+        return shop_id
+
+
+def create_magic_link(token: str, email_hash: str, shop_id: str):
+    with _conn() as con:
+        con.execute(
+            "INSERT INTO magic_links (token, email_hash, shop_id) VALUES (?,?,?)",
+            (token, email_hash, shop_id),
+        )
+
+
+def use_magic_link(token: str) -> dict | None:
+    with _conn() as con:
+        row = con.execute(
+            """SELECT * FROM magic_links
+               WHERE token = ? AND used_at IS NULL
+               AND created_at >= datetime('now', '-15 minutes')""",
+            (token,),
+        ).fetchone()
+        if not row:
+            return None
+        con.execute(
+            "UPDATE magic_links SET used_at = CURRENT_TIMESTAMP WHERE token = ?",
+            (token,),
+        )
+        return dict(row)
+
+
+def count_recent_magic_links(email_hash: str, minutes: int = 60) -> int:
+    with _conn() as con:
+        row = con.execute(
+            """SELECT COUNT(*) as n FROM magic_links
+               WHERE email_hash = ?
+               AND created_at >= datetime('now', ? || ' minutes')""",
+            (email_hash, f"-{minutes}"),
+        ).fetchone()
+        return row["n"] if row else 0
 
 
 # ── Abuse tracking ───────────────────────────────────────────────────────────
