@@ -1169,6 +1169,16 @@ def stripe_webhook():
 
     return jsonify({"received": True})
 
+# ── Legal pages ───────────────────────────────────────────────────────────────
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
 # ── Health check for Railway ──────────────────────────────────────────────────
 
 @app.route("/health")
