@@ -907,17 +907,19 @@ def api_magic_link():
     shop_id_for_email = get_or_create_email_shop(email_hash)
     ensure_shop(shop_id_for_email, "Guest")
 
-    # Migrate usage from current session ID so the counter stays correct
+    # Migrate usage: take the MAX so neither session loses progress
     current_sid  = guest_shop_id()
     if current_sid != shop_id_for_email:
         current_shop = get_shop(current_sid)
         email_shop   = get_shop(shop_id_for_email)
-        if (email_shop and email_shop.get("free_used", 0) == 0
-                and current_shop and current_shop.get("free_used", 0) > 0):
-            from db import _conn as _db_conn
-            with _db_conn() as con:
-                con.execute("UPDATE shops SET free_used = ? WHERE shop_id = ?",
-                            (int(current_shop["free_used"]), shop_id_for_email))
+        if current_shop and email_shop:
+            merged = max(int(current_shop.get("free_used", 0)),
+                         int(email_shop.get("free_used", 0)))
+            if merged > int(email_shop.get("free_used", 0)):
+                from db import _conn as _db_conn
+                with _db_conn() as con:
+                    con.execute("UPDATE shops SET free_used = ? WHERE shop_id = ?",
+                                (merged, shop_id_for_email))
 
     token = secrets.token_urlsafe(32)
     create_magic_link(token, email_hash, shop_id_for_email)
@@ -1033,7 +1035,7 @@ def auth_magic():
     session["email_verified"] = True
     session["email_shop_id"]  = row["shop_id"]
     session.permanent         = True
-    return redirect(url_for("index"))
+    return render_template("magic_verified.html")
 
 
 # ── App routes ────────────────────────────────────────────────────────────────
@@ -1106,6 +1108,8 @@ def api_status():
 @limiter.limit("10 per minute; 50 per day")
 def api_generate():
     if not is_authorized(): return jsonify({"error": "Not connected"}), 401
+    if is_guest() and not is_email_verified():
+        return jsonify({"error": "email_verification_required"}), 403
 
     if is_guest():
         sid = guest_shop_id()
@@ -1790,6 +1794,8 @@ def stripe_webhook():
 
     obj = event["data"]["object"]
     if event["type"] == "checkout.session.completed":
+        if obj.get("payment_status") != "paid":
+            return jsonify({"received": True})  # wait for invoice.payment_succeeded
         sid  = obj.get("client_reference_id") or obj.get("metadata", {}).get("shop_id")
         plan = obj.get("metadata", {}).get("plan", "pro")
         if sid:
