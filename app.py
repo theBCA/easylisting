@@ -16,11 +16,12 @@ from flask import (
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from itsdangerous import BadSignature, URLSafeSerializer
 from dotenv import load_dotenv
 from db import (
     init_db, ensure_shop, can_generate, increment_usage,
     save_template, get_template,
-    set_premium, get_shop_by_stripe_customer,
+    set_premium, get_shop, get_shop_by_stripe_customer,
 )
 
 load_dotenv()
@@ -91,6 +92,17 @@ def set_security_headers(resp):
         f"font-src 'self' https://fonts.gstatic.com; "
         f"frame-ancestors 'none';"
     )
+    guest_id = getattr(g, "set_guest_id_cookie", "")
+    if guest_id:
+        token = URLSafeSerializer(app.config["SECRET_KEY"], salt="guest-id").dumps(guest_id)
+        resp.set_cookie(
+            GUEST_ID_COOKIE,
+            token,
+            max_age=GUEST_ID_MAX_AGE,
+            httponly=True,
+            secure=_is_production,
+            samesite="Lax",
+        )
     return resp
 
 # ── Etsy OAuth config ─────────────────────────────────────────────────────────
@@ -103,6 +115,9 @@ READINESS_ID        = 1489219211571
 REDIRECT_URI        = os.getenv("REDIRECT_URI", "http://localhost:5050/auth/callback")
 HTTP_TIMEOUT        = (5, 30)  # (connect timeout, read timeout) in seconds
 GUEST_FREE_LIMIT    = 3
+GUEST_ID_COOKIE     = "easylisting_guest_id"
+GUEST_ID_MAX_AGE    = 60 * 60 * 24 * 180  # 180 days
+ALLOW_PAID_OPENAI   = os.getenv("ALLOW_PAID_OPENAI", "").lower() in {"1", "true", "yes"}
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_TITLE_LEN       = 140
@@ -146,9 +161,46 @@ def is_guest():
 def is_authorized():
     return is_connected() or is_guest()
 
+def _cookie_guest_id():
+    token = request.cookies.get(GUEST_ID_COOKIE, "")
+    if not token:
+        return None
+    try:
+        guest_id = URLSafeSerializer(app.config["SECRET_KEY"], salt="guest-id").loads(token)
+    except BadSignature:
+        return None
+    if not isinstance(guest_id, str) or len(guest_id) < 16:
+        return None
+    return guest_id
+
+def _get_or_create_guest_id():
+    cookie_guest_id = _cookie_guest_id()
+    guest_id = session.get("guest_id") or cookie_guest_id
+    if not isinstance(guest_id, str) or len(guest_id) < 16:
+        guest_id = secrets.token_urlsafe(18)
+    if session.get("guest_id") != guest_id:
+        session.permanent = True
+        session["guest_id"] = guest_id
+    if cookie_guest_id != guest_id:
+        g.set_guest_id_cookie = guest_id
+    return guest_id
+
 def guest_shop_id():
-    ip_hash = hashlib.sha256(request.remote_addr.encode()).hexdigest()[:16]
-    return f"guest_{ip_hash}"
+    guest_id = _get_or_create_guest_id()
+    guest_hash = hashlib.sha256(f"guest:{guest_id}".encode()).hexdigest()[:16]
+    return f"guest_{guest_hash}"
+
+def provider_chain():
+    chain = ["gemini", "nvidia"]
+    if ALLOW_PAID_OPENAI:
+        chain.append("openai")
+    return chain
+
+def has_premium_access():
+    if is_guest() or not shop_id():
+        return False
+    shop = get_shop(str(shop_id()))
+    return bool(shop and shop.get("has_premium"))
 
 def require_connection():
     if not is_authorized():
@@ -519,8 +571,8 @@ def _nvidia_generate(image_bytes_list, hint, model_key="llama-90b", api_key=None
         raise RuntimeError("quota_exceeded") from e
     return _parse_ai_json(resp.choices[0].message.content)
 
-# Fallback order when a provider is over quota
-_PROVIDER_CHAIN = ["gemini", "nvidia", "openai"]
+# Fallback order when a provider is over quota. OpenAI is paid, so it is opt-in.
+_PROVIDER_CHAIN = provider_chain()
 
 def _run_provider(provider, image_bytes, hint, nvidia_model, api_key=None, lang="en", platform="etsy"):
     if provider == "gemini":
@@ -670,16 +722,18 @@ def index():
         _, remaining = can_generate(gid, GUEST_FREE_LIMIT)
         return render_template("index.html",
             shop_name=None, remaining=remaining, free_limit=GUEST_FREE_LIMIT,
-            unlimited=False, is_guest=True)
+            unlimited=False, is_guest=True, has_premium=False)
     sid = str(shop_id())
     _, remaining = can_generate(sid)
     from db import FREE_LIMIT
+    premium = has_premium_access()
     return render_template(
         "index.html",
         shop_name=session.get("shop_name"),
         remaining=remaining,
         free_limit=FREE_LIMIT,
         unlimited=remaining >= 999,
+        has_premium=premium,
         is_guest=False,
     )
 
@@ -737,7 +791,7 @@ def api_generate():
     lang         = request.form.get("lang", "en")
     platform     = request.form.get("platform", "etsy")
 
-    if provider not in ("gemini", "openai", "nvidia"):
+    if provider not in _PROVIDER_CHAIN:
         provider = "gemini"
     if nvidia_model not in NVIDIA_MODELS:
         nvidia_model = "llama-90b"
@@ -760,7 +814,7 @@ def api_generate():
         image_bytes.append(data_b)
 
     key_env = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "nvidia": "NVIDIA_API_KEY"}
-    # Try chosen provider first, then fall through Gemini → NVIDIA → OpenAI.
+    # Try chosen provider first, then fall through configured providers.
     start   = _PROVIDER_CHAIN.index(provider) if provider in _PROVIDER_CHAIN else 0
     ordered = _PROVIDER_CHAIN[start:] + _PROVIDER_CHAIN[:start]
     data    = None
@@ -976,7 +1030,7 @@ def _translate_ai(fields: dict, target_lang: str) -> dict:
         "Keep tags 1-3 words each. Keep title under 140 chars. "
         "Return ONLY valid JSON with the same keys:\n" + json.dumps(fields)
     )
-    # Try Gemini, fall back to OpenAI
+    # Try Gemini, then optionally fall back to paid OpenAI if explicitly enabled.
     if os.getenv("GEMINI_API_KEY"):
         try:
             from google import genai as ggenai
@@ -987,7 +1041,7 @@ def _translate_ai(fields: dict, target_lang: str) -> dict:
         except ClientError as e:
             if "429" not in str(e) and "RESOURCE_EXHAUSTED" not in str(e):
                 raise
-    if os.getenv("OPENAI_API_KEY"):
+    if ALLOW_PAID_OPENAI and os.getenv("OPENAI_API_KEY"):
         from openai import OpenAI
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         resp = client.chat.completions.create(
@@ -1024,6 +1078,8 @@ def api_translate():
 def bulk():
     redir = require_connection()
     if redir: return redir
+    if not has_premium_access():
+        return redirect(url_for("upgrade", bulk_required=1))
     return render_template("bulk.html", shop_name=session.get("shop_name"))
 
 @app.route("/api/bulk-generate", methods=["POST"])
@@ -1031,6 +1087,8 @@ def bulk():
 def api_bulk_generate():
     redir = require_connection()
     if redir: return jsonify({"error": "Not connected"}), 401
+    if not has_premium_access():
+        return jsonify({"error": "premium_required"}), 403
     sid = str(shop_id())
     allowed, _ = can_generate(sid)
     if not allowed:
@@ -1041,7 +1099,7 @@ def api_bulk_generate():
     provider = request.form.get("provider", "gemini")
     lang     = request.form.get("lang", "en")
     platform = request.form.get("platform", "etsy")
-    if provider not in ("gemini", "nvidia", "openai"):
+    if provider not in _PROVIDER_CHAIN:
         provider = "gemini"
     if lang not in _LANG_NAMES:
         lang = "en"
