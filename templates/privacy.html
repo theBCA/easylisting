@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='security.js') }}"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — KolayListele</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --primary:#5B47E0; --bg:#F6F7FB; --border:#E5E7F0; --text:#111827; --muted:#6B7280; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text); }
+nav { background:white; border-bottom:1px solid var(--border); padding:0 24px; height:58px; display:flex; align-items:center; }
+.nav-logo { font-size:17px; font-weight:800; color:var(--primary); text-decoration:none; }
+.nav-logo span { color:var(--text); }
+.container { max-width:760px; margin:0 auto; padding:56px 24px 80px; }
+h1 { font-size:32px; font-weight:800; margin-bottom:8px; }
+.updated { font-size:13px; color:var(--muted); margin-bottom:40px; }
+h2 { font-size:18px; font-weight:700; margin:36px 0 12px; }
+p { font-size:15px; line-height:1.75; color:#374151; margin-bottom:12px; }
+ul { padding-left:20px; margin-bottom:12px; }
+li { font-size:15px; line-height:1.75; color:#374151; margin-bottom:4px; }
+a { color:var(--primary); }
+footer { text-align:center; padding:32px; font-size:13px; color:var(--muted); border-top:1px solid var(--border); margin-top:40px; }
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Kolay<span>Listele</span></a>
+</nav>
+<div class="container">
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: June 4, 2025</p>
+
+  <p>KolayListele ("we", "our", or "us") operates the website kolaylistele.com and provides an AI-powered product listing generation service for Etsy sellers. This Privacy Policy explains what information we collect, how we use it, and your rights regarding that information.</p>
+
+  <h2>1. Information We Collect</h2>
+  <p>When you connect your Etsy shop, we collect and store:</p>
+  <ul>
+    <li><strong>Etsy Shop ID and Shop Name</strong> — to identify your account within our system.</li>
+    <li><strong>Etsy OAuth Access Token</strong> — stored securely in your browser session to make API calls on your behalf. We do not store this token permanently on our servers.</li>
+    <li><strong>Usage data</strong> — how many AI-generated listings you have created, to enforce free tier limits.</li>
+    <li><strong>Billing data</strong> — if you subscribe to a paid plan, we store your Stripe customer ID and subscription ID. We do not store your credit card details (handled entirely by Stripe).</li>
+  </ul>
+  <p>When you upload product images, those images are processed by our AI providers (Google Gemini, OpenAI) to generate listing content. Images are not permanently stored on our servers after processing.</p>
+
+  <h2>2. How We Use Your Information</h2>
+  <ul>
+    <li>To authenticate your Etsy shop and make API calls on your behalf (creating draft listings, uploading images).</li>
+    <li>To track your usage of the free tier and enforce usage limits.</li>
+    <li>To manage your subscription and billing via Stripe.</li>
+    <li>To generate AI listing content using your uploaded product images and optional hints.</li>
+  </ul>
+  <p>We do not sell, rent, or share your personal data with third parties for marketing purposes.</p>
+
+  <h2>3. Etsy API Data</h2>
+  <p>We request the following Etsy OAuth scopes:</p>
+  <ul>
+    <li><strong>listings_r</strong> — to read your existing listings and shop data.</li>
+    <li><strong>listings_w</strong> — to create new draft listings on your behalf.</li>
+    <li><strong>shops_r</strong> — to read your shop information (name, shipping profiles).</li>
+  </ul>
+  <p>We access your Etsy data only to perform actions you explicitly request within the app. We do not use your Etsy data for any other purpose.</p>
+
+  <h2>4. Third-Party Services</h2>
+  <ul>
+    <li><strong>Google Gemini / OpenAI</strong> — your product images and optional text hints are sent to these services to generate listing content. Please review their respective privacy policies.</li>
+    <li><strong>Stripe</strong> — payment processing for paid plans. Stripe's privacy policy applies to all billing data.</li>
+    <li><strong>Railway</strong> — our hosting provider. Application data is hosted on Railway's infrastructure.</li>
+  </ul>
+
+  <h2>5. Data Retention</h2>
+  <p>We retain your shop ID, shop name, and usage data for as long as your account is active. You may request deletion of your data at any time by emailing us. Upon request, we will delete all data associated with your Etsy Shop ID from our systems within 30 days.</p>
+
+  <h2>6. Security</h2>
+  <p>We implement industry-standard security measures including HTTPS encryption, secure session cookies, rate limiting, and input validation. However, no method of transmission over the internet is 100% secure.</p>
+
+  <h2>7. Children's Privacy</h2>
+  <p>Our service is not directed to children under 13. We do not knowingly collect personal information from children.</p>
+
+  <h2>8. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. We will notify users of significant changes by updating the "Last updated" date above.</p>
+
+  <h2>9. Contact Us</h2>
+  <p>If you have any questions about this Privacy Policy or wish to request deletion of your data, please contact us at:<br>
+  <a href="mailto:privacy@kolaylistele.com">privacy@kolaylistele.com</a></p>
+</div>
+<footer>© 2025 KolayListele. All rights reserved.</footer>
+</body>
+</html>
