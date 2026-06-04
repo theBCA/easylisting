@@ -169,7 +169,6 @@ HTTP_TIMEOUT        = (5, 30)  # (connect timeout, read timeout) in seconds
 GUEST_FREE_LIMIT    = 3
 GUEST_ID_COOKIE     = "easylisting_guest_id"
 GUEST_ID_MAX_AGE    = 60 * 60 * 24 * 180  # 180 days
-ALLOW_PAID_OPENAI   = os.getenv("ALLOW_PAID_OPENAI", "").lower() in {"1", "true", "yes"}
 PHOTO_VARIANT_COUNT = 3
 FAL_KEY             = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
 
@@ -255,11 +254,12 @@ def guest_shop_id():
 def is_email_verified():
     return bool(session.get("email_verified") and session.get("email_shop_id"))
 
-def provider_chain():
-    chain = ["gemini", "nvidia"]
-    if ALLOW_PAID_OPENAI:
-        chain.append("openai")
-    return chain
+def provider_chain(premium=False):
+    # Free: nvidia first (free quota), gemini as fallback
+    # Premium: gemini → openai → nvidia (best quality first)
+    if premium:
+        return ["gemini", "openai", "nvidia"]
+    return ["nvidia", "gemini"]
 
 def has_premium_access():
     if is_guest() or not shop_id():
@@ -673,7 +673,8 @@ def _nvidia_generate(image_bytes_list, hint, model_key="llama-90b", api_key=None
     return _parse_ai_json(resp.choices[0].message.content)
 
 # Fallback order when a provider is over quota. OpenAI is paid, so it is opt-in.
-_PROVIDER_CHAIN = provider_chain()
+_PROVIDER_CHAIN_FREE    = provider_chain(premium=False)
+_PROVIDER_CHAIN_PREMIUM = provider_chain(premium=True)
 
 def _run_provider(provider, image_bytes, hint, nvidia_model, api_key=None, lang="en", platform="etsy"):
     if provider == "gemini":
@@ -1133,13 +1134,16 @@ def api_generate():
     images       = request.files.getlist("images")
     hint         = str(request.form.get("hint", "")).strip()[:200]
     hint         = _merge_hint_with_style(hint, None if is_guest() else sid)
-    provider     = request.form.get("provider", "gemini")
+    provider     = request.form.get("provider", "nvidia")
     nvidia_model = request.form.get("nvidia_model", "llama-90b")
     lang         = request.form.get("lang", "en")
     platform     = request.form.get("platform", "etsy")
 
-    if provider not in _PROVIDER_CHAIN:
-        provider = "gemini"
+    premium = has_premium_access()
+    chain   = _PROVIDER_CHAIN_PREMIUM if premium else _PROVIDER_CHAIN_FREE
+
+    if provider not in chain:
+        provider = chain[0]
     if nvidia_model not in NVIDIA_MODELS:
         nvidia_model = "llama-90b"
     if lang not in _LANG_NAMES:
@@ -1161,9 +1165,9 @@ def api_generate():
         image_bytes.append(data_b)
 
     key_env = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "nvidia": "NVIDIA_API_KEY"}
-    # Try chosen provider first, then fall through configured providers.
-    start   = _PROVIDER_CHAIN.index(provider) if provider in _PROVIDER_CHAIN else 0
-    ordered = _PROVIDER_CHAIN[start:] + _PROVIDER_CHAIN[:start]
+    # Try chosen provider first, then fall through the chain.
+    start   = chain.index(provider) if provider in chain else 0
+    ordered = chain[start:] + chain[:start]
     data    = None
     for p in ordered:
         if not os.getenv(key_env[p]):
@@ -1630,11 +1634,12 @@ def api_bulk_generate():
     images   = request.files.getlist("images")
     hint     = str(request.form.get("hint", "")).strip()[:200]
     hint     = _merge_hint_with_style(hint, sid)
-    provider = request.form.get("provider", "gemini")
+    provider = request.form.get("provider", "nvidia")
     lang     = request.form.get("lang", "en")
     platform = request.form.get("platform", "etsy")
-    if provider not in _PROVIDER_CHAIN:
-        provider = "gemini"
+    chain    = _PROVIDER_CHAIN_PREMIUM if has_premium_access() else _PROVIDER_CHAIN_FREE
+    if provider not in chain:
+        provider = chain[0]
     if lang not in _LANG_NAMES:
         lang = "en"
     if platform not in PLATFORM_PROMPTS:
@@ -1652,9 +1657,9 @@ def api_bulk_generate():
             return jsonify({"error": "File content does not match an allowed image format."}), 400
         image_bytes.append(data_b)
 
-    key_env  = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "nvidia": "NVIDIA_API_KEY"}
-    start   = _PROVIDER_CHAIN.index(provider) if provider in _PROVIDER_CHAIN else 0
-    ordered = _PROVIDER_CHAIN[start:] + _PROVIDER_CHAIN[:start]
+    key_env = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "nvidia": "NVIDIA_API_KEY"}
+    start   = chain.index(provider) if provider in chain else 0
+    ordered = chain[start:] + chain[:start]
     data    = None
     for p in ordered:
         if not os.getenv(key_env[p]):
