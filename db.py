@@ -6,7 +6,7 @@ import sqlite3
 import os
 
 DB_PATH   = os.getenv("DB_PATH", "easylisting.sqlite")
-FREE_LIMIT = 5
+FREE_LIMIT = 3
 
 
 def _conn():
