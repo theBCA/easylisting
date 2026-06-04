@@ -78,6 +78,18 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 /* Toast */
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A1A; color: white; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; transition: transform .3s; z-index: 9999; pointer-events: none; }
 .toast.show { transform: translateX(-50%) translateY(0); }
+@media (max-width: 600px) {
+  .container, .page-header { padding-left: 14px; padding-right: 14px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .tabs { gap: 4px; }
+  .tab { font-size: 13px; padding: 6px 14px; }
+  .cards-grid { grid-template-columns: 1fr; }
+  .card { padding: 14px; }
+  .card-actions { flex-direction: column; gap: 6px; }
+  .card-action { width: 100%; text-align: center; padding: 9px; }
+  .btn-new { font-size: 13px; padding: 8px 16px; }
+  nav { padding: 0 14px; height: auto; min-height: 54px; }
+}
 </style>
 </head>
 <body>
