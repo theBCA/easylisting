@@ -1084,8 +1084,7 @@ function startEmailVerifiedPolling() {
 
 // ── State ──────────────────────────────────────────────────────────────────
 const IS_GUEST = {{ 'true' if is_guest else 'false' }};
-let selectedFiles = [], selectedProvider = 'gemini', aiData = {}, selectedPlatform = 'etsy';
-const PROVIDER = 'gemini';
+let selectedFiles = [], selectedProvider = 'nvidia', aiData = {}, selectedPlatform = 'etsy';
 
 // ── Platform config ────────────────────────────────────────────────────────
 const PLATFORM_META = {
@@ -1486,7 +1485,7 @@ async function startGenerate() {
   const fd = new FormData();
   selectedFiles.forEach(f => fd.append('images', f));
   fd.append('hint',     document.getElementById('hintInput').value);
-  fd.append('provider', PROVIDER);
+  fd.append('provider', selectedProvider);
   const langSel = document.getElementById('langSelect');
   const genLang = langSel ? langSel.value : currentLang;
   fd.append('lang', genLang);
