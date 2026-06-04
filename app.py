@@ -810,9 +810,31 @@ def api_fingerprint():
     if not fp or not (16 <= len(fp) <= 64) or not all(c in "0123456789abcdef" for c in fp):
         return jsonify({"ok": False}), 400
     fp_guest_id = f"guest_fp_{fp[:24]}"
+
+    # Capture the current random-based ID BEFORE switching, so we can
+    # migrate its usage to the fp ID (prevents fp ID starting at 0/3).
+    current_sid = guest_shop_id()
+
     session["fp_guest_id"] = fp_guest_id
     session.permanent = True
-    g.set_guest_id_cookie = fp_guest_id
+    # Do NOT overwrite GUEST_ID_COOKIE — the random 180-day cookie is the
+    # stable fallback and must not be replaced with a fresh fp ID.
+
+    # Ensure fp shop exists, then migrate usage from the random shop if
+    # the fp shop is brand-new (free_used=0) but the random shop has usage.
+    ensure_shop(fp_guest_id, "Guest")
+    if current_sid != fp_guest_id:
+        fp_shop      = get_shop(fp_guest_id)
+        current_shop = get_shop(current_sid)
+        if (fp_shop and fp_shop.get("free_used", 0) == 0
+                and current_shop and current_shop.get("free_used", 0) > 0):
+            from db import _conn as _db_conn
+            with _db_conn() as con:
+                con.execute(
+                    "UPDATE shops SET free_used = ? WHERE shop_id = ?",
+                    (int(current_shop["free_used"]), fp_guest_id),
+                )
+
     return jsonify({"ok": True})
 
 # ── App routes ────────────────────────────────────────────────────────────────
