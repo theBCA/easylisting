@@ -927,7 +927,7 @@ function setLang(lang) {
 }
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
-  if (IS_GUEST) _sendFingerprint();
+  if (IS_GUEST) _fpReady = _sendFingerprint();
   // Pick up regenerate prefill from My Listings page
   const raw = sessionStorage.getItem('sd_regenerate');
   if (raw) {
@@ -953,21 +953,21 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Browser fingerprint (guest incognito resistance) ──────────────────────
+// Stored as a promise so startGenerate() can await it before calling the API.
+let _fpReady = Promise.resolve();
+
 async function _sendFingerprint() {
   try {
     const parts = [];
-    // Canvas
     const cv = document.createElement('canvas');
     const ctx = cv.getContext('2d');
     ctx.textBaseline = 'top'; ctx.font = '14px Arial';
     ctx.fillStyle = '#f60'; ctx.fillRect(125, 1, 62, 20);
     ctx.fillStyle = '#069'; ctx.fillText('klstl\u{1F6CD}️', 2, 15);
     parts.push(cv.toDataURL());
-    // WebGL
     const gl = document.createElement('canvas').getContext('webgl');
     const ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
     if (ext) { parts.push(gl.getParameter(ext.UNMASKED_VENDOR_WEBGL), gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)); }
-    // Stable device signals
     parts.push(screen.width + 'x' + screen.height + 'x' + screen.colorDepth);
     parts.push(Intl.DateTimeFormat().resolvedOptions().timeZone);
     parts.push(navigator.language, navigator.platform);
@@ -978,6 +978,9 @@ async function _sendFingerprint() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({fp}),
     });
+    // After fingerprint is registered server-side, refresh the usage bar
+    // so it reflects the fingerprint-based ID's actual remaining count.
+    await refreshUsageBadge();
   } catch(_) {}
 }
 
@@ -1360,6 +1363,9 @@ async function saveTemplate() {
 // ── Generate ──────────────────────────────────────────────────────────────
 async function startGenerate() {
   if (!selectedFiles.length) return;
+  // Ensure fingerprint is registered before hitting the API so the server
+  // uses the correct (possibly exhausted) fp-based guest ID.
+  if (IS_GUEST) await _fpReady;
   showScreen('loading-screen');
   animateSteps();
 
