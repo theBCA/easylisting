@@ -324,6 +324,11 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
       </div>
       <div class="field-group">
         <label data-i18n="label_lang">Language</label>
+        <select id="langSelect" class="field-input" style="padding:10px 14px;">
+          <option value="tr">🇹🇷 Türkçe</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="de">🇩🇪 Deutsch</option>
+        </select>
       </div>
     </div>
 
@@ -1057,7 +1062,9 @@ async function startGenerate() {
   selectedFiles.forEach(f => fd.append('images', f));
   fd.append('hint',     document.getElementById('hintInput').value);
   fd.append('provider', PROVIDER);
-  fd.append('lang',     currentLang);
+  const langSel = document.getElementById('langSelect');
+  const genLang = langSel ? langSel.value : currentLang;
+  fd.append('lang', genLang);
   fd.append('platform', selectedPlatform);
   const nvidiaModel = document.querySelector('input[name="nvidia_model"]:checked');
   if (nvidiaModel) fd.append('nvidia_model', nvidiaModel.value);
@@ -1126,13 +1133,12 @@ function populateReview(data) {
   setVal('r-price', data.suggested_price_eur || '');
 
   const ps = byId('price-suggestion');
-  if (!ps) return;
-  ps.textContent = '';
-  if (data.suggested_price_eur) {
+  if (ps) ps.textContent = '';
+  if (ps && data.suggested_price_eur) {
     const label = document.createTextNode('AI suggested ');
     const span  = document.createElement('span');
     span.textContent = '€' + Number(data.suggested_price_eur).toFixed(2);
-    span.onclick = () => setValue('r-price', data.suggested_price_eur);
+    span.addEventListener('click', () => setValue('r-price', data.suggested_price_eur));
     ps.appendChild(label); ps.appendChild(span);
   }
 
@@ -1241,8 +1247,8 @@ async function publish() {
       btn.disabled = false; btn.textContent = STRINGS[currentLang].btn_publish || 'Create Draft on Etsy →';
       return;
     }
-    showToast('Draft created! listing_id=' + data.listing_id, 'success');
-    setTimeout(() => { window.location.href = '/listings'; }, 1800);
+    showToast('✓ Taslak Etsy\'ye eklendi! Yönlendiriliyorsunuz…', 'success');
+    setTimeout(() => { window.location.href = '/listings'; }, 2000);
   } catch(e) {
     showToast('Publish failed', 'error');
     btn.disabled = false; btn.textContent = STRINGS[currentLang].btn_publish || 'Create Draft on Etsy →';
