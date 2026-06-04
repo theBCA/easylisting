@@ -102,7 +102,7 @@ ETSY_SCOPES         = "listings_r listings_w shops_r"
 READINESS_ID        = 1489219211571
 REDIRECT_URI        = os.getenv("REDIRECT_URI", "http://localhost:5050/auth/callback")
 HTTP_TIMEOUT        = (5, 30)  # (connect timeout, read timeout) in seconds
-GUEST_FREE_LIMIT    = 2
+GUEST_FREE_LIMIT    = 3
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_TITLE_LEN       = 140
@@ -669,14 +669,16 @@ def index():
         ensure_shop(gid, "Guest")
         _, remaining = can_generate(gid, GUEST_FREE_LIMIT)
         return render_template("index.html",
-            shop_name=None, remaining=remaining,
+            shop_name=None, remaining=remaining, free_limit=GUEST_FREE_LIMIT,
             unlimited=False, is_guest=True)
     sid = str(shop_id())
     _, remaining = can_generate(sid)
+    from db import FREE_LIMIT
     return render_template(
         "index.html",
         shop_name=session.get("shop_name"),
         remaining=remaining,
+        free_limit=FREE_LIMIT,
         unlimited=remaining >= 999,
         is_guest=False,
     )
@@ -1124,11 +1126,15 @@ def upgrade():
         stripe_key=os.getenv("STRIPE_PUBLISHABLE_KEY", ""),
         has_starter=bool(os.getenv("STRIPE_STARTER_PRICE_ID")),
         has_pro=bool(os.getenv("STRIPE_PRO_PRICE_ID") or os.getenv("STRIPE_PRICE_ID")),
+        has_starter_annual=bool(os.getenv("STRIPE_STARTER_ANNUAL_PRICE_ID")),
+        has_pro_annual=bool(os.getenv("STRIPE_PRO_ANNUAL_PRICE_ID")),
     )
 
 _PLAN_PRICE_IDS = {
-    "starter": "STRIPE_STARTER_PRICE_ID",
-    "pro":     "STRIPE_PRO_PRICE_ID",
+    "starter":        "STRIPE_STARTER_PRICE_ID",
+    "pro":            "STRIPE_PRO_PRICE_ID",
+    "starter_annual": "STRIPE_STARTER_ANNUAL_PRICE_ID",
+    "pro_annual":     "STRIPE_PRO_ANNUAL_PRICE_ID",
 }
 
 @app.route("/stripe/checkout", methods=["POST"])
@@ -1140,10 +1146,11 @@ def stripe_checkout():
         return jsonify({"error": "Stripe not configured"}), 503
     body = request.get_json(silent=True) or {}
     plan = body.get("plan", "pro")
-    if plan not in ("starter", "pro"):
+    if plan not in _PLAN_PRICE_IDS:
         plan = "pro"
     price_env = _PLAN_PRICE_IDS.get(plan, "STRIPE_PRO_PRICE_ID")
     price_id  = os.getenv(price_env) or os.getenv("STRIPE_PRICE_ID")
+    base_plan = plan.replace("_annual", "")
     if not price_id:
         return jsonify({"error": "Stripe price not configured for this plan"}), 503
     try:
@@ -1159,7 +1166,7 @@ def stripe_checkout():
             client_reference_id=str(shop_id()),
             metadata={"shop_id": str(shop_id()),
                       "shop_name": session.get("shop_name", ""),
-                      "plan": plan},
+                      "plan": base_plan},
         )
         return jsonify({"url": checkout.url})
     except Exception as e:

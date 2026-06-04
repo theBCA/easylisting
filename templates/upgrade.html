@@ -119,6 +119,37 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
     {% endif %}
   </div>
 
+  <!-- Value prop -->
+  <div style="background:white;border-radius:16px;padding:20px 28px;margin-bottom:32px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div style="display:flex;gap:28px;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-size:28px;font-weight:900;color:var(--primary);">30<span style="font-size:16px;">dk</span></div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat1">manuel ilan süresi</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:28px;font-weight:900;color:var(--primary);">€5</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat2">kazanılan zaman değeri</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:28px;font-weight:900;color:var(--green);">2</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat3">ilan = Pro kendini karşılar</div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--muted);max-width:260px;line-height:1.6;" id="t-value-desc">
+      Etsy satıcıları ilan başına ortalama 30 dakika harcar. Pro planla bu süreyi 30 saniyeye indirin.
+    </div>
+  </div>
+
+  <!-- Billing toggle -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:28px;">
+    <span style="font-size:14px;font-weight:700;" id="t-monthly">Aylık</span>
+    <button id="billingToggle" style="width:48px;height:26px;border-radius:13px;border:none;background:#5B47E0;cursor:pointer;position:relative;transition:background .2s;" aria-label="Toggle billing">
+      <span id="billingThumb" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:white;transition:left .2s;"></span>
+    </button>
+    <span style="font-size:14px;font-weight:700;" id="t-annual">Yıllık</span>
+    <span style="background:#D1FAE5;color:#065F46;font-size:11px;font-weight:800;padding:3px 9px;border-radius:10px;" id="t-save-badge">2 ay bedava</span>
+  </div>
+
   <div class="plans">
 
     <!-- FREE -->
@@ -127,7 +158,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       <div class="plan-price"><sup>€</sup>0</div>
       <div class="plan-period" id="t-free-period">forever</div>
       <ul class="plan-features">
-        <li><span class="check">✓</span> <span id="t-f1">5 AI-generated listings</span></li>
+        <li><span class="check">✓</span> <span id="t-f1">3 AI-generated listings</span></li>
         <li><span class="check">✓</span> <span id="t-f2">Gemini + NVIDIA AI models</span></li>
         <li><span class="check">✓</span> <span id="t-f3">Multi-image upload</span></li>
         <li><span class="check">✓</span> <span id="t-f4">EN / DE / TR translations</span></li>
@@ -145,7 +176,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
     <div class="plan {% if current_plan == 'starter' %}highlight{% endif %}">
       <span class="plan-badge" id="t-start-badge">⭐ Best Value</span>
       <div class="plan-name" id="t-start-name">Starter</div>
-      <div class="plan-price"><sup>€</sup>4<span style="font-size:22px;font-weight:700">.99</span></div>
+      <div class="plan-price" id="starter-price"><sup>€</sup>4<span style="font-size:22px;font-weight:700">.99</span></div>
       <div class="plan-period" id="t-start-period">per month · cancel anytime</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> <span id="t-s1"><strong>100 generations</strong> per month</span></li>
@@ -164,13 +195,14 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       {% else %}
         <button class="btn-plan ghost" id="t-start-btn" disabled>Coming soon</button>
       {% endif %}
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;" id="starter-annual-note" style="display:none;">veya <strong>€49.99/yıl</strong> — 2 ay bedava</div>
     </div>
 
     <!-- PRO -->
     <div class="plan {% if current_plan == 'pro' %}highlight{% endif %}">
       <span class="plan-badge green" id="t-pro-badge">🚀 Unlimited</span>
       <div class="plan-name" id="t-pro-name">Pro</div>
-      <div class="plan-price"><sup>€</sup>9<span style="font-size:22px;font-weight:700">.99</span></div>
+      <div class="plan-price" id="pro-price"><sup>€</sup>9<span style="font-size:22px;font-weight:700">.99</span></div>
       <div class="plan-period" id="t-pro-period">per month · cancel anytime</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> <span id="t-p1"><strong>Unlimited</strong> AI generations</span></li>
@@ -189,6 +221,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       {% else %}
         <button class="btn-plan ghost" id="t-pro-btn" disabled>Coming soon</button>
       {% endif %}
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;" id="pro-annual-note">veya <strong>€99/yıl</strong> — 2 ay bedava</div>
     </div>
 
   </div>
@@ -387,6 +420,42 @@ function setLang(lang) {
 }
 
 const currentPlan = '{{ current_plan }}';
+const HAS_STARTER_ANNUAL = {{ 'true' if has_starter_annual else 'false' }};
+const HAS_PRO_ANNUAL     = {{ 'true' if has_pro_annual else 'false' }};
+
+let billingAnnual = false;
+
+function setBilling(annual) {
+  billingAnnual = annual;
+  const thumb = document.getElementById('billingThumb');
+  if (thumb) thumb.style.left = annual ? '25px' : '3px';
+
+  // Update starter price display
+  const sp = document.getElementById('starter-price');
+  if (sp) sp.innerHTML = annual ? '<sup>€</sup>4<span style="font-size:22px;font-weight:700">.17</span>' : '<sup>€</sup>4<span style="font-size:22px;font-weight:700">.99</span>';
+  const sn = document.getElementById('starter-annual-note');
+  if (sn) sn.style.display = annual ? 'block' : 'none';
+
+  // Update pro price display
+  const pp = document.getElementById('pro-price');
+  if (pp) pp.innerHTML = annual ? '<sup>€</sup>8<span style="font-size:22px;font-weight:700">.25</span>' : '<sup>€</sup>9<span style="font-size:22px;font-weight:700">.99</span>';
+  const pn = document.getElementById('pro-annual-note');
+  if (pn) pn.style.display = annual ? 'none' : 'block';
+
+  // Update checkout buttons plan
+  const sb = document.getElementById('t-start-btn');
+  if (sb && sb.dataset.checkoutPlan) sb.dataset.checkoutPlan = annual ? 'starter_annual' : 'starter';
+  const pb = document.getElementById('t-pro-btn');
+  if (pb && pb.dataset.checkoutPlan) pb.dataset.checkoutPlan = annual ? 'pro_annual' : 'pro';
+
+  // Period text
+  const sp2 = document.getElementById('t-start-period');
+  if (sp2) sp2.textContent = annual ? '€49.99/yıl · 2 ay bedava' : (T[currentLang]?.startPeriod || 'per month · cancel anytime');
+  const pp2 = document.getElementById('t-pro-period');
+  if (pp2) pp2.textContent = annual ? '€99/yıl · 2 ay bedava' : (T[currentLang]?.proPeriod || 'per month · cancel anytime');
+}
+
+document.getElementById('billingToggle')?.addEventListener('click', () => setBilling(!billingAnnual));
 
 {% if stripe_key %}
 const stripe = Stripe('{{ stripe_key | e }}');
