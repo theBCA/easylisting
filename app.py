@@ -161,7 +161,7 @@ def set_security_headers(resp):
 
 ETSY_CLIENT_ID      = os.getenv("ETSY_API_KEY")
 ETSY_CLIENT_SECRET  = os.getenv("ETSY_SHARED_SECRET", "").strip()
-ETSY_API_KEY_HEADER = f"{ETSY_CLIENT_ID}:{ETSY_CLIENT_SECRET}"
+ETSY_API_KEY_HEADER = ETSY_CLIENT_ID or ""
 ETSY_SCOPES         = "listings_r listings_w shops_r"
 READINESS_ID        = 1489219211571
 REDIRECT_URI        = os.getenv("REDIRECT_URI", "http://localhost:5050/auth/callback")
