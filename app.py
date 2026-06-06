@@ -744,6 +744,15 @@ def connect():
         return redirect(url_for("index"))
     return render_template("connect.html")
 
+def _dynamic_redirect_uri() -> str:
+    """Use the current request's host so the OAuth callback stays on the same domain."""
+    host = request.host or ""
+    _ALLOWED = {"kolaylistele.com", "easylisting.app"}
+    for allowed in _ALLOWED:
+        if allowed in host:
+            return f"https://{allowed}/auth/callback"
+    return REDIRECT_URI  # fallback to env var (local dev)
+
 @app.route("/auth/start")
 @limiter.limit("10 per minute")
 def auth_start():
@@ -752,16 +761,19 @@ def auth_start():
     challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
     state     = secrets.token_urlsafe(16)
 
+    redirect_uri = _dynamic_redirect_uri()
+
     pre_oauth_guest = guest_shop_id() if is_guest() else None
     session.clear()  # prevent session fixation
-    session["pkce_verifier"] = verifier
-    session["oauth_state"]   = state
+    session["pkce_verifier"]   = verifier
+    session["oauth_state"]     = state
+    session["_redirect_uri"]   = redirect_uri  # store for callback
     if pre_oauth_guest:
         session["_pre_oauth_guest_id"] = pre_oauth_guest
 
     url = "https://www.etsy.com/oauth/connect?" + urllib.parse.urlencode({
         "response_type":         "code",
-        "redirect_uri":          REDIRECT_URI,
+        "redirect_uri":          redirect_uri,
         "scope":                 ETSY_SCOPES,
         "client_id":             ETSY_CLIENT_ID,
         "state":                 state,
@@ -785,7 +797,7 @@ def auth_callback():
         data={
             "grant_type":    "authorization_code",
             "client_id":     ETSY_CLIENT_ID,
-            "redirect_uri":  REDIRECT_URI,
+            "redirect_uri":  session.pop("_redirect_uri", REDIRECT_URI),
             "code":          code,
             "code_verifier": session.pop("pkce_verifier", ""),
         },
