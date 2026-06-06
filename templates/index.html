@@ -915,7 +915,8 @@ const STRINGS = {
     sc_shipping:'Kargo profili seçildi',
   }
 };
-let currentLang = localStorage.getItem('easylisting_lang') ||
+const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
+let currentLang = localStorage.getItem(LANG_KEY) ||
   (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
 
 function byId(id) {
@@ -946,7 +947,7 @@ const BRAND = {
 function setLang(lang) {
   if (!STRINGS[lang]) return;
   currentLang = lang;
-  localStorage.setItem('easylisting_lang', lang);
+  localStorage.setItem(LANG_KEY, lang);
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const k = el.dataset.i18n;
     if (STRINGS[lang][k] !== undefined) el.textContent = STRINGS[lang][k];

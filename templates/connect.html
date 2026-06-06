@@ -265,7 +265,8 @@ function setLang(lang) {
   document.querySelectorAll('.lang-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.lang === lang));
   document.querySelector('html').lang = lang;
-  localStorage.setItem('easylisting_lang', lang);
+  const _lk = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
+  localStorage.setItem(_lk, lang);
 }
 
 function selectPlatform(p) {
@@ -289,7 +290,8 @@ document.querySelectorAll('.platform-btn[data-platform]').forEach(btn =>
   btn.addEventListener('click', () => selectPlatform(btn.dataset.platform)));
 
 // Init
-const saved = localStorage.getItem('easylisting_lang') ||
+const _lk2 = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
+const saved = localStorage.getItem(_lk2) ||
   (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
 setLang(saved);
 // ensure Etsy check is visible on load

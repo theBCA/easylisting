@@ -223,12 +223,14 @@ const BRAND = {
   tr: '<span style="color:var(--text)">kolay</span>listele',
 };
 const CURRENT_STATE = '{{ state }}';
-let currentLang = localStorage.getItem('easylisting_lang') || 'en';
+const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
+let currentLang = localStorage.getItem(LANG_KEY) ||
+  (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
 
 function setLang(lang) {
   if (!STRINGS[lang]) return;
   currentLang = lang;
-  localStorage.setItem('easylisting_lang', lang);
+  localStorage.setItem(LANG_KEY, lang);
   const s = STRINGS[lang];
   document.documentElement.lang = lang;
   document.title = s.page_title;

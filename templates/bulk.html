@@ -249,7 +249,8 @@ const BRAND = {
   de: 'Easy<span style="color:var(--text)">Listing</span>',
   tr: '<span style="color:var(--text)">kolay</span>listele',
 };
-let currentLang = localStorage.getItem('easylisting_lang') ||
+const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
+let currentLang = localStorage.getItem(LANG_KEY) ||
   (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
 function tr(key, ...args) {
   const value = STRINGS[currentLang]?.[key] ?? STRINGS.en[key] ?? key;
@@ -258,7 +259,7 @@ function tr(key, ...args) {
 function setLang(lang) {
   if (!STRINGS[lang]) return;
   currentLang = lang;
-  localStorage.setItem('easylisting_lang', lang);
+  localStorage.setItem(LANG_KEY, lang);
   document.documentElement.lang = lang;
   document.title = STRINGS[lang].page_title;
   document.getElementById('navLogo').innerHTML = BRAND[lang];
