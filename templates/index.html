@@ -323,10 +323,17 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
 </nav>
 
 {% if is_guest %}
+{% if email_verified %}
+<div id="guestBanner" style="background:#F0FDF4;border-bottom:1px solid #86EFAC;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <span style="font-size:13px;font-weight:600;color:#166534;">✅ E-posta ile giriş yapıldı — içerik oluşturabilir, kopyalayabilirsiniz. Etsy'ye göndermek için mağazanızı bağlayın.</span>
+  <a href="/connect" style="font-size:12px;font-weight:800;color:#5B47E0;white-space:nowrap;text-decoration:none;">Etsy Bağla →</a>
+</div>
+{% else %}
 <div id="guestBanner" style="background:#FFF8E7;border-bottom:1px solid #F59E0B;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
   <span style="font-size:13px;font-weight:600;color:#92400E;">⚡ Misafir modundasınız — içerik oluşturabilir, kopyalayabilirsiniz. Etsy'ye göndermek için mağazanızı bağlayın.</span>
   <a href="/connect" style="font-size:12px;font-weight:800;color:#5B47E0;white-space:nowrap;text-decoration:none;">Mağazanı Bağla →</a>
 </div>
+{% endif %}
 {% endif %}
 
 <div id="toast" class="toast"></div>
@@ -375,49 +382,37 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     <h1 class="hero-title" data-i18n-html="hero_title">Upload a photo.<br>AI writes your listing.</h1>
     <p class="hero-sub" data-i18n="hero_sub">Drop your product photo, add a short hint, and get a fully optimized Etsy title, description, tags, and more — ready to publish in seconds.</p>
 
-    <!-- platform-row hidden: only Etsy supported for now
+    {% if is_guest and email_verified %}
     <div class="platform-row">
       <div class="platform-row-label" data-i18n="label_platform">Sell on</div>
-      <div class="platform-grid">
+      <div class="platform-grid" id="platformGrid">
         <div class="platform-card active" data-platform="etsy">
           <span class="platform-icon">🛍️</span>
           <span class="platform-name">Etsy</span>
         </div>
-        <div class="platform-card" data-platform="shopify">
+        <div class="platform-card coming-soon" data-platform="shopify">
           <span class="platform-icon">🛒</span>
           <span class="platform-name">Shopify</span>
+          <span style="font-size:9px;color:#9CA3AF;">Soon</span>
         </div>
-        <div class="platform-card" data-platform="amazon">
+        <div class="platform-card coming-soon" data-platform="amazon">
           <span class="platform-icon">📦</span>
           <span class="platform-name">Amazon</span>
+          <span style="font-size:9px;color:#9CA3AF;">Soon</span>
         </div>
-        <div class="platform-card" data-platform="trendyol">
+        <div class="platform-card coming-soon" data-platform="trendyol">
           <span class="platform-icon">🇹🇷</span>
           <span class="platform-name">Trendyol</span>
+          <span style="font-size:9px;color:#9CA3AF;">Soon</span>
         </div>
-        <div class="platform-card" data-platform="hepsiburada">
-          <span class="platform-icon">🏪</span>
-          <span class="platform-name">Hepsiburada</span>
-        </div>
-        <div class="platform-card" data-platform="n11">
-          <span class="platform-icon">🔖</span>
-          <span class="platform-name">n11</span>
-        </div>
-        <div class="platform-card" data-platform="ebay">
-          <span class="platform-icon">🔨</span>
-          <span class="platform-name">eBay</span>
-        </div>
-        <div class="platform-card" data-platform="woocommerce">
+        <div class="platform-card coming-soon" data-platform="woocommerce">
           <span class="platform-icon">🌐</span>
           <span class="platform-name">WooCommerce</span>
-        </div>
-        <div class="platform-card" data-platform="pinterest">
-          <span class="platform-icon">📌</span>
-          <span class="platform-name">Pinterest</span>
+          <span style="font-size:9px;color:#9CA3AF;">Soon</span>
         </div>
       </div>
     </div>
-    -->
+    {% endif %}
 
     <div class="drop-zone" id="dropZone">
       <input type="file" id="fileInput" accept="image/*" multiple>
