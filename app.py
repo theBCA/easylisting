@@ -161,7 +161,7 @@ def set_security_headers(resp):
 
 ETSY_CLIENT_ID      = os.getenv("ETSY_API_KEY")
 ETSY_CLIENT_SECRET  = os.getenv("ETSY_SHARED_SECRET", "").strip()
-ETSY_API_KEY_HEADER = ETSY_CLIENT_ID or ""
+ETSY_API_KEY_HEADER = f"{ETSY_CLIENT_ID}:{ETSY_CLIENT_SECRET}" if ETSY_CLIENT_SECRET else (ETSY_CLIENT_ID or "")
 ETSY_SCOPES         = "listings_r listings_w shops_r"
 READINESS_ID        = 1489219211571
 REDIRECT_URI        = os.getenv("REDIRECT_URI", "http://localhost:5050/auth/callback")
@@ -262,16 +262,22 @@ def provider_chain(premium=False):
     return ["nvidia", "gemini"]
 
 def has_premium_access():
-    if is_guest() or not shop_id():
-        return False
-    shop = get_shop(str(shop_id()))
-    return bool(shop and shop.get("has_premium"))
+    if is_connected() and shop_id():
+        shop = get_shop(str(shop_id()))
+        return bool(shop and shop.get("has_premium"))
+    if is_guest() and is_email_verified():
+        shop = get_shop(guest_shop_id())
+        return bool(shop and shop.get("has_premium"))
+    return False
 
 def has_pro_access():
-    if is_guest() or not shop_id():
-        return False
-    shop = get_shop(str(shop_id()))
-    return bool(shop and shop.get("has_premium") and shop.get("plan") == "pro")
+    if is_connected() and shop_id():
+        shop = get_shop(str(shop_id()))
+        return bool(shop and shop.get("has_premium") and shop.get("plan") == "pro")
+    if is_guest() and is_email_verified():
+        shop = get_shop(guest_shop_id())
+        return bool(shop and shop.get("has_premium") and shop.get("plan") == "pro")
+    return False
 
 def usage_shop_id():
     if is_guest():
@@ -818,14 +824,20 @@ def auth_callback():
     try:
         me_resp   = requests.get("https://openapi.etsy.com/v3/application/users/me",
                                  headers=h, timeout=HTTP_TIMEOUT)
+        if not me_resp.ok:
+            logger.error("Etsy /users/me failed: %s %s", me_resp.status_code, me_resp.text[:300])
+            return render_template("connect.html", error=f"Etsy API error ({me_resp.status_code}). Check your API key in Railway.")
         me        = me_resp.json()
         shop_id_v = me.get("shop_id")
-        if not shop_id_v or not str(shop_id_v).isdigit():
+        if not shop_id_v:
+            return render_template("connect.html", error="No Etsy shop found on this account. Make sure you're signing in with a seller account that has an open shop.")
+        if not str(shop_id_v).isdigit():
             return render_template("connect.html", error="Could not retrieve your shop. Please try again.")
         shop_resp = requests.get(f"https://openapi.etsy.com/v3/application/shops/{shop_id_v}",
                                  headers=h, timeout=HTTP_TIMEOUT)
         shop = shop_resp.json()
-    except Exception:
+    except Exception as e:
+        logger.exception("Etsy auth callback error: %s", e)
         return render_template("connect.html", error="Could not reach Etsy. Please try again.")
 
     session.permanent = True
@@ -1063,11 +1075,15 @@ def index():
     if is_guest():
         gid = guest_shop_id()
         ensure_shop(gid, "Guest")
-        _, remaining = can_generate(gid, GUEST_FREE_LIMIT)
+        email_verified = is_email_verified()
+        premium = has_premium_access()
+        from db import FREE_LIMIT as _FL
+        limit = _FL if email_verified else GUEST_FREE_LIMIT
+        _, remaining = can_generate(gid, limit)
         return render_template("index.html",
-            shop_name=None, remaining=remaining, free_limit=GUEST_FREE_LIMIT,
-            unlimited=False, is_guest=True, has_premium=False,
-            email_verified=is_email_verified())
+            shop_name=None, remaining=remaining, free_limit=limit,
+            unlimited=premium, is_guest=True, has_premium=premium,
+            email_verified=email_verified)
     sid = str(shop_id())
     _, remaining = can_generate(sid)
     from db import FREE_LIMIT
@@ -1113,7 +1129,9 @@ def api_status():
     if is_guest():
         gid = guest_shop_id()
         ensure_shop(gid, "Guest")
-        allowed, remaining = can_generate(gid, GUEST_FREE_LIMIT)
+        from db import FREE_LIMIT as _FL
+        limit = _FL if is_email_verified() else GUEST_FREE_LIMIT
+        allowed, remaining = can_generate(gid, limit)
     else:
         allowed, remaining = can_generate(str(shop_id()))
     return jsonify({
@@ -1132,7 +1150,9 @@ def api_generate():
     if is_guest():
         sid = guest_shop_id()
         ensure_shop(sid, "Guest")
-        allowed, remaining = can_generate(sid, GUEST_FREE_LIMIT)
+        from db import FREE_LIMIT as _FL
+        limit = _FL if is_email_verified() else GUEST_FREE_LIMIT
+        allowed, remaining = can_generate(sid, limit)
     else:
         sid = str(shop_id())
         allowed, remaining = can_generate(sid)
@@ -1723,8 +1743,10 @@ def api_bulk_generate():
 def upgrade():
     redir = require_connection()
     if redir: return redir
-    sid = str(shop_id())
-    _, remaining = can_generate(sid)
+    sid = usage_shop_id()
+    from db import FREE_LIMIT as _FL
+    limit = _FL if (not is_guest() or is_email_verified()) else GUEST_FREE_LIMIT
+    _, remaining = can_generate(sid, limit)
     from db import get_shop
     s = get_shop(sid) or {}
     use_try = _is_try_domain()
@@ -1789,8 +1811,8 @@ def stripe_checkout():
             line_items=[{"price": price_id, "quantity": 1}],
             success_url=base + f"/upgrade?success=1&plan={plan}",
             cancel_url=base  + "/upgrade?cancelled=1",
-            client_reference_id=str(shop_id()),
-            metadata={"shop_id": str(shop_id()),
+            client_reference_id=str(usage_shop_id()),
+            metadata={"shop_id": str(usage_shop_id()),
                       "shop_name": session.get("shop_name", ""),
                       "plan": base_plan},
         )
