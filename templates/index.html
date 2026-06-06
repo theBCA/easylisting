@@ -375,6 +375,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     <h1 class="hero-title" data-i18n-html="hero_title">Upload a photo.<br>AI writes your listing.</h1>
     <p class="hero-sub" data-i18n="hero_sub">Drop your product photo, add a short hint, and get a fully optimized Etsy title, description, tags, and more — ready to publish in seconds.</p>
 
+    <!-- platform-row hidden: only Etsy supported for now
     <div class="platform-row">
       <div class="platform-row-label" data-i18n="label_platform">Sell on</div>
       <div class="platform-grid">
@@ -416,6 +417,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
         </div>
       </div>
     </div>
+    -->
 
     <div class="drop-zone" id="dropZone">
       <input type="file" id="fileInput" accept="image/*" multiple>
@@ -612,11 +614,13 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
           <div class="field-card-title" data-i18n="tools_export_title">Product pack export</div>
           <div class="export-grid">
             <button class="tool-btn export-btn" data-export="etsy" data-i18n="tools_export_etsy">Etsy text</button>
+            <button class="tool-btn export-btn" data-export="csv">CSV</button>
+            <!-- other platform exports hidden for now:
             <button class="tool-btn export-btn" data-export="shopify">Shopify</button>
             <button class="tool-btn export-btn" data-export="amazon">Amazon</button>
             <button class="tool-btn export-btn" data-export="pinterest">Pinterest</button>
             <button class="tool-btn export-btn" data-export="woocommerce">WooCommerce</button>
-            <button class="tool-btn export-btn" data-export="csv">CSV</button>
+            -->
           </div>
         </div>
 
