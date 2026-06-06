@@ -61,8 +61,9 @@ def connected_client(client):
 
 @pytest.fixture()
 def guest_client(client):
-    """Client with a guest session."""
+    """Client with a guest session (is_guest() returns True)."""
     with client.session_transaction() as sess:
+        sess["guest"]    = True
         sess["guest_id"] = "guest-abc123"
     return client
 
@@ -352,6 +353,7 @@ def test_stripe_webhook_activates_premium(client):
             "client_reference_id": "shop_stripe",
             "customer": "cus_abc",
             "subscription": "sub_abc",
+            "payment_status": "paid",
             "metadata": {"shop_id": "shop_stripe", "plan": "pro"},
         }},
     }).encode()
@@ -474,3 +476,470 @@ def test_template_save_and_load():
 def test_template_returns_empty_for_unknown_shop():
     result = db_module.get_template("nonexistent_shop_99999")
     assert result == {}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 11. LEVEL 2 — Auth-wall checks on all critical endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("method,path,body", [
+    ("POST", "/api/publish",          {"title": "x"}),
+    ("POST", "/api/bulk-generate",    None),
+    ("POST", "/api/improve-listing",  {"action": "title_seo"}),
+    ("POST", "/api/listing-variants", {}),
+    ("POST", "/api/translate",        {"lang": "de"}),
+    ("GET",  "/api/template",         None),
+    ("POST", "/api/template",         {}),
+    ("GET",  "/api/email-verified",   None),
+])
+def test_endpoint_requires_auth(client, method, path, body):
+    if method == "POST":
+        resp = client.post(path, json=body)
+    else:
+        resp = client.get(path)
+    assert resp.status_code == 401, f"{method} {path} should be 401 without auth, got {resp.status_code}"
+
+
+def test_bulk_page_redirects_without_auth(client):
+    resp = client.get("/bulk")
+    assert resp.status_code == 302
+
+
+def test_bulk_generate_requires_premium(connected_client):
+    db_module.ensure_shop("12345", "TestShop")  # free plan
+    import io
+    jpeg_header = b"\xff\xd8\xff\xe0" + b"\x00" * 12
+    data = {"images": (io.BytesIO(jpeg_header), "test.jpg"), "hint": "hat"}
+    resp = connected_client.post(
+        "/api/bulk-generate",
+        data=data,
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403
+    assert b"premium_required" in resp.data
+
+
+def test_listing_variants_requires_premium(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    resp = connected_client.post("/api/listing-variants", json={"title": "Hat"})
+    assert resp.status_code == 403
+    assert b"premium_required" in resp.data
+
+
+def test_publish_rejects_missing_fields(connected_client):
+    resp = connected_client.post("/api/publish", json={"title": "only title"})
+    assert resp.status_code == 400
+
+
+def test_publish_rejects_bad_price(connected_client):
+    resp = connected_client.post("/api/publish", json={
+        "title": "Test Hat",
+        "description": "A great hat",
+        "price": -5,
+        "taxonomy_id": 1234,
+    })
+    assert resp.status_code == 400
+
+
+def test_improve_listing_rejects_invalid_action(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    resp = connected_client.post(
+        "/api/improve-listing",
+        json={"action": "not_a_real_action", "title": "Test"},
+    )
+    assert resp.status_code == 400
+
+
+def test_translate_rejects_unsupported_lang(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    resp = connected_client.post(
+        "/api/translate",
+        json={"lang": "zh", "title": "Hat", "description": "Nice hat", "tags": []},
+    )
+    assert resp.status_code == 400
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 12. LEVEL 3 — Full flows with mocked AI and Etsy API
+# ─────────────────────────────────────────────────────────────────────────────
+
+_FAKE_AI_LISTING = {
+    "title": "Handmade Crochet Hat, Warm Beanie",
+    "description": "A lovely handmade hat crafted with care.",
+    "tags": ["crochet hat", "beanie", "handmade", "warm hat", "knit cap",
+             "winter hat", "wool hat", "artisan", "custom hat", "gift idea",
+             "cozy hat", "hand knit", "boho hat"],
+    "materials": ["wool", "cotton"],
+    "colors": ["white", "cream"],
+    "suggested_price_eur": 29.99,
+    "taxonomy_query": "Crocheted Hats",
+    "personalization_instructions": "Custom color?",
+    "instagram_caption": "Love this hat! #handmade #crochet",
+}
+
+
+def _jpeg_bytes():
+    return b"\xff\xd8\xff\xe0" + b"\x00" * 12
+
+
+# ── 12a. Generate flow ────────────────────────────────────────────────────────
+
+def test_generate_returns_listing_for_connected_shop(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+
+    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)) as mock_ai, \
+         patch("requests.get") as mock_get:
+        mock_get.return_value = MagicMock(ok=True, json=lambda: {"results": []})
+
+        import io
+        data = {
+            "images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"),
+            "hint":   "crochet hat",
+        }
+        resp = connected_client.post(
+            "/api/generate",
+            data=data,
+            content_type="multipart/form-data",
+        )
+
+    assert resp.status_code == 200, resp.data
+    body = resp.get_json()
+    assert body["title"] == _FAKE_AI_LISTING["title"]
+    assert "image_previews" in body
+    assert mock_ai.called
+
+    shop = db_module.get_shop("12345")
+    assert shop["free_used"] == 1
+
+
+def test_generate_increments_usage_and_blocks_at_limit(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    from db import FREE_LIMIT
+    for _ in range(FREE_LIMIT):
+        db_module.increment_usage("12345")
+
+    import io
+    resp = connected_client.post(
+        "/api/generate",
+        data={"images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"), "hint": "hat"},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403
+    assert b"free_limit_reached" in resp.data
+
+
+def test_generate_blocks_guest_without_email_verification(client):
+    with client.session_transaction() as sess:
+        sess["guest"]    = True
+        sess["guest_id"] = "guest-unverified"
+    import io
+    resp = client.post(
+        "/api/generate",
+        data={"images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"), "hint": "hat"},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403
+    assert b"email_verification_required" in resp.data
+
+
+def test_generate_all_providers_quota_returns_503(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+
+    def raise_quota(*args, **kwargs):
+        raise RuntimeError("quota_exceeded")
+
+    with patch("app._run_provider", side_effect=raise_quota), \
+         patch.dict(os.environ, {"NVIDIA_API_KEY": "fake", "GEMINI_API_KEY": "fake", "OPENAI_API_KEY": "fake"}):
+        import io
+        resp = connected_client.post(
+            "/api/generate",
+            data={"images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"), "hint": "hat"},
+            content_type="multipart/form-data",
+        )
+    assert resp.status_code == 503
+
+
+# ── 12b. Publish flow ────────────────────────────────────────────────────────
+
+_VALID_PUBLISH_PAYLOAD = {
+    "title": "Handmade Crochet Hat",
+    "description": "A beautiful handmade hat.",
+    "price": 29.99,
+    "taxonomy_id": 68887201,
+    "tags": ["handmade", "crochet"],
+    "materials": ["wool"],
+    "image_previews": [],
+    "shipping_profile_id": None,
+    "personalization_instructions": "",
+}
+
+
+def test_publish_creates_listing_on_etsy(connected_client):
+    etsy_create = MagicMock(ok=True, json=lambda: {"listing_id": 999888})
+    etsy_readiness = MagicMock(ok=True, json=lambda: {"results": []})
+
+    with patch("requests.post", return_value=etsy_create), \
+         patch("requests.get",  return_value=etsy_readiness):
+        resp = connected_client.post("/api/publish", json=_VALID_PUBLISH_PAYLOAD)
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["success"] is True
+    assert body["listing_id"] == 999888
+
+
+def test_publish_returns_400_on_etsy_error(connected_client):
+    etsy_fail = MagicMock(ok=False, text="shop not ready")
+    etsy_readiness = MagicMock(ok=True, json=lambda: {"results": []})
+
+    with patch("requests.post", return_value=etsy_fail), \
+         patch("requests.get",  return_value=etsy_readiness):
+        resp = connected_client.post("/api/publish", json=_VALID_PUBLISH_PAYLOAD)
+
+    assert resp.status_code == 400
+    assert b"Failed to create listing" in resp.data
+
+
+def test_publish_uploads_images(connected_client):
+    import base64
+    img_b64 = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
+    payload = {**_VALID_PUBLISH_PAYLOAD, "image_previews": [img_b64]}
+
+    etsy_create   = MagicMock(ok=True, json=lambda: {"listing_id": 111222})
+    etsy_readiness = MagicMock(ok=True, json=lambda: {"results": []})
+    etsy_img_upload = MagicMock(ok=True)
+
+    post_calls = []
+    def mock_post(url, **kwargs):
+        post_calls.append(url)
+        if "listings" in url and "images" in url:
+            return etsy_img_upload
+        return etsy_create
+
+    with patch("requests.post", side_effect=mock_post), \
+         patch("requests.get",  return_value=etsy_readiness):
+        resp = connected_client.post("/api/publish", json=payload)
+
+    assert resp.status_code == 200
+    image_upload_calls = [u for u in post_calls if "images" in u]
+    assert len(image_upload_calls) == 1
+
+
+# ── 12c. Improve listing flow ────────────────────────────────────────────────
+
+def test_improve_listing_returns_improved_data(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    improved = {"title": "Better SEO Hat", "description": "Improved desc", "tags": ["tag1"]}
+
+    with patch("app._run_text_json", return_value=improved):
+        resp = connected_client.post(
+            "/api/improve-listing",
+            json={"action": "title_seo", "title": "Hat", "description": "Old desc", "tags": []},
+        )
+
+    assert resp.status_code == 200
+    assert resp.get_json()["title"] == "Better SEO Hat"
+    shop = db_module.get_shop("12345")
+    assert shop["free_improve_used"] == 1
+
+
+def test_improve_listing_premium_does_not_increment(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_x", "sub_x", True, "pro")
+    improved = {"title": "SEO Hat", "description": "desc", "tags": []}
+
+    with patch("app._run_text_json", return_value=improved):
+        resp = connected_client.post(
+            "/api/improve-listing",
+            json={"action": "title_seo", "title": "Hat", "description": "desc", "tags": []},
+        )
+
+    assert resp.status_code == 200
+    shop = db_module.get_shop("12345")
+    assert shop["free_improve_used"] == 0
+
+
+def test_improve_listing_blocks_at_free_limit(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    from db import FREE_IMPROVE_LIMIT
+    db_module.increment_improve_usage("12345")  # exhaust the 1-use free allowance
+    # ensure we're past the limit
+    for _ in range(FREE_IMPROVE_LIMIT):
+        db_module.increment_improve_usage("12345")
+
+    resp = connected_client.post(
+        "/api/improve-listing",
+        json={"action": "title_seo", "title": "Hat", "description": "desc", "tags": []},
+    )
+    assert resp.status_code == 403
+
+
+# ── 12d. Translation flow ────────────────────────────────────────────────────
+
+def test_translate_returns_translated_data(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    translated = {"title": "Gehäkelte Mütze", "description": "Beschreibung", "tags": ["handgemacht"]}
+
+    with patch("app._translate_ai", return_value=translated):
+        resp = connected_client.post(
+            "/api/translate",
+            json={"lang": "de", "title": "Crochet Hat", "description": "Nice hat", "tags": ["handmade"]},
+        )
+
+    assert resp.status_code == 200
+    assert resp.get_json()["title"] == "Gehäkelte Mütze"
+
+
+# ── 12e. Template API ────────────────────────────────────────────────────────
+
+def test_template_api_get_and_post(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+
+    resp = connected_client.get("/api/template")
+    assert resp.status_code == 200
+    assert resp.get_json() == {}
+
+    resp = connected_client.post(
+        "/api/template",
+        json={"shipping_profile_id": "42", "price": "19.99"},
+    )
+    assert resp.status_code == 200
+
+    resp = connected_client.get("/api/template")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["shipping_profile_id"] == "42"
+
+
+# ── 12f. API status ──────────────────────────────────────────────────────────
+
+def test_api_status_connected_user(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    resp = connected_client.get("/api/status")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert "allowed" in body
+    assert body["is_guest"] is False
+
+
+def test_api_status_guest_user(guest_client):
+    resp = guest_client.get("/api/status")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["is_guest"] is True
+
+
+# ── 12g. Magic link flow ─────────────────────────────────────────────────────
+
+def test_magic_link_sent_to_guest(client):
+    with client.session_transaction() as sess:
+        sess["guest"]    = True
+        sess["guest_id"] = "guest-ml-test"
+
+    with patch("app.send_email", return_value=(True, None)) as mock_mail, \
+         patch("app.count_recent_magic_links", return_value=0), \
+         patch("app.get_or_create_email_shop", return_value="email-shop-1"), \
+         patch("app.create_magic_link"):
+        db_module.ensure_shop("email-shop-1", "Guest")
+        resp = client.post(
+            "/api/magic-link",
+            json={"email": "user@example.com"},
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 200
+    assert resp.get_json()["ok"] is True
+    assert mock_mail.called
+
+
+def test_magic_link_rejects_invalid_email(client):
+    with client.session_transaction() as sess:
+        sess["guest"]    = True
+        sess["guest_id"] = "guest-ml-bad"
+
+    resp = client.post(
+        "/api/magic-link",
+        json={"email": "not-an-email"},
+        content_type="application/json",
+    )
+    assert resp.status_code == 400
+    assert b"invalid_email" in resp.data
+
+
+def test_magic_link_rate_limited(client):
+    with client.session_transaction() as sess:
+        sess["guest"]    = True
+        sess["guest_id"] = "guest-ml-ratelimit"
+
+    with patch("app.count_recent_magic_links", return_value=5):
+        resp = client.post(
+            "/api/magic-link",
+            json={"email": "user@example.com"},
+            content_type="application/json",
+        )
+    assert resp.status_code == 429
+
+
+def test_magic_link_rejects_non_guest(connected_client):
+    resp = connected_client.post(
+        "/api/magic-link",
+        json={"email": "user@example.com"},
+        content_type="application/json",
+    )
+    assert resp.status_code == 400
+    assert b"not_guest" in resp.data
+
+
+def test_auth_magic_valid_token_sets_session(client):
+    fake_row = {"shop_id": "email-shop-42"}
+    with patch("app.use_magic_link", return_value=fake_row):
+        resp = client.get("/auth/magic?token=valid-token-abc")
+    assert resp.status_code == 200
+    with client.session_transaction() as sess:
+        assert sess.get("email_verified") is True
+        assert sess.get("email_shop_id") == "email-shop-42"
+
+
+def test_auth_magic_invalid_token_shows_error(client):
+    with patch("db.use_magic_link", return_value=None):
+        resp = client.get("/auth/magic?token=bad-token")
+    assert resp.status_code == 200
+    assert b"ge" in resp.data  # error text rendered in connect.html
+
+
+# ── 12h. Bulk generate flow ──────────────────────────────────────────────────
+
+def test_bulk_generate_returns_data_for_premium(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_bulk", "sub_bulk", True, "pro")
+
+    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)):
+        import io
+        data = {
+            "images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"),
+            "hint":   "crochet hat",
+        }
+        resp = connected_client.post(
+            "/api/bulk-generate",
+            data=data,
+            content_type="multipart/form-data",
+        )
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["title"] == _FAKE_AI_LISTING["title"]
+    assert "image_previews" in body
+
+
+def test_bulk_generate_rejects_non_image(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_bulk2", "sub_bulk2", True, "pro")
+
+    import io
+    data = {"images": (io.BytesIO(b"notanimage"), "file.txt"), "hint": "hat"}
+    resp = connected_client.post(
+        "/api/bulk-generate",
+        data=data,
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code in (400, 403)
