@@ -197,6 +197,20 @@ def init_magic_tables(con):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS marketing_consents (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            email             TEXT NOT NULL,
+            email_hash        TEXT NOT NULL,
+            locale            TEXT NOT NULL DEFAULT 'en',
+            source            TEXT NOT NULL DEFAULT 'magic_link',
+            consented_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            unsubscribe_token TEXT UNIQUE NOT NULL,
+            unsubscribed_at   TIMESTAMP DEFAULT NULL
+        )
+    """)
+    con.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_mc_email_hash ON marketing_consents(email_hash)")
+    con.execute("CREATE INDEX IF NOT EXISTS idx_mc_unsub ON marketing_consents(unsubscribe_token)")
 
 
 def get_or_create_email_shop(email_hash: str) -> str:
@@ -237,6 +251,78 @@ def use_magic_link(token: str) -> dict | None:
             "SELECT * FROM magic_links WHERE token = ?", (token,)
         ).fetchone()
         return dict(row) if row else None
+
+
+def add_marketing_consent(email: str, email_hash: str, locale: str = "en",
+                          source: str = "magic_link") -> str | None:
+    """Store explicit opt-in consent. Returns unsubscribe_token, or None if already exists."""
+    import secrets as _secrets
+    token = _secrets.token_urlsafe(32)
+    try:
+        with _conn() as con:
+            con.execute(
+                """INSERT OR IGNORE INTO marketing_consents
+                   (email, email_hash, locale, source, unsubscribe_token)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (email, email_hash, locale, source, token),
+            )
+            row = con.execute(
+                "SELECT unsubscribe_token FROM marketing_consents WHERE email_hash = ?",
+                (email_hash,),
+            ).fetchone()
+            return row["unsubscribe_token"] if row else None
+    except Exception:
+        return None
+
+
+def unsubscribe_by_token(token: str) -> bool:
+    """Mark consent withdrawn. Returns True if a row was updated."""
+    with _conn() as con:
+        cur = con.execute(
+            """UPDATE marketing_consents
+               SET unsubscribed_at = CURRENT_TIMESTAMP
+               WHERE unsubscribe_token = ? AND unsubscribed_at IS NULL""",
+            (token,),
+        )
+        return cur.rowcount > 0
+
+
+def get_marketing_stats() -> dict:
+    with _conn() as con:
+        total_hashes = con.execute(
+            "SELECT COUNT(*) as n FROM verified_emails"
+        ).fetchone()["n"]
+        total_links_sent = con.execute(
+            "SELECT COUNT(*) as n FROM magic_links"
+        ).fetchone()["n"]
+        total_verified = con.execute(
+            "SELECT COUNT(*) as n FROM magic_links WHERE used_at IS NOT NULL"
+        ).fetchone()["n"]
+        total_consented = con.execute(
+            "SELECT COUNT(*) as n FROM marketing_consents WHERE unsubscribed_at IS NULL"
+        ).fetchone()["n"]
+        total_unsubscribed = con.execute(
+            "SELECT COUNT(*) as n FROM marketing_consents WHERE unsubscribed_at IS NOT NULL"
+        ).fetchone()["n"]
+        by_locale = con.execute(
+            """SELECT locale, COUNT(*) as n FROM marketing_consents
+               WHERE unsubscribed_at IS NULL GROUP BY locale"""
+        ).fetchall()
+        by_day = con.execute(
+            """SELECT DATE(consented_at) as day, COUNT(*) as n
+               FROM marketing_consents WHERE unsubscribed_at IS NULL
+               GROUP BY DATE(consented_at) ORDER BY day DESC LIMIT 30"""
+        ).fetchall()
+    return {
+        "email_hashes_total":   total_hashes,
+        "magic_links_sent":     total_links_sent,
+        "magic_links_verified": total_verified,
+        "verify_rate_pct":      round(total_verified / total_links_sent * 100, 1) if total_links_sent else 0,
+        "marketing_subscribed": total_consented,
+        "marketing_unsubscribed": total_unsubscribed,
+        "by_locale": {r["locale"]: r["n"] for r in by_locale},
+        "consents_by_day": [{"day": r["day"], "n": r["n"]} for r in by_day],
+    }
 
 
 def count_recent_magic_links(email_hash: str, minutes: int = 60) -> int:
