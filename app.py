@@ -918,8 +918,14 @@ def api_fingerprint():
 @csrf.exempt
 @limiter.limit("5 per minute; 10 per hour")
 def api_magic_link():
-    if not is_guest():
+    # Etsy-connected users shouldn't use magic links
+    if is_connected():
         return jsonify({"error": "not_guest"}), 400
+    # Session may have been invalidated by a server restart (new SECRET_KEY);
+    # auto-reinitialize rather than returning 400 to the user.
+    if not is_guest():
+        session.permanent = True
+        session["guest"] = True
     if is_email_verified():
         return jsonify({"ok": True})
     body             = request.get_json(silent=True) or {}
