@@ -2388,10 +2388,14 @@ function onTrendyolCategoryInput() {
   ensureTrendyolCategories().then(() => {
     const matches = (_trCategories || []).filter(c => c.name.toLowerCase().includes(q)).slice(0, 12);
     if (!matches.length) { box.style.display = 'none'; return; }
-    box.innerHTML = matches.map(c =>
-      `<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);"
-            onmousedown="selectTrendyolCategory(${c.id},${JSON.stringify(c.name).replace(/'/g,'&#39;')})">${c.name}</div>`
-    ).join('');
+    box.innerHTML = '';
+    matches.forEach(c => {
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)';
+      div.textContent = c.name;
+      div.addEventListener('mousedown', () => selectTrendyolCategory(c.id, c.name));
+      box.appendChild(div);
+    });
     box.style.display = 'block';
   });
 }
@@ -2421,8 +2425,16 @@ async function loadCategoryAttributes(catId) {
         const sel = document.createElement('select');
         sel.className = 'field-input';
         sel.dataset.attrId = attr.attribute.id;
-        sel.innerHTML = `<option value="">${attr.attribute.name}${required}</option>` +
-          attr.attributeValues.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = attr.attribute.name + required;
+        sel.appendChild(placeholder);
+        attr.attributeValues.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v.id;
+          opt.textContent = v.name;
+          sel.appendChild(opt);
+        });
         wrap.appendChild(sel);
       } else if (attr.allowCustom) {
         const inp = document.createElement('input');
@@ -2449,10 +2461,14 @@ async function searchTrendyolBrand() {
     const data = await res.json();
     const brands = data.brands || [];
     if (!brands.length) { box.style.display = 'none'; return; }
-    box.innerHTML = brands.map(b =>
-      `<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);"
-            onmousedown="selectTrendyolBrand(${b.id},${JSON.stringify(b.name).replace(/'/g,'&#39;')})">${b.name}</div>`
-    ).join('');
+    box.innerHTML = '';
+    brands.forEach(b => {
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)';
+      div.textContent = b.name;
+      div.addEventListener('mousedown', () => selectTrendyolBrand(b.id, b.name));
+      box.appendChild(div);
+    });
     box.style.display = 'block';
   } catch(e) {
     box.style.display = 'none';

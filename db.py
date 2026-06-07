@@ -4,6 +4,8 @@ SQLite store for per-shop usage, templates, and billing.
 import json
 import sqlite3
 import os
+import hashlib as _hashlib
+import base64 as _base64
 from datetime import datetime, timezone
 
 DB_PATH   = os.getenv("DB_PATH", "easylisting.sqlite")
@@ -418,7 +420,26 @@ def get_shop_by_stripe_customer(customer_id: str) -> dict | None:
         return dict(row) if row else None
 
 
-# ── Platform credentials ──────────────────────────────────────────────────────
+# ── Platform credentials (encrypted at rest) ──────────────────────────────────
+
+def _cred_fernet():
+    from cryptography.fernet import Fernet as _Fernet
+    secret = os.getenv("FLASK_SECRET", "dev-secret-not-set")
+    derived = _hashlib.sha256(secret.encode()).digest()
+    return _Fernet(_base64.urlsafe_b64encode(derived))
+
+
+def _encrypt_creds(data: dict) -> str:
+    return _cred_fernet().encrypt(json.dumps(data).encode()).decode()
+
+
+def _decrypt_creds(stored: str) -> dict:
+    try:
+        return json.loads(_cred_fernet().decrypt(stored.encode()))
+    except Exception:
+        # Migration path: fall back to plain JSON for rows written before encryption was added.
+        return json.loads(stored)
+
 
 def save_platform_credentials(shop_id: str, platform: str, creds: dict):
     with _conn() as con:
@@ -428,7 +449,7 @@ def save_platform_credentials(shop_id: str, platform: str, creds: dict):
                ON CONFLICT(shop_id, platform) DO UPDATE
                SET credentials = excluded.credentials,
                    connected_at = CURRENT_TIMESTAMP""",
-            (str(shop_id), platform, json.dumps(creds)),
+            (str(shop_id), platform, _encrypt_creds(creds)),
         )
 
 
@@ -441,7 +462,7 @@ def get_platform_credentials(shop_id: str, platform: str) -> dict | None:
         if not row:
             return None
         try:
-            return json.loads(row["credentials"])
+            return _decrypt_creds(row["credentials"])
         except Exception:
             return None
 

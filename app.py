@@ -47,8 +47,11 @@ app.config.update(
     SESSION_COOKIE_SAMESITE    = "Lax",
     SESSION_COOKIE_SECURE      = _is_production,
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 2,  # 48 hours
-    WTF_CSRF_TIME_LIMIT        = None,
+    WTF_CSRF_TIME_LIMIT        = 3600,
 )
+
+if _is_production and not os.getenv("REDIS_URL"):
+    raise RuntimeError("REDIS_URL must be set in production to ensure rate-limit persistence")
 
 limiter = Limiter(
     get_remote_address,
@@ -140,7 +143,7 @@ def set_security_headers(resp):
         f"default-src 'self'; "
         f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        f"img-src 'self' data: blob: *.etsystatic.com *.etsy.com; "
+        f"img-src 'self' data: blob: *.etsystatic.com *.etsy.com *.fal.run *.fal.media; "
         f"connect-src 'self' https://api.stripe.com; "
         f"frame-src https://js.stripe.com https://hooks.stripe.com; "
         f"font-src 'self' https://fonts.gstatic.com; "
@@ -167,6 +170,7 @@ ETSY_API_KEY_HEADER = f"{ETSY_CLIENT_ID}:{ETSY_CLIENT_SECRET}" if ETSY_CLIENT_SE
 ETSY_SCOPES         = "listings_r listings_w shops_r"
 READINESS_ID        = 1489219211571
 REDIRECT_URI        = os.getenv("REDIRECT_URI", "http://localhost:5050/auth/callback")
+APP_BASE_URL        = os.getenv("APP_BASE_URL", "").rstrip("/")
 HTTP_TIMEOUT        = (5, 30)  # (connect timeout, read timeout) in seconds
 GUEST_FREE_LIMIT    = 3
 GUEST_ID_COOKIE     = "easylisting_guest_id"
@@ -190,6 +194,7 @@ _IMAGE_MAGIC = [
 ]
 
 def _is_valid_image_bytes(data: bytes) -> bool:
+    # Intentionally magic-byte only — Image.open() is avoided to prevent decompression-bomb attacks.
     for sig in _IMAGE_MAGIC:
         if data[:len(sig)] == sig:
             return True
@@ -757,7 +762,7 @@ def _dynamic_redirect_uri() -> str:
     host = request.host or ""
     _ALLOWED = {"kolaylistele.com", "easylisting.app"}
     for allowed in _ALLOWED:
-        if allowed in host:
+        if host == allowed or host.endswith("." + allowed):
             return f"https://{allowed}/auth/callback"
     return REDIRECT_URI  # fallback to env var (local dev)
 
@@ -1527,6 +1532,21 @@ def _photo_variant_prompts(meta: dict) -> list[str]:
         f"E-commerce product photography, {name}, seasonal gift-ready scene, soft golden-hour lighting, tasteful background bokeh, product centered and unchanged, high resolution commercial shot.",
     ]
 
+_FAL_CDN_HOSTS = {"fal.run", "fal.media", "storage.googleapis.com"}
+
+
+def _is_trusted_fal_url(url: str) -> bool:
+    try:
+        from urllib.parse import urlparse as _urlparse
+        p = _urlparse(url)
+        return p.scheme == "https" and any(
+            p.hostname == h or (p.hostname or "").endswith("." + h)
+            for h in _FAL_CDN_HOSTS
+        )
+    except Exception:
+        return False
+
+
 def _fal_generate_variant(image_url: str, prompt: str) -> str:
     resp = requests.post(
         "https://fal.run/fal-ai/flux-pro/kontext",
@@ -1553,6 +1573,8 @@ def _fal_generate_variant(image_url: str, prompt: str) -> str:
     url = images[0].get("url", "")
     if url.startswith("data:image/"):
         return url
+    if not _is_trusted_fal_url(url):
+        raise RuntimeError("Generated image URL is not from a trusted CDN.")
     img_resp = requests.get(url, timeout=HTTP_TIMEOUT)
     if not img_resp.ok:
         raise RuntimeError("Could not fetch generated photo.")
@@ -1871,6 +1893,20 @@ UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
+def _cleanup_old_uploads(max_age_secs: int = 3600):
+    import glob as _glob
+    import threading as _threading
+    def _run():
+        now = time.time()
+        for fpath in _glob.glob(os.path.join(UPLOAD_DIR, "*.jpg")):
+            try:
+                if now - os.path.getmtime(fpath) > max_age_secs:
+                    os.remove(fpath)
+            except OSError:
+                pass
+    _threading.Thread(target=_run, daemon=True).start()
+
+
 @app.route("/uploads/<path:filename>")
 def serve_upload(filename):
     safe = os.path.basename(filename)
@@ -1930,7 +1966,6 @@ def _tr_creds() -> dict | None:
 
 
 @app.route("/api/trendyol/connect", methods=["POST"])
-@csrf.exempt
 @limiter.limit("10 per minute")
 def api_trendyol_connect():
     if not is_authorized():
@@ -1959,7 +1994,6 @@ def api_trendyol_connect():
 
 
 @app.route("/api/trendyol/disconnect", methods=["POST"])
-@csrf.exempt
 @limiter.limit("10 per minute")
 def api_trendyol_disconnect():
     if not is_authorized():
@@ -2058,7 +2092,6 @@ def api_trendyol_brands():
 
 
 @app.route("/api/trendyol/publish", methods=["POST"])
-@csrf.exempt
 @limiter.limit("10 per minute")
 def api_trendyol_publish():
     if not is_authorized():
@@ -2066,6 +2099,8 @@ def api_trendyol_publish():
     creds = _tr_creds()
     if not creds:
         return jsonify({"error": "not_connected"}), 400
+
+    _VALID_VAT_RATES = {0, 1, 8, 10, 18, 20}
 
     body    = request.get_json(silent=True) or {}
     barcode = str(body.get("barcode", "")).strip()
@@ -2085,6 +2120,10 @@ def api_trendyol_publish():
         return jsonify({"error": "Barkod zorunludur."}), 400
     if sale_price <= 0 or list_price < sale_price:
         return jsonify({"error": "Liste fiyatı satış fiyatından küçük olamaz."}), 400
+    if vat_rate not in _VALID_VAT_RATES:
+        return jsonify({"error": f"Geçersiz KDV oranı. İzin verilen: {sorted(_VALID_VAT_RATES)}"}), 400
+    if not (1 <= quantity <= 9999):
+        return jsonify({"error": "Stok adedi 1-9999 arasında olmalıdır."}), 400
     if not all([brand_id, cat_id, ship_addr, ret_addr]):
         return jsonify({"error": "Marka, kategori ve adres seçimi zorunludur."}), 400
 
@@ -2097,8 +2136,9 @@ def api_trendyol_publish():
         return jsonify({"error": "Başlık ve açıklama zorunludur."}), 400
 
     # Save images to disk → generate public URLs
+    _cleanup_old_uploads()
     previews   = body.get("image_previews", [])
-    base_url   = request.host_url.rstrip("/")
+    base_url   = APP_BASE_URL or request.host_url.rstrip("/")
     image_urls = []
     for b64 in previews[:5]:
         fname = _save_image_for_upload(b64)
