@@ -1891,9 +1891,14 @@ def admin_stats():
     expected = os.getenv("ADMIN_TOKEN", "")
     if not expected or not secrets.compare_digest(token, expected):
         return "", 404
+    import db as _db
+    db_path = os.path.abspath(_db.DB_PATH)
+    db_exists = os.path.isfile(db_path)
+    db_size = os.path.getsize(db_path) if db_exists else 0
     s = get_marketing_stats()
     lines = [
         "<h2>EasyListing — Growth Stats</h2>",
+        f"<p style='font-family:monospace;font-size:12px;color:#888;'>DB: {db_path} | exists: {db_exists} | size: {db_size:,} bytes</p>",
         "<h3>Email funnel</h3><pre>",
         f"  Magic links sent        {s['magic_links_sent']:>8}",
         f"  Magic links verified    {s['magic_links_verified']:>8}  ({s['verify_rate_pct']}%)",
