@@ -26,6 +26,7 @@ from db import (
     set_premium, get_shop, get_shop_by_stripe_customer,
     log_abuse_signal, get_abuse_summary,
     get_or_create_email_shop, create_magic_link, use_magic_link, count_recent_magic_links,
+    add_marketing_consent, unsubscribe_by_token, get_marketing_stats,
 )
 
 load_dotenv()
@@ -920,8 +921,9 @@ def api_magic_link():
         return jsonify({"error": "not_guest"}), 400
     if is_email_verified():
         return jsonify({"ok": True})
-    body  = request.get_json(silent=True) or {}
-    email = (body.get("email") or "").strip().lower()
+    body             = request.get_json(silent=True) or {}
+    email            = (body.get("email") or "").strip().lower()
+    marketing_opt_in = bool(body.get("marketing_consent", False))
 
     import re
     if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
@@ -955,6 +957,10 @@ def api_magic_link():
     base  = REDIRECT_URI.replace("/auth/callback", "")
     link  = f"{base}/auth/magic?token={token}"
     is_tr = "kolaylistele" in base or request.host and "kolaylistele" in request.host
+
+    if marketing_opt_in:
+        locale = "tr" if is_tr else "en"
+        add_marketing_consent(email, email_hash, locale=locale, source="magic_link")
 
     if is_tr:
         subject   = "kolaylistele — Giriş bağlantınız"
@@ -1878,6 +1884,56 @@ def admin_abuse():
         lines.append(f"  fp={r['fp_hash']}  guests={r['guests']}  events={r['events']}")
     lines.append("</pre>")
     return "\n".join(lines), 200, {"Content-Type": "text/html"}
+
+@app.route("/admin/stats")
+def admin_stats():
+    token = request.args.get("token", "")
+    expected = os.getenv("ADMIN_TOKEN", "")
+    if not expected or not secrets.compare_digest(token, expected):
+        return "", 404
+    s = get_marketing_stats()
+    lines = [
+        "<h2>EasyListing — Growth Stats</h2>",
+        "<h3>Email funnel</h3><pre>",
+        f"  Magic links sent        {s['magic_links_sent']:>8}",
+        f"  Magic links verified    {s['magic_links_verified']:>8}  ({s['verify_rate_pct']}%)",
+        f"  Unique email hashes     {s['email_hashes_total']:>8}",
+        "</pre><h3>Marketing list</h3><pre>",
+        f"  Subscribed              {s['marketing_subscribed']:>8}",
+        f"  Unsubscribed            {s['marketing_unsubscribed']:>8}",
+    ]
+    if s["by_locale"]:
+        lines.append("</pre><h3>By locale</h3><pre>")
+        for locale, n in s["by_locale"].items():
+            lines.append(f"  {locale:<6} {n:>8}")
+    if s["consents_by_day"]:
+        lines.append("</pre><h3>New consents (last 30 days)</h3><pre>")
+        for row in s["consents_by_day"]:
+            lines.append(f"  {row['day']}  {row['n']:>4}")
+    lines.append("</pre>")
+    return "\n".join(lines), 200, {"Content-Type": "text/html"}
+
+
+@app.route("/unsubscribe")
+def unsubscribe():
+    token = request.args.get("token", "")
+    if not token:
+        return "Invalid unsubscribe link.", 400
+    changed = unsubscribe_by_token(token)
+    if changed:
+        msg = (
+            "Abonelikten çıkıldı. Artık pazarlama e-postası almayacaksınız."
+            if "kolaylistele" in request.host
+            else "You have been unsubscribed. You will no longer receive marketing emails."
+        )
+    else:
+        msg = (
+            "Bu bağlantı daha önce kullanılmış veya geçersiz."
+            if "kolaylistele" in request.host
+            else "This unsubscribe link has already been used or is invalid."
+        )
+    return f"<p style='font-family:sans-serif;padding:40px;font-size:16px;'>{msg}</p>", 200
+
 
 # ── Legal pages ───────────────────────────────────────────────────────────────
 

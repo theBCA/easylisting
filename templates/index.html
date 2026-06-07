@@ -347,6 +347,12 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
       <input type="email" id="magicEmailInput" class="field-input" style="margin:16px 0 12px;"
              data-i18n-placeholder="magic_placeholder" placeholder="ornek@eposta.com">
       <div id="magicError" style="color:#EF4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+      <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;cursor:pointer;">
+        <input type="checkbox" id="magicMarketingConsent" style="margin-top:3px;flex-shrink:0;accent-color:var(--primary);">
+        <span data-i18n="magic_consent_label" style="font-size:12px;color:var(--muted);line-height:1.5;">
+          Send me tips on improving my listings and occasional product updates. You can unsubscribe at any time.
+        </span>
+      </label>
       <div class="modal-actions">
         <button class="btn-modal-primary" id="magicSendBtn" data-i18n="magic_send">Bağlantı gönder →</button>
         <button class="btn-modal-secondary" id="magicCloseBtn" data-i18n="magic_skip">Şimdilik geç</button>
@@ -767,6 +773,7 @@ const STRINGS = {
     magic_placeholder:"you@example.com", magic_send:"Send link →",
     magic_skip:"Skip for now", magic_sent_title:"Check your email",
     magic_sent_sub:"Link sent. Click it and you'll be brought right back.",
+    magic_consent_label:"Send me tips on improving my listings and occasional product updates. You can unsubscribe at any time.",
     magic_resend:"Try a different email", magic_verified:"Email verified ✓",
     tools_improve_title:"AI improve tools",
     tools_title_seo:"Make title more searchable", tools_desc_warm:"Make description warmer",
@@ -827,6 +834,7 @@ const STRINGS = {
     magic_placeholder:"du@beispiel.de", magic_send:"Link senden →",
     magic_skip:"Jetzt überspringen", magic_sent_title:"Prüfe deine E-Mails",
     magic_sent_sub:"Link wurde gesendet. Klicke darauf und du wirst zurückgebracht.",
+    magic_consent_label:"Schick mir Tipps zur Verbesserung meiner Listings und gelegentliche Produktupdates. Abmeldung jederzeit möglich.",
     magic_resend:"Andere E-Mail versuchen", magic_verified:"E-Mail bestätigt ✓",
     tools_improve_title:"KI-Verbesserungstools",
     tools_title_seo:"Titel suchbarer machen", tools_desc_warm:"Beschreibung wärmer gestalten",
@@ -887,6 +895,7 @@ const STRINGS = {
     magic_placeholder:"siz@ornek.com", magic_send:"Bağlantı gönder →",
     magic_skip:"Şimdilik geç", magic_sent_title:"E-postanızı kontrol edin",
     magic_sent_sub:"Bağlantı gönderildi. Linke tıklayınca bu sayfaya dönersiniz.",
+    magic_consent_label:"Listelemi iyileştirme ipuçları ve ara sıra ürün güncellemeleri almak istiyorum. İstediğiniz zaman abonelikten çıkabilirsiniz.",
     magic_resend:"Farklı e-posta dene", magic_verified:"E-posta doğrulandı ✓",
     tools_improve_title:"YZ iyileştirme araçları",
     tools_title_seo:"Başlığı daha aranabilir yap", tools_desc_warm:"Açıklamayı daha samimi yap",
@@ -1043,10 +1052,11 @@ async function sendMagicLink() {
   }
   if (errEl) errEl.style.display = 'none';
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const marketing_consent = document.getElementById('magicMarketingConsent')?.checked ?? false;
   try {
     const res  = await fetch('/api/magic-link', {
       method: 'POST', headers: csrfHeaders(),
-      body: JSON.stringify({email}),
+      body: JSON.stringify({email, marketing_consent}),
     });
     const data = await res.json();
     if (!data.ok) {
