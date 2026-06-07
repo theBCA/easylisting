@@ -2567,11 +2567,13 @@ async function submitTrendyolPublish() {
     });
     const data = await res.json();
     if (data.error) { showErr(errEl, data.error); return; }
-    if (sucEl) { sucEl.textContent = data.message || 'Trendyol\'a gönderildi. Onay sürecindedir.'; sucEl.style.display = 'block'; }
+    let sucMsg = data.message || 'Trendyol\'a gönderildi. Onay sürecindedir.';
+    if (data.batchRequestId) sucMsg += ` (Batch: ${data.batchRequestId})`;
+    if (sucEl) { sucEl.textContent = sucMsg; sucEl.style.display = 'block'; }
     // Update result button
     const rb = document.getElementById('trPublishResultBtn');
     if (rb) { rb.textContent = '🇹🇷 Trendyol: Onay Bekliyor ✓'; rb.style.background = '#059669'; rb.disabled = true; }
-    setTimeout(() => closeModal('trendyolPublishModal'), 2500);
+    setTimeout(() => closeModal('trendyolPublishModal'), 3500);
   } catch(e) {
     showErr(errEl, 'Bağlantı hatası. Tekrar deneyin.');
   } finally {

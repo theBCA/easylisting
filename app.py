@@ -1590,7 +1590,7 @@ def api_generate_photos():
     if not FAL_KEY:
         return jsonify({"error": "Photo generation is not configured yet."}), 503
 
-    sid = str(shop_id()) if shop_id() else None
+    sid = str(shop_id()) if shop_id() else (guest_shop_id() if is_guest() else None)
     if not sid:
         return jsonify({"error": "Invalid shop"}), 400
     allowed, remaining = can_generate_photo_variants(sid, PHOTO_VARIANT_COUNT)
@@ -1813,7 +1813,7 @@ def _ip_hash() -> str:
 
 def _is_try_domain() -> bool:
     host = request.host or ""
-    return "kolaylistele" in host
+    return host == "kolaylistele.com" or host.endswith(".kolaylistele.com")
 
 @app.route("/stripe/checkout", methods=["POST"])
 @limiter.limit("10 per minute")
@@ -2182,10 +2182,16 @@ def api_trendyol_publish():
             msg = "Trendyol'da ürün oluşturulamadı."
         return jsonify({"error": safe_error(msg)}), 400
 
+    batch_id = None
+    try:
+        batch_id = r.json().get("batchRequestId")
+    except Exception:
+        pass
     return jsonify({
-        "ok":      True,
-        "barcode": barcode,
-        "message": "Ürün Trendyol'a gönderildi. Onay sürecindedir.",
+        "ok":             True,
+        "barcode":        barcode,
+        "batchRequestId": batch_id,
+        "message":        "Ürün Trendyol'a gönderildi. Onay sürecindedir.",
     })
 
 
@@ -2197,18 +2203,22 @@ def admin_abuse():
     expected = os.getenv("ADMIN_TOKEN", "")
     if not expected or not secrets.compare_digest(token, expected):
         return "", 404
-    days = int(request.args.get("days", 7))
+    import html as _html
+    try:
+        days = max(1, min(int(request.args.get("days", 7)), 365))
+    except (ValueError, TypeError):
+        days = 7
     data = get_abuse_summary(days)
     lines = [f"<h2>Abuse signals — last {days} days</h2>"]
     lines.append("<h3>By event</h3><pre>")
     for event, n in data["by_event"].items():
-        lines.append(f"  {event:<25} {n:>6}")
+        lines.append(f"  {_html.escape(str(event)):<25} {n:>6}")
     lines.append("</pre><h3>Top IPs (by unique guest IDs created)</h3><pre>")
     for r in data["top_ips"]:
-        lines.append(f"  ip={r['ip_hash']}  guests={r['guests']}  events={r['events']}")
+        lines.append(f"  ip={_html.escape(str(r['ip_hash']))}  guests={r['guests']}  events={r['events']}")
     lines.append("</pre><h3>Top fingerprints (by unique guest IDs)</h3><pre>")
     for r in data["top_fps"]:
-        lines.append(f"  fp={r['fp_hash']}  guests={r['guests']}  events={r['events']}")
+        lines.append(f"  fp={_html.escape(str(r['fp_hash']))}  guests={r['guests']}  events={r['events']}")
     lines.append("</pre>")
     return "\n".join(lines), 200, {"Content-Type": "text/html"}
 
@@ -2218,6 +2228,7 @@ def admin_stats():
     expected = os.getenv("ADMIN_TOKEN", "")
     if not expected or not secrets.compare_digest(token, expected):
         return "", 404
+    import html as _html
     import db as _db
     db_path = os.path.abspath(_db.DB_PATH)
     db_exists = os.path.isfile(db_path)
@@ -2225,7 +2236,7 @@ def admin_stats():
     s = get_marketing_stats()
     lines = [
         "<h2>EasyListing — Growth Stats</h2>",
-        f"<p style='font-family:monospace;font-size:12px;color:#888;'>DB: {db_path} | exists: {db_exists} | size: {db_size:,} bytes</p>",
+        f"<p style='font-family:monospace;font-size:12px;color:#888;'>DB: {_html.escape(db_path)} | exists: {db_exists} | size: {db_size:,} bytes</p>",
         "<h3>Email funnel</h3><pre>",
         f"  Magic links sent        {s['magic_links_sent']:>8}",
         f"  Magic links verified    {s['magic_links_verified']:>8}  ({s['verify_rate_pct']}%)",
@@ -2237,11 +2248,11 @@ def admin_stats():
     if s["by_locale"]:
         lines.append("</pre><h3>By locale</h3><pre>")
         for locale, n in s["by_locale"].items():
-            lines.append(f"  {locale:<6} {n:>8}")
+            lines.append(f"  {_html.escape(str(locale)):<6} {n:>8}")
     if s["consents_by_day"]:
         lines.append("</pre><h3>New consents (last 30 days)</h3><pre>")
         for row in s["consents_by_day"]:
-            lines.append(f"  {row['day']}  {row['n']:>4}")
+            lines.append(f"  {_html.escape(str(row['day']))}  {row['n']:>4}")
     lines.append("</pre>")
     return "\n".join(lines), 200, {"Content-Type": "text/html"}
 
