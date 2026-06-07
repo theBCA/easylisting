@@ -381,6 +381,76 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
   </div>
 </div>
 
+<!-- TRENDYOL CONNECT MODAL -->
+<div class="modal-overlay" id="trendyolConnectModal">
+  <div class="modal">
+    <h2>Trendyol Hesabını Bağla</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
+      Trendyol Satıcı Paneli → Hesap Bilgilerim → Entegrasyon Bilgileri
+    </p>
+    <input type="text" id="trSupplierId" class="field-input" style="margin-bottom:10px;" placeholder="Satıcı ID (Supplier ID)">
+    <input type="text" id="trApiKey" class="field-input" style="margin-bottom:10px;" placeholder="API Key">
+    <input type="password" id="trApiSecret" class="field-input" style="margin-bottom:16px;" placeholder="API Secret">
+    <div id="trConnectError" style="color:#EF4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-primary" id="trConnectBtn">Bağlan →</button>
+      <button class="btn-modal-secondary" id="trConnectCloseBtn">İptal</button>
+    </div>
+    <div id="trDisconnectRow" style="display:none;margin-top:12px;text-align:center;">
+      <span style="font-size:13px;color:var(--muted);">Trendyol bağlı.</span>
+      <button id="trDisconnectBtn" style="background:none;border:none;color:#EF4444;font-size:13px;cursor:pointer;margin-left:8px;">Bağlantıyı kes</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRENDYOL PUBLISH MODAL -->
+<div class="modal-overlay" id="trendyolPublishModal">
+  <div class="modal" style="max-width:520px;max-height:85vh;overflow-y:auto;">
+    <h2 style="margin-bottom:4px;">Trendyol'da Yayınla</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Ürün bilgilerini girerek Trendyol'a gönderin.</p>
+
+    <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Ürün Bilgileri</div>
+    <input type="text" id="trBarcode" class="field-input" style="margin-bottom:8px;" placeholder="Barkod (EAN/GTIN veya özel kod) *">
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <input type="number" id="trQuantity" class="field-input" style="flex:1;" placeholder="Adet" value="1" min="1">
+      <input type="text" id="trStockCode" class="field-input" style="flex:1;" placeholder="Stok Kodu (SKU)">
+    </div>
+
+    <div style="font-weight:600;font-size:13px;margin-bottom:8px;margin-top:12px;">Fiyatlandırma</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <input type="number" id="trListPrice" class="field-input" style="flex:1;" placeholder="Liste Fiyatı (₺) *" step="0.01" min="0">
+      <input type="number" id="trSalePrice" class="field-input" style="flex:1;" placeholder="Satış Fiyatı (₺) *" step="0.01" min="0">
+    </div>
+    <select id="trVatRate" class="field-input" style="margin-bottom:8px;">
+      <option value="0">KDV %0</option>
+      <option value="1">KDV %1</option>
+      <option value="8">KDV %8</option>
+      <option value="18" selected>KDV %18</option>
+      <option value="20">KDV %20</option>
+    </select>
+
+    <div style="font-weight:600;font-size:13px;margin-bottom:8px;margin-top:12px;">Kategori ve Marka</div>
+    <input type="text" id="trCategorySearch" class="field-input" style="margin-bottom:4px;" placeholder="Kategori ara (ör: El Örgüsü)..." autocomplete="off">
+    <div id="trCategoryResults" style="border:1px solid var(--border);border-radius:8px;max-height:140px;overflow-y:auto;display:none;margin-bottom:8px;background:var(--surface);"></div>
+    <input type="hidden" id="trSelectedCategoryId">
+    <div id="trAttributeFields" style="margin-bottom:8px;"></div>
+    <input type="text" id="trBrandSearch" class="field-input" style="margin-bottom:4px;" placeholder="Marka ara *..." autocomplete="off">
+    <div id="trBrandResults" style="border:1px solid var(--border);border-radius:8px;max-height:120px;overflow-y:auto;display:none;margin-bottom:8px;background:var(--surface);"></div>
+    <input type="hidden" id="trSelectedBrandId">
+
+    <div style="font-weight:600;font-size:13px;margin-bottom:8px;margin-top:12px;">Adres</div>
+    <select id="trShipmentAddress" class="field-input" style="margin-bottom:8px;"><option value="">Sevkiyat adresi yükleniyor...</option></select>
+    <select id="trReturnAddress" class="field-input" style="margin-bottom:16px;"><option value="">İade adresi yükleniyor...</option></select>
+
+    <div id="trPublishError" style="color:#EF4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <div id="trPublishSuccess" style="color:#10B981;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-primary" id="trPublishBtn">Trendyol'da Yayınla →</button>
+      <button class="btn-modal-secondary" id="trPublishCloseBtn">İptal</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── UPLOAD SCREEN ── -->
 <div id="upload-screen" class="screen active">
   <div style="max-width:680px;margin:0 auto;padding:60px 24px">
@@ -406,10 +476,10 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
           <span class="platform-name">Amazon</span>
           <span style="font-size:9px;color:#9CA3AF;">Soon</span>
         </div>
-        <div class="platform-card coming-soon" data-platform="trendyol">
+        <div class="platform-card" data-platform="trendyol">
           <span class="platform-icon">🇹🇷</span>
           <span class="platform-name">Trendyol</span>
-          <span style="font-size:9px;color:#9CA3AF;">Soon</span>
+          <span id="trendyolBadge" style="font-size:9px;display:none;color:#10B981;">Bağlı</span>
         </div>
         <div class="platform-card coming-soon" data-platform="woocommerce">
           <span class="platform-icon">🌐</span>
@@ -667,6 +737,9 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
         </button>
         <a href="/connect" style="display:block;text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:#5B47E0;text-decoration:none;">Etsy'ye göndermek için mağazanı bağla →</a>
         {% endif %}
+        <button id="trPublishResultBtn" style="width:100%;padding:13px;background:linear-gradient(135deg,#F97316,#EA580C);color:white;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;display:none;">
+          🇹🇷 Trendyol'da Yayınla →
+        </button>
         <button class="btn-save-template" id="saveTemplateBtn" data-i18n="btn_save_template">
           💾 Save as default template
         </button>
@@ -766,6 +839,8 @@ const STRINGS = {
     personalization_placeholder:"What should buyers tell you when ordering?",
     label_instagram:"Instagram Caption", btn_copy:"Copy",
     btn_publish:"Create Draft on Etsy →", btn_save_template:"💾 Save as default template",
+    trendyol_connect:"Connect Trendyol", trendyol_connected:"Trendyol Connected ✓",
+    trendyol_publish:"Publish on Trendyol", trendyol_pending:"Pending Approval",
     paywall_title:"You've used your free generations",
     paywall_body:"Upgrade to EasyListing Pro for unlimited AI generations and bulk listing tools.",
     paywall_upgrade:"View upgrade plans", paywall_later:"Maybe later", cancel:"Cancel",
@@ -888,6 +963,8 @@ const STRINGS = {
     personalization_placeholder:"Alıcılar sipariş verirken ne belirtmeli?",
     label_instagram:"Instagram Başlığı", btn_copy:"Kopyala",
     btn_publish:"Etsy'de Taslak Oluştur →", btn_save_template:"💾 Varsayılan şablon olarak kaydet",
+    trendyol_connect:"Trendyol'a Bağlan", trendyol_connected:"Trendyol Bağlı ✓",
+    trendyol_publish:"Trendyol'da Yayınla", trendyol_pending:"Onay Bekliyor",
     paywall_title:"Ücretsiz oluşturma hakkınız bitti",
     paywall_body:"Sınırsız yapay zeka üretimi ve toplu ilan araçları için kolaylistele Pro'ya yükseltin.",
     paywall_upgrade:"Yükseltme planlarını gör", paywall_later:"Belki daha sonra", cancel:"İptal",
@@ -1519,6 +1596,9 @@ async function startGenerate() {
     } else {
       populatePlatformReview(data, selectedPlatform);
     }
+    // Show Trendyol publish button if connected
+    const trBtn = document.getElementById('trPublishResultBtn');
+    if (trBtn) trBtn.style.display = _trConnected ? 'block' : 'none';
     refreshUsageBadge();
   } catch(e) {
     showToast('Generation failed: ' + e.message, 'error');
@@ -2050,6 +2130,7 @@ async function refreshUsageBadge() {
       badge.innerHTML = d.remaining + '/' + limit + ' <span>' + (STRINGS[currentLang].nav_free_left || 'free left') + '</span>';
       if (fill) { fill.style.width = pct + '%'; fill.classList.toggle('low', d.remaining === 0); }
     }
+    onStatusTrendyol(d);
   } catch(_) {}
 }
 
@@ -2176,7 +2257,315 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('copyAllBtn')?.addEventListener('click', copyAll);
+
+  // ── Trendyol wiring ───────────────────────────────────────────────────────
+  document.getElementById('trConnectBtn')?.addEventListener('click', submitTrendyolConnect);
+  document.getElementById('trConnectCloseBtn')?.addEventListener('click', () => closeModal('trendyolConnectModal'));
+  document.getElementById('trDisconnectBtn')?.addEventListener('click', disconnectTrendyol);
+  document.getElementById('trPublishBtn')?.addEventListener('click', submitTrendyolPublish);
+  document.getElementById('trPublishCloseBtn')?.addEventListener('click', () => closeModal('trendyolPublishModal'));
+  document.getElementById('trPublishResultBtn')?.addEventListener('click', openTrendyolPublish);
+
+  // Trendyol platform card click
+  document.querySelector('.platform-card[data-platform="trendyol"]')?.addEventListener('click', () => {
+    openTrendyolConnect();
+  });
+
+  // Category search
+  document.getElementById('trCategorySearch')?.addEventListener('input', onTrendyolCategoryInput);
+
+  // Brand search (debounced)
+  let _trBrandTimer = null;
+  document.getElementById('trBrandSearch')?.addEventListener('input', () => {
+    clearTimeout(_trBrandTimer);
+    _trBrandTimer = setTimeout(searchTrendyolBrand, 300);
+  });
 });
+
+// ── TRENDYOL ─────────────────────────────────────────────────────────────────
+
+let _trConnected   = false;
+let _trCategories  = null;   // flat list of leaf categories
+let _trAddresses   = null;
+
+function updateTrendyolUI(connected) {
+  _trConnected = connected;
+  const badge = document.getElementById('trendyolBadge');
+  if (badge) badge.style.display = connected ? 'inline' : 'none';
+  const publishBtn = document.getElementById('trPublishResultBtn');
+  if (publishBtn && aiData) publishBtn.style.display = connected ? 'block' : 'none';
+}
+
+// Called from checkStatus() after /api/status response
+function onStatusTrendyol(data) {
+  updateTrendyolUI(!!data.trendyol_connected);
+}
+
+async function openTrendyolConnect() {
+  const errEl = document.getElementById('trConnectError');
+  if (errEl) errEl.style.display = 'none';
+  const disconnRow = document.getElementById('trDisconnectRow');
+  const form = document.querySelector('#trendyolConnectModal .modal-actions');
+  if (_trConnected) {
+    if (disconnRow) disconnRow.style.display = 'block';
+    if (form) form.style.display = 'none';
+  } else {
+    if (disconnRow) disconnRow.style.display = 'none';
+    if (form) form.style.display = 'flex';
+  }
+  openModal('trendyolConnectModal');
+}
+
+async function submitTrendyolConnect() {
+  const errEl      = document.getElementById('trConnectError');
+  const btn        = document.getElementById('trConnectBtn');
+  const supplierId = document.getElementById('trSupplierId')?.value.trim();
+  const apiKey     = document.getElementById('trApiKey')?.value.trim();
+  const apiSecret  = document.getElementById('trApiSecret')?.value.trim();
+
+  if (!supplierId || !apiKey || !apiSecret) {
+    if (errEl) { errEl.textContent = 'Tüm alanlar zorunludur.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+  try {
+    const res = await fetch('/api/trendyol/connect', {
+      method: 'POST', headers: csrfHeaders(),
+      body: JSON.stringify({supplier_id: supplierId, api_key: apiKey, api_secret: apiSecret}),
+    });
+    const d = await res.json();
+    if (d.error) {
+      if (errEl) { errEl.textContent = d.error; errEl.style.display = 'block'; }
+    } else {
+      closeModal('trendyolConnectModal');
+      updateTrendyolUI(true);
+      showToast('Trendyol bağlandı!', 'success');
+    }
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Bağlantı hatası. Tekrar deneyin.'; errEl.style.display = 'block'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Bağlan →'; }
+  }
+}
+
+async function disconnectTrendyol() {
+  await fetch('/api/trendyol/disconnect', {method:'POST', headers:csrfHeaders()});
+  updateTrendyolUI(false);
+  closeModal('trendyolConnectModal');
+  showToast('Trendyol bağlantısı kesildi.', 'success');
+}
+
+// Flatten nested category tree to a searchable list
+function flattenCategories(cats, result = []) {
+  for (const c of cats) {
+    if (!c.subCategories || c.subCategories.length === 0) {
+      result.push({id: c.id, name: c.name});
+    } else {
+      flattenCategories(c.subCategories, result);
+    }
+  }
+  return result;
+}
+
+async function ensureTrendyolCategories() {
+  if (_trCategories) return;
+  try {
+    const res  = await fetch('/api/trendyol/categories');
+    const data = await res.json();
+    _trCategories = flattenCategories(data.categories || []);
+  } catch(e) {
+    _trCategories = [];
+  }
+}
+
+function onTrendyolCategoryInput() {
+  const q    = document.getElementById('trCategorySearch')?.value.trim().toLowerCase();
+  const box  = document.getElementById('trCategoryResults');
+  if (!box) return;
+  if (!q || q.length < 2) { box.style.display = 'none'; return; }
+  ensureTrendyolCategories().then(() => {
+    const matches = (_trCategories || []).filter(c => c.name.toLowerCase().includes(q)).slice(0, 12);
+    if (!matches.length) { box.style.display = 'none'; return; }
+    box.innerHTML = matches.map(c =>
+      `<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);"
+            onmousedown="selectTrendyolCategory(${c.id},${JSON.stringify(c.name).replace(/'/g,'&#39;')})">${c.name}</div>`
+    ).join('');
+    box.style.display = 'block';
+  });
+}
+
+function selectTrendyolCategory(id, name) {
+  document.getElementById('trCategorySearch').value  = name;
+  document.getElementById('trSelectedCategoryId').value = id;
+  document.getElementById('trCategoryResults').style.display = 'none';
+  loadCategoryAttributes(id);
+}
+
+async function loadCategoryAttributes(catId) {
+  const container = document.getElementById('trAttributeFields');
+  if (!container) return;
+  container.innerHTML = '<p style="font-size:12px;color:var(--muted);">Özellikler yükleniyor…</p>';
+  try {
+    const res  = await fetch(`/api/trendyol/categories/${catId}/attributes`);
+    const data = await res.json();
+    const attrs = data.categoryAttributes || [];
+    if (!attrs.length) { container.innerHTML = ''; return; }
+    container.innerHTML = `<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">Kategori Özellikleri</div>`;
+    attrs.forEach(attr => {
+      const required = attr.required ? ' *' : '';
+      const wrap = document.createElement('div');
+      wrap.style.marginBottom = '6px';
+      if (attr.attributeValues && attr.attributeValues.length) {
+        const sel = document.createElement('select');
+        sel.className = 'field-input';
+        sel.dataset.attrId = attr.attribute.id;
+        sel.innerHTML = `<option value="">${attr.attribute.name}${required}</option>` +
+          attr.attributeValues.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+        wrap.appendChild(sel);
+      } else if (attr.allowCustom) {
+        const inp = document.createElement('input');
+        inp.type = 'text'; inp.className = 'field-input';
+        inp.placeholder = attr.attribute.name + required;
+        inp.dataset.attrId = attr.attribute.id;
+        inp.dataset.custom = '1';
+        wrap.appendChild(inp);
+      }
+      container.appendChild(wrap);
+    });
+  } catch(e) {
+    container.innerHTML = '<p style="font-size:12px;color:#EF4444;">Özellikler alınamadı.</p>';
+  }
+}
+
+async function searchTrendyolBrand() {
+  const q   = document.getElementById('trBrandSearch')?.value.trim();
+  const box = document.getElementById('trBrandResults');
+  if (!box) return;
+  if (!q || q.length < 2) { box.style.display = 'none'; return; }
+  try {
+    const res  = await fetch(`/api/trendyol/brands?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    const brands = data.brands || [];
+    if (!brands.length) { box.style.display = 'none'; return; }
+    box.innerHTML = brands.map(b =>
+      `<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);"
+            onmousedown="selectTrendyolBrand(${b.id},${JSON.stringify(b.name).replace(/'/g,'&#39;')})">${b.name}</div>`
+    ).join('');
+    box.style.display = 'block';
+  } catch(e) {
+    box.style.display = 'none';
+  }
+}
+
+function selectTrendyolBrand(id, name) {
+  document.getElementById('trBrandSearch').value     = name;
+  document.getElementById('trSelectedBrandId').value = id;
+  document.getElementById('trBrandResults').style.display = 'none';
+}
+
+async function openTrendyolPublish() {
+  if (!_trConnected) { openTrendyolConnect(); return; }
+  // Pre-fill from aiData
+  if (aiData) {
+    if (document.getElementById('trStockCode') && aiData.stock_code)
+      document.getElementById('trStockCode').value = aiData.stock_code;
+    if (aiData.suggested_price_try) {
+      document.getElementById('trListPrice').value = aiData.suggested_price_try;
+      document.getElementById('trSalePrice').value = aiData.suggested_price_try;
+    }
+  }
+  // Load addresses
+  if (!_trAddresses) {
+    try {
+      const res  = await fetch('/api/trendyol/addresses');
+      const data = await res.json();
+      _trAddresses = data.addresses || [];
+      ['trShipmentAddress','trReturnAddress'].forEach(sid => {
+        const sel = document.getElementById(sid);
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Adres seçin *</option>' +
+          _trAddresses.map(a => `<option value="${a.id}">${a.label}</option>`).join('');
+      });
+    } catch(e) {
+      console.error('Address load error', e);
+    }
+  }
+  // Reset publish state
+  const errEl = document.getElementById('trPublishError');
+  const sucEl = document.getElementById('trPublishSuccess');
+  if (errEl) errEl.style.display = 'none';
+  if (sucEl) sucEl.style.display = 'none';
+  // Pre-load categories in background
+  ensureTrendyolCategories();
+  openModal('trendyolPublishModal');
+}
+
+async function submitTrendyolPublish() {
+  const errEl = document.getElementById('trPublishError');
+  const sucEl = document.getElementById('trPublishSuccess');
+  const btn   = document.getElementById('trPublishBtn');
+  if (errEl) errEl.style.display = 'none';
+  if (sucEl) sucEl.style.display = 'none';
+
+  const barcode    = document.getElementById('trBarcode')?.value.trim();
+  const listPrice  = parseFloat(document.getElementById('trListPrice')?.value || '0');
+  const salePrice  = parseFloat(document.getElementById('trSalePrice')?.value || '0');
+  const vatRate    = parseInt(document.getElementById('trVatRate')?.value || '18');
+  const quantity   = parseInt(document.getElementById('trQuantity')?.value || '1');
+  const stockCode  = document.getElementById('trStockCode')?.value.trim() || barcode;
+  const brandId    = parseInt(document.getElementById('trSelectedBrandId')?.value || '0');
+  const categoryId = parseInt(document.getElementById('trSelectedCategoryId')?.value || '0');
+  const shipAddr   = parseInt(document.getElementById('trShipmentAddress')?.value || '0');
+  const retAddr    = parseInt(document.getElementById('trReturnAddress')?.value || '0');
+
+  if (!barcode) { showErr(errEl, 'Barkod zorunludur.'); return; }
+  if (!listPrice || !salePrice) { showErr(errEl, 'Fiyat bilgileri zorunludur.'); return; }
+  if (listPrice < salePrice) { showErr(errEl, 'Liste fiyatı satış fiyatından küçük olamaz.'); return; }
+  if (!brandId) { showErr(errEl, 'Marka seçimi zorunludur.'); return; }
+  if (!categoryId) { showErr(errEl, 'Kategori seçimi zorunludur.'); return; }
+  if (!shipAddr || !retAddr) { showErr(errEl, 'Adres seçimi zorunludur.'); return; }
+
+  // Collect category attributes
+  const attributes = [];
+  document.querySelectorAll('#trAttributeFields select[data-attr-id]').forEach(sel => {
+    if (sel.value) attributes.push({attributeId: parseInt(sel.dataset.attrId), attributeValueId: parseInt(sel.value)});
+  });
+  document.querySelectorAll('#trAttributeFields input[data-attr-id][data-custom]').forEach(inp => {
+    if (inp.value.trim()) attributes.push({attributeId: parseInt(inp.dataset.attrId), customAttributeValue: inp.value.trim()});
+  });
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Gönderiliyor…'; }
+  try {
+    const payload = {
+      barcode, list_price: listPrice, sale_price: salePrice, vat_rate: vatRate,
+      quantity, stock_code: stockCode, brand_id: brandId, category_id: categoryId,
+      shipment_address_id: shipAddr, returning_address_id: retAddr, attributes,
+      title:         aiData?.title || '',
+      description:   aiData?.description || '',
+      image_previews: aiData?.image_previews || [],
+    };
+    const res  = await fetch('/api/trendyol/publish', {
+      method: 'POST', headers: csrfHeaders(), body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.error) { showErr(errEl, data.error); return; }
+    if (sucEl) { sucEl.textContent = data.message || 'Trendyol\'a gönderildi. Onay sürecindedir.'; sucEl.style.display = 'block'; }
+    // Update result button
+    const rb = document.getElementById('trPublishResultBtn');
+    if (rb) { rb.textContent = '🇹🇷 Trendyol: Onay Bekliyor ✓'; rb.style.background = '#059669'; rb.disabled = true; }
+    setTimeout(() => closeModal('trendyolPublishModal'), 2500);
+  } catch(e) {
+    showErr(errEl, 'Bağlantı hatası. Tekrar deneyin.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Trendyol\'da Yayınla →'; }
+  }
+}
+
+function showErr(el, msg) {
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
 </script>
 <footer style="text-align:center;padding:24px 16px;font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7F0;margin-top:40px;">
   The term "Etsy" is a trademark of Etsy, Inc. This application uses Etsy's API but is not endorsed or certified by Etsy. &nbsp;·&nbsp;

@@ -211,6 +211,15 @@ def init_magic_tables(con):
     """)
     con.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_mc_email_hash ON marketing_consents(email_hash)")
     con.execute("CREATE INDEX IF NOT EXISTS idx_mc_unsub ON marketing_consents(unsubscribe_token)")
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS platform_credentials (
+            shop_id      TEXT NOT NULL,
+            platform     TEXT NOT NULL,
+            credentials  TEXT NOT NULL,
+            connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (shop_id, platform)
+        )
+    """)
 
 
 def get_or_create_email_shop(email_hash: str) -> str:
@@ -407,3 +416,39 @@ def get_shop_by_stripe_customer(customer_id: str) -> dict | None:
             "SELECT * FROM shops WHERE stripe_customer_id = ?", (customer_id,)
         ).fetchone()
         return dict(row) if row else None
+
+
+# ── Platform credentials ──────────────────────────────────────────────────────
+
+def save_platform_credentials(shop_id: str, platform: str, creds: dict):
+    with _conn() as con:
+        con.execute(
+            """INSERT INTO platform_credentials (shop_id, platform, credentials)
+               VALUES (?, ?, ?)
+               ON CONFLICT(shop_id, platform) DO UPDATE
+               SET credentials = excluded.credentials,
+                   connected_at = CURRENT_TIMESTAMP""",
+            (str(shop_id), platform, json.dumps(creds)),
+        )
+
+
+def get_platform_credentials(shop_id: str, platform: str) -> dict | None:
+    with _conn() as con:
+        row = con.execute(
+            "SELECT credentials FROM platform_credentials WHERE shop_id=? AND platform=?",
+            (str(shop_id), platform),
+        ).fetchone()
+        if not row:
+            return None
+        try:
+            return json.loads(row["credentials"])
+        except Exception:
+            return None
+
+
+def delete_platform_credentials(shop_id: str, platform: str):
+    with _conn() as con:
+        con.execute(
+            "DELETE FROM platform_credentials WHERE shop_id=? AND platform=?",
+            (str(shop_id), platform),
+        )
