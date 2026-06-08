@@ -220,6 +220,13 @@ def init_magic_tables(con):
             PRIMARY KEY (shop_id, platform)
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS fp_sessions (
+            fp_id        TEXT PRIMARY KEY,
+            email_shop_id TEXT NOT NULL,
+            created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
 
 def get_or_create_email_shop(email_hash: str) -> str:
@@ -452,3 +459,19 @@ def delete_platform_credentials(shop_id: str, platform: str):
             "DELETE FROM platform_credentials WHERE shop_id=? AND platform=?",
             (str(shop_id), platform),
         )
+
+
+def save_fp_session(fp_id: str, email_shop_id: str):
+    with _conn() as con:
+        con.execute(
+            "INSERT OR REPLACE INTO fp_sessions (fp_id, email_shop_id) VALUES (?, ?)",
+            (fp_id, email_shop_id),
+        )
+
+
+def get_fp_session(fp_id: str) -> str | None:
+    with _conn() as con:
+        row = con.execute(
+            "SELECT email_shop_id FROM fp_sessions WHERE fp_id = ?", (fp_id,)
+        ).fetchone()
+        return row["email_shop_id"] if row else None
