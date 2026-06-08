@@ -990,7 +990,20 @@ def api_magic_link():
     email_shop = get_shop(shop_id_for_email)
 
     if existing_shop_id is not None:
-        # Returning user — skip the email, log them in immediately
+        # Returning user — migrate usage first, then log in immediately
+        current_sid = guest_shop_id()
+        if current_sid != shop_id_for_email:
+            current_shop = get_shop(current_sid)
+            if current_shop and email_shop:
+                merged = max(int(current_shop.get("free_used", 0)),
+                             int(email_shop.get("free_used", 0)))
+                if merged > int(email_shop.get("free_used", 0)):
+                    from db import _conn as _db_conn
+                    with _db_conn() as con:
+                        con.execute("UPDATE shops SET free_used = ? WHERE shop_id = ?",
+                                    (merged, shop_id_for_email))
+                    email_shop = get_shop(shop_id_for_email)  # refresh after update
+
         if email_shop and not email_shop.get("has_premium") and int(email_shop.get("free_used", 0)) >= _FL2:
             return jsonify({"error": "limit_reached"}), 403
         session["guest"]          = True
@@ -1137,14 +1150,28 @@ def auth_magic():
         return render_template("connect.html",
             error="Bu bağlantı geçersiz veya süresi dolmuş. Lütfen tekrar deneyin.")
 
-    session["guest"]         = True
+    email_shop_id = row["shop_id"]
+    # Migrate usage from current guest shop → email shop before switching
+    current_sid = session.get("fp_guest_id") or session.get("GUEST_ID")
+    if current_sid and current_sid != email_shop_id:
+        current_shop = get_shop(current_sid)
+        email_shop   = get_shop(email_shop_id)
+        if current_shop and email_shop:
+            merged = max(int(current_shop.get("free_used", 0)),
+                         int(email_shop.get("free_used", 0)))
+            if merged > int(email_shop.get("free_used", 0)):
+                from db import _conn as _db_conn
+                with _db_conn() as con:
+                    con.execute("UPDATE shops SET free_used = ? WHERE shop_id = ?",
+                                (merged, email_shop_id))
+
+    session["guest"]          = True
     session["email_verified"] = True
-    session["email_shop_id"]  = row["shop_id"]
+    session["email_shop_id"]  = email_shop_id
     session.permanent         = True
-    # Persist fp→email mapping so the session survives server restarts
     fp_id = session.get("fp_guest_id")
     if fp_id:
-        save_fp_session(fp_id, row["shop_id"])
+        save_fp_session(fp_id, email_shop_id)
     return render_template("magic_verified.html")
 
 
