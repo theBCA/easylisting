@@ -352,6 +352,15 @@ def has_verified_email(email_hash: str) -> bool:
         return bool(row and row["n"] > 0)
 
 
+def get_email_shop(email_hash: str) -> str | None:
+    """Return shop_id if this email exists in verified_emails, None if brand new."""
+    with _conn() as con:
+        row = con.execute(
+            "SELECT shop_id FROM verified_emails WHERE email_hash = ?", (email_hash,)
+        ).fetchone()
+        return row["shop_id"] if row else None
+
+
 def count_recent_magic_links(email_hash: str, minutes: int = 60) -> int:
     with _conn() as con:
         row = con.execute(
