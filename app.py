@@ -2375,6 +2375,25 @@ def admin_stats():
         lines.append("</pre><h3>New consents (last 30 days)</h3><pre>")
         for row in s["consents_by_day"]:
             lines.append(f"  {row['day']}  {row['n']:>4}")
+
+    # Raw table row counts — helps diagnose empty-table issues
+    lines.append("</pre><h3>DB table counts (raw)</h3><pre>")
+    try:
+        import sqlite3 as _sq
+        con = _sq.connect(_db.DB_PATH)
+        con.row_factory = _sq.Row
+        tables = [r[0] for r in con.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+        ).fetchall()]
+        for t in tables:
+            try:
+                n = con.execute(f"SELECT COUNT(*) FROM \"{t}\"").fetchone()[0]
+                lines.append(f"  {t:<35} {n:>6} rows")
+            except Exception as te:
+                lines.append(f"  {t:<35} ERROR: {te}")
+        con.close()
+    except Exception as e:
+        lines.append(f"  ERROR reading tables: {e}")
     lines.append("</pre>")
     return "\n".join(lines), 200, {"Content-Type": "text/html"}
 
