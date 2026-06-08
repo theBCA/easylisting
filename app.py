@@ -632,25 +632,36 @@ def _gemini_generate(image_bytes_list, hint, api_key=None, lang="en", platform="
         gtypes.Part.from_bytes(data=b, mime_type="image/jpeg")
         for b in image_bytes_list
     ]
+    last_exc = None
     for model in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
         try:
             resp = client.models.generate_content(model=model, contents=parts)
             try:
                 return _parse_ai_json(resp.text)
             except (json.JSONDecodeError, ValueError) as je:
-                logger.error("Gemini JSON parse failed (%s). Raw: %s", je, (resp.text or "")[:500])
-                raise
+                logger.warning("Gemini JSON parse failed (model=%s): %s. Raw: %s", model, je, (resp.text or "")[:500])
+                last_exc = je
+                continue  # try the lite model before giving up
         except ClientError as e:
             s = str(e)
             if "429" in s or "RESOURCE_EXHAUSTED" in s:
                 if model == "gemini-2.5-flash-lite":
                     raise RuntimeError("quota_exceeded") from e
+                last_exc = e
                 continue  # try lite
             if "404" in s or "no longer available" in s.lower():
                 if model == "gemini-2.5-flash-lite":
                     raise RuntimeError("quota_exceeded") from e
+                last_exc = e
                 continue  # try lite
             raise
+        except Exception as e:
+            logger.warning("Gemini API error (model=%s): %s", model, e)
+            last_exc = e
+            continue
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("quota_exceeded")
 
 def _openai_generate(image_bytes_list, hint, api_key=None, lang="en", platform="etsy"):
     from openai import OpenAI, RateLimitError
@@ -1252,11 +1263,8 @@ def api_generate():
                 logger.info("Fell back from %s to %s (quota)", provider, p)
             break
         except RuntimeError as e:
-            if "quota_exceeded" in str(e):
-                logger.info("Provider %s quota exceeded, trying next", p)
-                continue
-            logger.error("AI RuntimeError (provider=%s): %s", p, e)
-            return jsonify({"error": safe_error(str(e))}), 500
+            logger.warning("AI RuntimeError (provider=%s), trying next: %s", p, e)
+            continue
         except json.JSONDecodeError as e:
             logger.warning("AI JSON decode error (provider=%s), trying next: %s", p, e)
             continue
@@ -1745,12 +1753,11 @@ def api_bulk_generate():
             data = _run_provider(p, image_bytes, hint, "llama-90b", lang=lang, platform=platform)
             break
         except RuntimeError as e:
-            if "quota_exceeded" in str(e):
-                continue
-            return jsonify({"error": safe_error(str(e))}), 500
+            logger.warning("Bulk AI RuntimeError (provider=%s), trying next: %s", p, e)
+            continue
         except Exception as e:
             logger.exception("Bulk AI error (provider=%s): %s", p, e)
-            return jsonify({"error": safe_error(str(e))}), 500
+            continue
     if data is None:
         return jsonify({"error": "All AI providers are over quota."}), 503
 
@@ -2207,6 +2214,70 @@ def admin_abuse():
         lines.append(f"  fp={r['fp_hash']}  guests={r['guests']}  events={r['events']}")
     lines.append("</pre>")
     return "\n".join(lines), 200, {"Content-Type": "text/html"}
+
+@app.route("/admin/ping-ai")
+def admin_ping_ai():
+    token = request.args.get("token", "")
+    expected = os.getenv("ADMIN_TOKEN", "")
+    if not expected or not secrets.compare_digest(token, expected):
+        return "", 404
+
+    import time
+    results = {}
+    test_prompt = "Reply with exactly this JSON and nothing else: {\"ok\": true}"
+
+    # Test Gemini
+    if os.getenv("GEMINI_API_KEY"):
+        try:
+            t0 = time.time()
+            from google import genai as _ggenai
+            client = _ggenai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+            resp = client.models.generate_content(model="gemini-2.5-flash", contents=[test_prompt])
+            results["gemini"] = {"status": "ok", "ms": int((time.time()-t0)*1000), "preview": (resp.text or "")[:80]}
+        except Exception as e:
+            results["gemini"] = {"status": "error", "error": str(e)[:200]}
+    else:
+        results["gemini"] = {"status": "no_key"}
+
+    # Test NVIDIA
+    if os.getenv("NVIDIA_API_KEY"):
+        try:
+            t0 = time.time()
+            from openai import OpenAI as _OAI
+            client = _OAI(base_url="https://integrate.api.nvidia.com/v1",
+                          api_key=os.getenv("NVIDIA_API_KEY"), timeout=30.0)
+            resp = client.chat.completions.create(
+                model="meta/llama-3.2-90b-vision-instruct",
+                messages=[{"role": "user", "content": test_prompt}],
+                max_tokens=50,
+            )
+            content = resp.choices[0].message.content if resp.choices else ""
+            results["nvidia"] = {"status": "ok" if content else "empty", "ms": int((time.time()-t0)*1000), "preview": (content or "")[:80]}
+        except Exception as e:
+            results["nvidia"] = {"status": "error", "error": str(e)[:200]}
+    else:
+        results["nvidia"] = {"status": "no_key"}
+
+    # Test OpenAI
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            t0 = time.time()
+            from openai import OpenAI as _OAI2
+            client = _OAI2(api_key=os.getenv("OPENAI_API_KEY"), timeout=20.0)
+            resp = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": test_prompt}],
+                max_tokens=50,
+            )
+            content = resp.choices[0].message.content if resp.choices else ""
+            results["openai"] = {"status": "ok", "ms": int((time.time()-t0)*1000), "preview": (content or "")[:80]}
+        except Exception as e:
+            results["openai"] = {"status": "error", "error": str(e)[:200]}
+    else:
+        results["openai"] = {"status": "no_key"}
+
+    return jsonify(results)
+
 
 @app.route("/admin/stats")
 def admin_stats():
