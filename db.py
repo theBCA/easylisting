@@ -13,14 +13,15 @@ PHOTO_VARIANT_MONTHLY_LIMIT = int(os.getenv("PHOTO_VARIANT_MONTHLY_LIMIT", "30")
 
 
 def _conn():
-    con = sqlite3.connect(DB_PATH, check_same_thread=False)
+    con = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
     con.row_factory = sqlite3.Row
-    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA busy_timeout=30000")
     return con
 
 
 def init_db():
     with _conn() as con:
+        con.execute("PRAGMA journal_mode=WAL")
         con.execute("""
             CREATE TABLE IF NOT EXISTS shops (
                 shop_id                TEXT PRIMARY KEY,
