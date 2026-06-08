@@ -342,6 +342,16 @@ def get_marketing_stats() -> dict:
     }
 
 
+def has_verified_email(email_hash: str) -> bool:
+    """True if this email hash has at least one used (clicked) magic link."""
+    with _conn() as con:
+        row = con.execute(
+            "SELECT COUNT(*) as n FROM magic_links WHERE email_hash = ? AND used_at IS NOT NULL",
+            (email_hash,),
+        ).fetchone()
+        return bool(row and row["n"] > 0)
+
+
 def count_recent_magic_links(email_hash: str, minutes: int = 60) -> int:
     with _conn() as con:
         row = con.execute(
