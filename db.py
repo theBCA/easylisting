@@ -304,31 +304,43 @@ def unsubscribe_by_token(token: str) -> bool:
         return cur.rowcount > 0
 
 
-def get_marketing_stats() -> dict:
+def get_marketing_stats(exclude_hashes: list[str] | None = None) -> dict:
+    excl = tuple(exclude_hashes or [])
+    placeholders = ",".join("?" * len(excl)) if excl else None
+
+    def _excl_ve(col="email_hash"):
+        return f" AND {col} NOT IN ({placeholders})" if excl else ""
+
+    def _excl_ml(col="email_hash"):
+        return f" AND {col} NOT IN ({placeholders})" if excl else ""
+
+    def _excl_mc(col="email_hash"):
+        return f" AND {col} NOT IN ({placeholders})" if excl else ""
+
     with _conn() as con:
         total_hashes = con.execute(
-            "SELECT COUNT(*) as n FROM verified_emails"
+            f"SELECT COUNT(*) as n FROM verified_emails WHERE 1=1{_excl_ve()}", excl
         ).fetchone()["n"]
         total_links_sent = con.execute(
-            "SELECT COUNT(*) as n FROM magic_links"
+            f"SELECT COUNT(*) as n FROM magic_links WHERE 1=1{_excl_ml()}", excl
         ).fetchone()["n"]
         total_verified = con.execute(
-            "SELECT COUNT(*) as n FROM magic_links WHERE used_at IS NOT NULL"
+            f"SELECT COUNT(*) as n FROM magic_links WHERE used_at IS NOT NULL{_excl_ml()}", excl
         ).fetchone()["n"]
         total_consented = con.execute(
-            "SELECT COUNT(*) as n FROM marketing_consents WHERE unsubscribed_at IS NULL"
+            f"SELECT COUNT(*) as n FROM marketing_consents WHERE unsubscribed_at IS NULL{_excl_mc()}", excl
         ).fetchone()["n"]
         total_unsubscribed = con.execute(
-            "SELECT COUNT(*) as n FROM marketing_consents WHERE unsubscribed_at IS NOT NULL"
+            f"SELECT COUNT(*) as n FROM marketing_consents WHERE unsubscribed_at IS NOT NULL{_excl_mc()}", excl
         ).fetchone()["n"]
         by_locale = con.execute(
-            """SELECT locale, COUNT(*) as n FROM marketing_consents
-               WHERE unsubscribed_at IS NULL GROUP BY locale"""
+            f"""SELECT locale, COUNT(*) as n FROM marketing_consents
+               WHERE unsubscribed_at IS NULL{_excl_mc()} GROUP BY locale""", excl
         ).fetchall()
         by_day = con.execute(
-            """SELECT DATE(consented_at) as day, COUNT(*) as n
-               FROM marketing_consents WHERE unsubscribed_at IS NULL
-               GROUP BY DATE(consented_at) ORDER BY day DESC LIMIT 30"""
+            f"""SELECT DATE(consented_at) as day, COUNT(*) as n
+               FROM marketing_consents WHERE unsubscribed_at IS NULL{_excl_mc()}
+               GROUP BY DATE(consented_at) ORDER BY day DESC LIMIT 30""", excl
         ).fetchall()
     return {
         "email_hashes_total":   total_hashes,
