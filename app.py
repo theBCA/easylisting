@@ -138,10 +138,10 @@ def set_security_headers(resp):
     nonce = getattr(g, "csp_nonce", "")
     resp.headers["Content-Security-Policy"] = (
         f"default-src 'self'; "
-        f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com; "
+        f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com https://static.cloudflareinsights.com; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         f"img-src 'self' data: blob: *.etsystatic.com *.etsy.com; "
-        f"connect-src 'self' https://api.stripe.com; "
+        f"connect-src 'self' https://api.stripe.com https://cloudflareinsights.com; "
         f"frame-src https://js.stripe.com https://hooks.stripe.com; "
         f"font-src 'self' https://fonts.gstatic.com; "
         f"frame-ancestors 'none';"
@@ -757,7 +757,7 @@ def _dynamic_redirect_uri() -> str:
     host = request.host or ""
     _ALLOWED = {"kolaylistele.com", "easylisting.app"}
     for allowed in _ALLOWED:
-        if allowed in host:
+        if host == allowed or host.endswith("." + allowed):
             return f"https://{allowed}/auth/callback"
     return REDIRECT_URI  # fallback to env var (local dev)
 
@@ -919,7 +919,11 @@ def api_fingerprint():
 @limiter.limit("5 per minute; 10 per hour")
 def api_magic_link():
     if not is_guest():
-        return jsonify({"error": "not_guest"}), 400
+        if is_connected():
+            return jsonify({"error": "not_guest"}), 400
+        # Session was invalidated by a server restart (new SECRET_KEY) — reinitialize as guest
+        session["guest"] = True
+        session.permanent = True
     if is_email_verified():
         return jsonify({"ok": True})
     body             = request.get_json(silent=True) or {}
@@ -1220,9 +1224,12 @@ def api_generate():
             break
         except RuntimeError as e:
             if "quota_exceeded" in str(e):
+                logger.info("Provider %s quota exceeded, trying next", p)
                 continue
+            logger.error("AI RuntimeError (provider=%s): %s", p, e)
             return jsonify({"error": safe_error(str(e))}), 500
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            logger.error("AI JSON decode error (provider=%s): %s", p, e)
             return jsonify({"error": "AI returned invalid JSON. Try again."}), 500
         except Exception as e:
             logger.exception("AI error (provider=%s): %s", p, e)
@@ -1568,7 +1575,7 @@ def api_generate_photos():
     if not FAL_KEY:
         return jsonify({"error": "Photo generation is not configured yet."}), 503
 
-    sid = str(shop_id()) if shop_id() else None
+    sid = str(shop_id()) if shop_id() else (guest_shop_id() if is_guest() else None)
     if not sid:
         return jsonify({"error": "Invalid shop"}), 400
     allowed, remaining = can_generate_photo_variants(sid, PHOTO_VARIANT_COUNT)
@@ -1791,7 +1798,7 @@ def _ip_hash() -> str:
 
 def _is_try_domain() -> bool:
     host = request.host or ""
-    return "kolaylistele" in host
+    return host == "kolaylistele.com" or host.endswith(".kolaylistele.com")
 
 @app.route("/stripe/checkout", methods=["POST"])
 @limiter.limit("10 per minute")
