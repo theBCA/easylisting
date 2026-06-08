@@ -317,10 +317,23 @@ def get_marketing_stats(exclude_hashes: list[str] | None = None) -> dict:
     def _excl_mc(col="email_hash"):
         return f" AND {col} NOT IN ({placeholders})" if excl else ""
 
+    # Build exclusion list based on shop_id prefix for shops table queries
+    excl_shop_ids = tuple(f"guest_email_{h[:20]}" for h in excl)
+
     with _conn() as con:
+        # Count from verified_emails (populated when magic link is first sent)
         total_hashes = con.execute(
             f"SELECT COUNT(*) as n FROM verified_emails WHERE 1=1{_excl_ve()}", excl
         ).fetchone()["n"]
+        # Also count from shops table (guest_email_ prefix) — survives even if
+        # verified_emails is empty after a DB reset
+        total_email_shops = con.execute(
+            "SELECT COUNT(*) as n FROM shops WHERE shop_id LIKE 'guest_email_%'"
+            + (f" AND shop_id NOT IN ({','.join('?'*len(excl_shop_ids))})" if excl_shop_ids else ""),
+            excl_shop_ids,
+        ).fetchone()["n"]
+        total_hashes = max(total_hashes, total_email_shops)
+
         total_links_sent = con.execute(
             f"SELECT COUNT(*) as n FROM magic_links WHERE 1=1{_excl_ml()}", excl
         ).fetchone()["n"]

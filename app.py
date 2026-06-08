@@ -961,12 +961,15 @@ def api_magic_link():
         session["guest"] = True
         session.permanent = True
     if is_email_verified():
-        # Session already active — check if they're at their free limit
+        # Session already active — ensure DB has a record for this email shop
         from db import FREE_LIMIT as _FL
         sid  = guest_shop_id()
         shop = get_shop(sid)
         if shop and not shop.get("has_premium") and int(shop.get("free_used", 0)) >= _FL:
             return jsonify({"error": "limit_reached"}), 403
+        # Backfill verified_emails if missing (e.g. after a DB reset)
+        if sid and sid.startswith("guest_email_"):
+            ensure_shop(sid, "Guest")
         return jsonify({"ok": True, "already_verified": True})
 
     body             = request.get_json(silent=True) or {}
