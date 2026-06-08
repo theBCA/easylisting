@@ -25,7 +25,7 @@ from db import (
     save_template, get_template,
     set_premium, get_shop, get_shop_by_stripe_customer,
     log_abuse_signal, get_abuse_summary,
-    get_or_create_email_shop, create_magic_link, use_magic_link, count_recent_magic_links,
+    get_or_create_email_shop, create_magic_link, use_magic_link, count_recent_magic_links, has_verified_email,
     add_marketing_consent, unsubscribe_by_token, get_marketing_stats,
     save_platform_credentials, get_platform_credentials, delete_platform_credentials,
     save_fp_session, get_fp_session,
@@ -979,15 +979,29 @@ def api_magic_link():
 
     email_hash = hashlib.sha256(email.encode()).hexdigest()
 
-    if count_recent_magic_links(email_hash, minutes=60) >= 5:
-        return jsonify({"error": "too_many_requests"}), 429
-
     shop_id_for_email = get_or_create_email_shop(email_hash)
     ensure_shop(shop_id_for_email, "Guest")
 
-    # Early limit check — if this email's shop is already at the cap, skip the email
     from db import FREE_LIMIT as _FL2
     email_shop = get_shop(shop_id_for_email)
+
+    # If this email has been verified before, auto-login without sending a new link
+    if has_verified_email(email_hash):
+        if email_shop and not email_shop.get("has_premium") and int(email_shop.get("free_used", 0)) >= _FL2:
+            return jsonify({"error": "limit_reached"}), 403
+        session["guest"]          = True
+        session["email_verified"] = True
+        session["email_shop_id"]  = shop_id_for_email
+        session.permanent         = True
+        fp_id = session.get("fp_guest_id")
+        if fp_id:
+            save_fp_session(fp_id, shop_id_for_email)
+        return jsonify({"ok": True, "already_verified": True})
+
+    if count_recent_magic_links(email_hash, minutes=60) >= 5:
+        return jsonify({"error": "too_many_requests"}), 429
+
+    # Early limit check — if this email's shop is already at the cap, skip the email
     if email_shop and not email_shop.get("has_premium") and int(email_shop.get("free_used", 0)) >= _FL2:
         return jsonify({"error": "limit_reached"}), 403
 
