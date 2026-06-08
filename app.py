@@ -1258,11 +1258,11 @@ def api_generate():
             logger.error("AI RuntimeError (provider=%s): %s", p, e)
             return jsonify({"error": safe_error(str(e))}), 500
         except json.JSONDecodeError as e:
-            logger.error("AI JSON decode error (provider=%s): %s", p, e)
-            return jsonify({"error": "AI returned invalid JSON. Try again."}), 500
+            logger.warning("AI JSON decode error (provider=%s), trying next: %s", p, e)
+            continue
         except Exception as e:
             logger.exception("AI error (provider=%s): %s", p, e)
-            return jsonify({"error": safe_error(str(e))}), 500
+            continue
     if data is None:
         return jsonify({"error": "All AI providers are over quota right now. Please try again later."}), 503
 
