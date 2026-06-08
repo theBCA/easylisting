@@ -2344,17 +2344,25 @@ def admin_stats():
     if not expected or not secrets.compare_digest(token, expected):
         return "", 404
     import db as _db
+    import hashlib as _hl
     db_path = os.path.abspath(_db.DB_PATH)
     db_exists = os.path.isfile(db_path)
     db_size = os.path.getsize(db_path) if db_exists else 0
-    s = get_marketing_stats()
+
+    # Build exclusion list from env + hardcoded owner emails
+    _owner_emails = ["berkcem123@gmail.com", "berkcemarslan@gmail.com"]
+    _extra = [e.strip().lower() for e in os.getenv("ADMIN_EXCLUDE_EMAILS", "").split(",") if e.strip()]
+    _excl_hashes = list({_hl.sha256(e.encode()).hexdigest() for e in _owner_emails + _extra})
+
+    s_all  = get_marketing_stats()
+    s      = get_marketing_stats(exclude_hashes=_excl_hashes)
     lines = [
         "<h2>EasyListing — Growth Stats</h2>",
         f"<p style='font-family:monospace;font-size:12px;color:#888;'>DB: {db_path} | exists: {db_exists} | size: {db_size:,} bytes</p>",
-        "<h3>Email funnel</h3><pre>",
-        f"  Magic links sent        {s['magic_links_sent']:>8}",
+        "<h3>Email funnel (excluding owner emails)</h3><pre>",
+        f"  Magic links sent        {s['magic_links_sent']:>8}  (total incl. yours: {s_all['magic_links_sent']})",
         f"  Magic links verified    {s['magic_links_verified']:>8}  ({s['verify_rate_pct']}%)",
-        f"  Unique email hashes     {s['email_hashes_total']:>8}",
+        f"  Unique email hashes     {s['email_hashes_total']:>8}  (total incl. yours: {s_all['email_hashes_total']})",
         "</pre><h3>Marketing list</h3><pre>",
         f"  Subscribed              {s['marketing_subscribed']:>8}",
         f"  Unsubscribed            {s['marketing_unsubscribed']:>8}",
