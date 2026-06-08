@@ -28,6 +28,7 @@ from db import (
     get_or_create_email_shop, create_magic_link, use_magic_link, count_recent_magic_links,
     add_marketing_consent, unsubscribe_by_token, get_marketing_stats,
     save_platform_credentials, get_platform_credentials, delete_platform_credentials,
+    save_fp_session, get_fp_session,
 )
 
 load_dotenv()
@@ -253,15 +254,30 @@ def guest_shop_id():
     guest_hash = hashlib.sha256(f"guest:{guest_id}".encode()).hexdigest()[:16]
     return f"guest_{guest_hash}"
 
+def _try_restore_email_session():
+    """Restore email-verified session from DB if session was cleared (e.g. server restart)."""
+    if session.get("email_verified") and session.get("email_shop_id"):
+        return  # already set
+    fp_id = session.get("fp_guest_id")
+    if fp_id:
+        email_shop = get_fp_session(fp_id)
+        if email_shop:
+            session["email_verified"] = True
+            session["email_shop_id"]  = email_shop
+            session["guest"]          = True
+            session.permanent         = True
+
 def is_email_verified():
+    _try_restore_email_session()
     return bool(session.get("email_verified") and session.get("email_shop_id"))
 
 def provider_chain(premium=False):
-    # Free: nvidia first (free quota), gemini as fallback
-    # Premium: gemini → openai → nvidia (best quality first)
+    # Gemini first for both tiers — reliable, fast, free quota
+    # NVIDIA as fallback (free but has empty-response issues under load)
+    # Premium also gets OpenAI as second option
     if premium:
         return ["gemini", "openai", "nvidia"]
-    return ["nvidia", "gemini"]
+    return ["gemini", "nvidia"]
 
 def has_premium_access():
     if is_connected() and shop_id():
@@ -638,7 +654,7 @@ def _gemini_generate(image_bytes_list, hint, api_key=None, lang="en", platform="
 
 def _openai_generate(image_bytes_list, hint, api_key=None, lang="en", platform="etsy"):
     from openai import OpenAI, RateLimitError
-    client  = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY", ""))
+    client  = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY", ""), timeout=60.0)
     content = [{"type": "text", "text": _build_prompt(hint, lang, platform)}]
     for b in image_bytes_list:
         b64 = base64.b64encode(b).decode()
@@ -659,9 +675,11 @@ NVIDIA_MODELS = {
 }
 
 def _nvidia_generate(image_bytes_list, hint, model_key="llama-90b", api_key=None, lang="en", platform="etsy"):
-    from openai import OpenAI, RateLimitError
+    from openai import OpenAI, RateLimitError, APITimeoutError
+    import httpx
     client   = OpenAI(base_url="https://integrate.api.nvidia.com/v1",
-                      api_key=api_key or os.getenv("NVIDIA_API_KEY", ""))
+                      api_key=api_key or os.getenv("NVIDIA_API_KEY", ""),
+                      timeout=60.0)
     model_id = NVIDIA_MODELS.get(model_key, NVIDIA_MODELS["llama-90b"])
     b64      = base64.b64encode(image_bytes_list[0]).decode()
     prompt   = _build_prompt(hint, lang, platform)
@@ -678,7 +696,14 @@ def _nvidia_generate(image_bytes_list, hint, model_key="llama-90b", api_key=None
         )
     except RateLimitError as e:
         raise RuntimeError("quota_exceeded") from e
-    return _parse_ai_json(resp.choices[0].message.content)
+    except (APITimeoutError, httpx.TimeoutException) as e:
+        logger.warning("NVIDIA timeout, falling back: %s", e)
+        raise RuntimeError("quota_exceeded") from e
+    content = resp.choices[0].message.content if resp.choices else ""
+    if not content or not content.strip():
+        logger.warning("NVIDIA returned empty content, falling back")
+        raise RuntimeError("quota_exceeded")
+    return _parse_ai_json(content)
 
 # Fallback order when a provider is over quota. OpenAI is paid, so it is opt-in.
 _PROVIDER_CHAIN_FREE    = provider_chain(premium=False)
@@ -1074,6 +1099,10 @@ def auth_magic():
     session["email_verified"] = True
     session["email_shop_id"]  = row["shop_id"]
     session.permanent         = True
+    # Persist fp→email mapping so the session survives server restarts
+    fp_id = session.get("fp_guest_id")
+    if fp_id:
+        save_fp_session(fp_id, row["shop_id"])
     return render_template("magic_verified.html")
 
 
