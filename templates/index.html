@@ -1137,9 +1137,21 @@ async function sendMagicLink() {
     });
     const data = await res.json();
     if (!data.ok) {
+      if (data.error === 'limit_reached') {
+        closeModal('magicModal');
+        openModal('paywallModal');
+        return;
+      }
       const msgs = {invalid_email: 'Geçersiz e-posta.', too_many_requests: 'Çok fazla deneme. Lütfen bekleyin.', send_failed: 'Gönderilemedi, tekrar deneyin.'};
       if (errEl) { errEl.textContent = msgs[data.error] || data.error; errEl.style.display = 'block'; }
       if (btn) { btn.disabled = false; btn.textContent = STRINGS[currentLang]?.magic_send || 'Bağlantı gönder →'; }
+      return;
+    }
+    if (data.already_verified) {
+      closeModal('magicModal');
+      EMAIL_VERIFIED = true;
+      showToast(STRINGS[currentLang]?.magic_verified || 'E-posta doğrulandı ✓', 'success');
+      startGenerate();
       return;
     }
     document.getElementById('magicStep1').style.display = 'none';

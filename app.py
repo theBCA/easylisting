@@ -961,7 +961,14 @@ def api_magic_link():
         session["guest"] = True
         session.permanent = True
     if is_email_verified():
-        return jsonify({"ok": True})
+        # Session already active — check if they're at their free limit
+        from db import FREE_LIMIT as _FL
+        sid  = guest_shop_id()
+        shop = get_shop(sid)
+        if shop and not shop.get("has_premium") and int(shop.get("free_used", 0)) >= _FL:
+            return jsonify({"error": "limit_reached"}), 403
+        return jsonify({"ok": True, "already_verified": True})
+
     body             = request.get_json(silent=True) or {}
     email            = (body.get("email") or "").strip().lower()
     marketing_opt_in = bool(body.get("marketing_consent", False))
@@ -977,6 +984,12 @@ def api_magic_link():
 
     shop_id_for_email = get_or_create_email_shop(email_hash)
     ensure_shop(shop_id_for_email, "Guest")
+
+    # Early limit check — if this email's shop is already at the cap, skip the email
+    from db import FREE_LIMIT as _FL2
+    email_shop = get_shop(shop_id_for_email)
+    if email_shop and not email_shop.get("has_premium") and int(email_shop.get("free_used", 0)) >= _FL2:
+        return jsonify({"error": "limit_reached"}), 403
 
     # Migrate usage: take the MAX so neither session loses progress
     current_sid  = guest_shop_id()
