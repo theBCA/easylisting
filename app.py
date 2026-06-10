@@ -1156,7 +1156,7 @@ def auth_magic():
 
     email_shop_id = row["shop_id"]
     # Migrate usage from current guest shop → email shop before switching
-    current_sid = session.get("fp_guest_id") or session.get("GUEST_ID")
+    current_sid = session.get("fp_guest_id") or session.get("guest_id")
     if current_sid and current_sid != email_shop_id:
         current_shop = get_shop(current_sid)
         email_shop   = get_shop(email_shop_id)
