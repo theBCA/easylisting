@@ -111,7 +111,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       <button class="lang-btn" data-lang="de">DE</button>
       <button class="lang-btn" data-lang="tr">TR</button>
     </div>
-    <a href="/" class="btn-back" id="t-back">← Back</a>
+    <a href="/" class="btn-back" id="t-back" onclick="if(document.referrer && !document.referrer.includes('/upgrade')){event.preventDefault();history.back();}">← Back</a>
   </div>
 </nav>
 
