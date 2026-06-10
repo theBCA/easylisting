@@ -489,9 +489,10 @@ async function startCheckout(plan) {
   const btn = document.getElementById('t-' + (plan === 'starter' ? 'start' : 'pro') + '-btn');
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const resp = await fetch('/stripe/checkout', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': csrfToken},
       body: JSON.stringify({plan}),
     });
     const data = await resp.json();

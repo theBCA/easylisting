@@ -1608,6 +1608,30 @@ def test_csrf_rejected_on_generate_without_token():
         app.config["WTF_CSRF_ENABLED"] = False
 
 
+def test_csrf_rejected_on_stripe_checkout_without_token():
+    """With CSRF enabled, stripe/checkout must reject requests missing X-CSRFToken."""
+    app.config["TESTING"] = True
+    app.config["WTF_CSRF_ENABLED"] = True
+    app.config["WTF_CSRF_CHECK_DEFAULT"] = True
+    try:
+        with app.test_client() as c:
+            db_module.ensure_shop("csrf-stripe-shop", "TestShop")
+            with c.session_transaction() as sess:
+                sess["access_token"] = "fake-token"
+                sess["shop_id"] = "csrf-stripe-shop"
+                sess["shop_name"] = "CsrfStripeShop"
+                sess["token_expiry"] = time.time() + 3600
+            resp = c.post(
+                "/stripe/checkout",
+                json={"plan": "pro"},
+                headers={"Content-Type": "application/json"},
+                # No X-CSRFToken header — must be rejected
+            )
+        assert resp.status_code in (400, 403)
+    finally:
+        app.config["WTF_CSRF_ENABLED"] = False
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 25. PRIVACY AND TERMS PAGES
 # ─────────────────────────────────────────────────────────────────────────────
