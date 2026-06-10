@@ -1345,7 +1345,7 @@ def test_generate_photos_rejected_without_fal_key(connected_client):
     db_module.ensure_shop("12345", "TestShop")
     db_module.set_premium("12345", "cus_ph3", "sub_ph3", True, "pro")
 
-    with patch.dict(os.environ, {"FAL_KEY": ""}):
+    with patch("app.FAL_KEY", None):
         import base64
         fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
         resp = connected_client.post(
@@ -1620,3 +1620,312 @@ def test_privacy_page_loads(client):
 def test_terms_page_loads(client):
     resp = client.get("/terms")
     assert resp.status_code == 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 26. FINGERPRINT ENDPOINT
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_fingerprint_stores_fp_session(client):
+    """Valid fingerprint from a guest must be accepted and stored."""
+    with client.session_transaction() as sess:
+        sess["guest"] = True
+        sess["guest_id"] = "guest-fp-test"
+    fp = "a" * 32  # 32 lowercase hex chars
+    resp = client.post("/api/fingerprint", json={"fp": fp})
+    assert resp.status_code == 200
+    assert resp.get_json().get("ok") is True
+    with client.session_transaction() as sess:
+        assert "fp_guest_id" in sess
+        assert sess["fp_guest_id"] == f"guest_fp_{fp[:24]}"
+
+
+def test_fingerprint_rejects_connected_user(connected_client):
+    """Fingerprint endpoint must return 400 when user is already connected."""
+    resp = connected_client.post("/api/fingerprint", json={"fp": "a" * 32})
+    assert resp.status_code == 400
+
+
+def test_fingerprint_rejects_invalid_fp(client):
+    """Fingerprint endpoint must reject too-short or non-hex values."""
+    with client.session_transaction() as sess:
+        sess["guest"] = True
+        sess["guest_id"] = "guest-fp-bad"
+    assert client.post("/api/fingerprint", json={"fp": "abc"}).status_code == 400
+    assert client.post("/api/fingerprint", json={"fp": "GGGG" * 8}).status_code == 400
+    assert client.post("/api/fingerprint", json={"fp": ""}).status_code == 400
+
+
+def test_fingerprint_migrates_usage(client):
+    """Fingerprint must migrate free_used from random guest shop to fp shop."""
+    import hashlib as hl
+    # guest_shop_id() hashes "guest:{guest_id}" — compute the real shop ID
+    gid = "guest-random-001"
+    hashed_shop_id = "guest_" + hl.sha256(f"guest:{gid}".encode()).hexdigest()[:16]
+    db_module.ensure_shop(hashed_shop_id, "Guest")
+    for _ in range(3):
+        db_module.increment_usage(hashed_shop_id)
+    with client.session_transaction() as sess:
+        sess["guest"] = True
+        sess["guest_id"] = gid
+    fp = "b" * 32
+    client.post("/api/fingerprint", json={"fp": fp})
+    fp_shop = db_module.get_shop(f"guest_fp_{fp[:24]}")
+    assert fp_shop is not None
+    assert fp_shop.get("free_used", 0) >= 3
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 27. TRENDYOL ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _make_tr_response(status=200, body=None):
+    """Build a mock requests.Response for Trendyol API calls."""
+    r = MagicMock()
+    r.status_code = status
+    r.ok = (status < 400)
+    r.json.return_value = body or {}
+    r.text = json.dumps(body or {})
+    return r
+
+
+def test_trendyol_connect_requires_auth(client):
+    resp = client.post("/api/trendyol/connect", json={
+        "supplier_id": "123", "api_key": "k", "api_secret": "s"
+    })
+    assert resp.status_code == 401
+
+
+def test_trendyol_connect_missing_fields(connected_client):
+    resp = connected_client.post("/api/trendyol/connect", json={"supplier_id": "123"})
+    assert resp.status_code == 400
+
+
+def test_trendyol_connect_success(connected_client):
+    with patch("app._tr_get") as mock_get:
+        mock_get.return_value = _make_tr_response(200, {"supplierAddresses": []})
+        resp = connected_client.post("/api/trendyol/connect", json={
+            "supplier_id": "sup-1", "api_key": "key-1", "api_secret": "sec-1"
+        })
+    assert resp.status_code == 200
+    assert resp.get_json().get("ok") is True
+    creds = db_module.get_platform_credentials("12345", "trendyol")
+    assert creds is not None
+    assert creds["supplier_id"] == "sup-1"
+
+
+def test_trendyol_connect_invalid_credentials(connected_client):
+    with patch("app._tr_get") as mock_get:
+        mock_get.return_value = _make_tr_response(401)
+        resp = connected_client.post("/api/trendyol/connect", json={
+            "supplier_id": "bad", "api_key": "bad", "api_secret": "bad"
+        })
+    assert resp.status_code == 400
+
+
+def test_trendyol_connect_api_down(connected_client):
+    with patch("app._tr_get", side_effect=Exception("timeout")):
+        resp = connected_client.post("/api/trendyol/connect", json={
+            "supplier_id": "s", "api_key": "k", "api_secret": "x"
+        })
+    assert resp.status_code == 502
+
+
+def test_trendyol_disconnect_requires_auth(client):
+    resp = client.post("/api/trendyol/disconnect")
+    assert resp.status_code == 401
+
+
+def test_trendyol_disconnect_clears_credentials(connected_client):
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    resp = connected_client.post("/api/trendyol/disconnect")
+    assert resp.status_code == 200
+    assert db_module.get_platform_credentials("12345", "trendyol") is None
+
+
+def test_trendyol_addresses_requires_auth(client):
+    assert client.get("/api/trendyol/addresses").status_code == 401
+
+
+def test_trendyol_addresses_requires_connection(connected_client):
+    resp = connected_client.get("/api/trendyol/addresses")
+    assert resp.status_code == 400
+    assert resp.get_json().get("error") == "not_connected"
+
+
+def test_trendyol_addresses_returns_list(connected_client):
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    with patch("app._tr_get") as mock_get:
+        mock_get.return_value = _make_tr_response(200, {
+            "supplierAddresses": [{"id": 10, "fullAddress": "Istanbul"}]
+        })
+        resp = connected_client.get("/api/trendyol/addresses")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["addresses"][0]["id"] == 10
+    assert body["addresses"][0]["label"] == "Istanbul"
+
+
+def test_trendyol_categories_requires_auth(client):
+    assert client.get("/api/trendyol/categories").status_code == 401
+
+
+def test_trendyol_categories_returns_and_caches(connected_client):
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    cats = [{"id": 1, "name": "Electronics"}]
+    with patch("app._tr_get") as mock_get:
+        mock_get.return_value = _make_tr_response(200, {"categories": cats})
+        resp1 = connected_client.get("/api/trendyol/categories")
+        resp2 = connected_client.get("/api/trendyol/categories")  # should use cache
+        assert mock_get.call_count == 1  # second call served from cache
+    assert resp1.status_code == 200
+    assert resp2.get_json()["categories"] == cats
+
+
+def test_trendyol_cat_attributes_requires_auth(client):
+    assert client.get("/api/trendyol/categories/1/attributes").status_code == 401
+
+
+def test_trendyol_cat_attributes_returns_data(connected_client):
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    with patch("app._tr_get") as mock_get:
+        mock_get.return_value = _make_tr_response(200, {"categoryAttributes": []})
+        resp = connected_client.get("/api/trendyol/categories/42/attributes")
+    assert resp.status_code == 200
+
+
+def test_trendyol_brands_requires_auth(client):
+    assert client.get("/api/trendyol/brands?q=nike").status_code == 401
+
+
+def test_trendyol_brands_short_query_returns_empty(connected_client):
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    resp = connected_client.get("/api/trendyol/brands?q=x")
+    assert resp.status_code == 200
+    assert resp.get_json() == {"brands": []}
+
+
+def test_trendyol_brands_returns_results(connected_client):
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    with patch("app._tr_get") as mock_get:
+        mock_get.return_value = _make_tr_response(200, [{"id": 5, "name": "Nike"}])
+        resp = connected_client.get("/api/trendyol/brands?q=nike")
+    assert resp.status_code == 200
+    assert resp.get_json()["brands"][0]["name"] == "Nike"
+
+
+def test_trendyol_publish_requires_auth(client):
+    assert client.post("/api/trendyol/publish", json={}).status_code == 401
+
+
+def test_trendyol_publish_requires_trendyol_connection(connected_client):
+    resp = connected_client.post("/api/trendyol/publish", json={})
+    assert resp.status_code == 400
+    assert resp.get_json().get("error") == "not_connected"
+
+
+def test_trendyol_publish_validates_barcode(connected_client):
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    resp = connected_client.post("/api/trendyol/publish", json={
+        "barcode": "", "title": "t", "description": "d",
+        "sale_price": 10, "list_price": 10,
+        "brand_id": 1, "category_id": 1,
+        "shipment_address_id": 1, "returning_address_id": 1,
+        "image_previews": [],
+    })
+    assert resp.status_code == 400
+
+
+def test_trendyol_publish_validates_price(connected_client):
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    resp = connected_client.post("/api/trendyol/publish", json={
+        "barcode": "1234", "title": "t", "description": "d",
+        "sale_price": 100, "list_price": 50,  # list < sale → invalid
+        "brand_id": 1, "category_id": 1,
+        "shipment_address_id": 1, "returning_address_id": 1,
+        "image_previews": [],
+    })
+    assert resp.status_code == 400
+
+
+def test_trendyol_publish_requires_image(connected_client):
+    """Publishing without images must return 400."""
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    resp = connected_client.post("/api/trendyol/publish", json={
+        "barcode": "1234", "title": "My Product", "description": "Desc",
+        "sale_price": 50, "list_price": 100,
+        "brand_id": 1, "category_id": 1,
+        "shipment_address_id": 1, "returning_address_id": 1,
+        "image_previews": [],  # no images
+    })
+    assert resp.status_code == 400
+
+
+def test_trendyol_publish_success(connected_client):
+    """Valid product must be submitted to Trendyol and return ok=True."""
+    db_module.save_platform_credentials("12345", "trendyol",
+        {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
+    import base64
+    # Minimal valid JPEG data URL
+    fake_b64 = "data:image/jpeg;base64," + base64.b64encode(
+        b"\xff\xd8\xff\xe0" + b"\x00" * 12).decode()
+    with patch("app._tr_post") as mock_post, \
+         patch("app._save_image_for_upload", return_value="test.jpg"):
+        mock_post.return_value = _make_tr_response(200, {"batchRequestId": "batch-1"})
+        resp = connected_client.post("/api/trendyol/publish", json={
+            "barcode": "1234", "title": "My Product", "description": "A product",
+            "sale_price": 50, "list_price": 100,
+            "brand_id": 1, "category_id": 1,
+            "shipment_address_id": 1, "returning_address_id": 1,
+            "image_previews": [fake_b64],
+        })
+    assert resp.status_code == 200
+    assert resp.get_json().get("ok") is True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 28. MAGIC LINK — guest usage migration on verification
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_magic_link_migrates_guest_usage_on_verify(client):
+    """Guest usage (free_used) must carry over to the email shop when the
+    magic link is verified — regardless of whether a fingerprint was submitted."""
+    import hashlib as hl
+    email = "migrate-test@example.com"
+    email_hash = hl.sha256(email.encode()).hexdigest()
+    email_shop_id = f"guest_email_{email_hash[:20]}"
+
+    # Set up: random guest shop with 3 uses (keyed by raw guest_id, as read in app.py:1159)
+    db_module.ensure_shop("guest-random-migrate", "Guest")
+    for _ in range(3):
+        db_module.increment_usage("guest-random-migrate")
+
+    # Set up email shop with 0 uses
+    db_module.ensure_shop(email_shop_id, "Guest")
+
+    # Create a magic link token (create_magic_link returns None, store the token string)
+    token_val = "tok-migrate-01"
+    db_module.create_magic_link(token_val, email_hash, email_shop_id)
+
+    # Simulate: guest session with guest_id (no fingerprint)
+    with client.session_transaction() as sess:
+        sess["guest"] = True
+        sess["guest_id"] = "guest-random-migrate"
+
+    # Verify the magic link
+    resp = client.get(f"/auth/magic?token={token_val}")
+    assert resp.status_code == 200
+
+    # The email shop must now reflect the migrated usage
+    email_shop = db_module.get_shop(email_shop_id)
+    assert email_shop is not None
+    assert int(email_shop.get("free_used", 0)) >= 3
