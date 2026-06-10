@@ -1894,6 +1894,7 @@ async function generatePhotoVariants() {
     });
     const d = await res.json();
     if (d.error === 'pro_required') { openModal('paywallModal'); return; }
+    if (d.error === 'photo_limit_reached') { openModal('paywallModal'); return; }
     if (d.error) { showToast(d.error, 'error'); return; }
     (d.variants || []).forEach(v => {
       const wrap = document.createElement('div');

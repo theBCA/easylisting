@@ -121,6 +121,8 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
   <div class="banner success" id="banner-success">🎉 Welcome to EasyListing! Your plan is now active.</div>
   {% elif request.args.get('cancelled') %}
   <div class="banner info" id="banner-cancel">You cancelled — no charges were made.</div>
+  {% elif request.args.get('bulk_required') %}
+  <div class="banner info" id="banner-bulk">Bulk listing creation requires a paid plan. Upgrade to process multiple listings at once.</div>
   {% endif %}
 
   <div class="hero">

@@ -174,6 +174,7 @@ GUEST_ID_COOKIE     = "easylisting_guest_id"
 GUEST_ID_MAX_AGE    = 60 * 60 * 24 * 180  # 180 days
 PHOTO_VARIANT_COUNT = 3
 FAL_KEY             = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
+ALLOW_PAID_OPENAI   = os.getenv("ALLOW_PAID_OPENAI", "false").lower() == "true"
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_TITLE_LEN       = 140
@@ -1917,7 +1918,7 @@ def stripe_checkout():
     try:
         import stripe as stripe_lib
         stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
-        base = REDIRECT_URI.replace("/auth/callback", "")
+        base = request.url_root.rstrip("/")
         checkout = stripe_lib.checkout.Session.create(
             payment_method_types=["card"],
             mode="subscription",
