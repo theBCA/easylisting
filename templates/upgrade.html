@@ -487,7 +487,7 @@ document.getElementById('billingToggle')?.addEventListener('click', () => setBil
 const stripe = Stripe('{{ stripe_key | e }}');
 async function startCheckout(plan) {
   const btn = document.getElementById('t-' + (plan === 'starter' ? 'start' : 'pro') + '-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  if (btn) { btn.dataset.origText = btn.textContent; btn.disabled = true; btn.textContent = '…'; }
   try {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const resp = await fetch('/stripe/checkout', {
@@ -499,7 +499,7 @@ async function startCheckout(plan) {
     if (data.url) { window.location.href = data.url; }
     else throw new Error(data.error || 'Checkout failed');
   } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = plan === 'starter' ? 'Get Starter →' : 'Get Pro →'; }
+    if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || (plan === 'starter' ? 'Get Starter →' : 'Get Pro →'); }
     const t = document.getElementById('toast');
     t.textContent = '⚠ ' + e.message;
     t.classList.add('show');
