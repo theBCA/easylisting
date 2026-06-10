@@ -2446,7 +2446,18 @@ def terms():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok"}), 200
+    return jsonify({
+        "status": "ok",
+        "stripe": {
+            "starter":        bool(os.getenv("STRIPE_STARTER_PRICE_ID")),
+            "pro":            bool(os.getenv("STRIPE_PRO_PRICE_ID")),
+            "starter_try":    bool(os.getenv("STRIPE_STARTER_PRICE_ID_TRY")),
+            "pro_try":        bool(os.getenv("STRIPE_PRO_PRICE_ID_TRY")),
+            "secret":         bool(os.getenv("STRIPE_SECRET_KEY")),
+        },
+        "host":  request.host,
+        "is_try": _is_try_domain(),
+    }), 200
 
 if __name__ == "__main__":
     os.makedirs("images", exist_ok=True)
