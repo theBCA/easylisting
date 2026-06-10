@@ -1871,17 +1871,17 @@ def upgrade():
         current_plan=s.get("plan", "free"),
         stripe_key=os.getenv("STRIPE_PUBLISHABLE_KEY", ""),
         has_starter=bool(
-            os.getenv("STRIPE_STARTER_PRICE_ID_TRY" if use_try else "STRIPE_STARTER_PRICE_ID")
+            os.getenv("STRIPE_STARTER_PRICE_ID") or os.getenv("STRIPE_STARTER_PRICE_ID_TRY")
         ),
         has_pro=bool(
-            os.getenv("STRIPE_PRO_PRICE_ID_TRY" if use_try else "STRIPE_PRO_PRICE_ID")
+            os.getenv("STRIPE_PRO_PRICE_ID") or os.getenv("STRIPE_PRO_PRICE_ID_TRY")
             or os.getenv("STRIPE_PRICE_ID")
         ),
         has_starter_annual=bool(
-            os.getenv("STRIPE_STARTER_ANNUAL_PRICE_ID_TRY" if use_try else "STRIPE_STARTER_ANNUAL_PRICE_ID")
+            os.getenv("STRIPE_STARTER_ANNUAL_PRICE_ID") or os.getenv("STRIPE_STARTER_ANNUAL_PRICE_ID_TRY")
         ),
         has_pro_annual=bool(
-            os.getenv("STRIPE_PRO_ANNUAL_PRICE_ID_TRY" if use_try else "STRIPE_PRO_ANNUAL_PRICE_ID")
+            os.getenv("STRIPE_PRO_ANNUAL_PRICE_ID") or os.getenv("STRIPE_PRO_ANNUAL_PRICE_ID_TRY")
         ),
         use_try=use_try,
     )
