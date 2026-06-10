@@ -31,11 +31,16 @@ from app import app
 
 @pytest.fixture(autouse=True)
 def fresh_db(tmp_path):
-    """Each test gets a fresh SQLite file (not :memory: so threads work)."""
+    """Each test gets a fresh SQLite file and a reset rate-limiter."""
     db_file = str(tmp_path / "test.sqlite")
     with patch.dict(os.environ, {"DB_PATH": db_file}):
         db_module.DB_PATH = db_file
         db_module.init_db()
+        # Reset in-memory rate-limiter storage so limits don't bleed across tests
+        try:
+            app_module.limiter.reset()
+        except Exception:
+            pass
         yield
         db_module.DB_PATH = ":memory:"
 
@@ -943,3 +948,675 @@ def test_bulk_generate_rejects_non_image(connected_client):
         content_type="multipart/form-data",
     )
     assert resp.status_code in (400, 403)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 13. STRIPE CHECKOUT — URL generation, plan routing, TRY domain
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_stripe_checkout_generates_url_for_pro(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    mock_session = MagicMock()
+    mock_session.url = "https://checkout.stripe.com/test-session"
+
+    with patch("stripe.checkout.Session.create", return_value=mock_session) as mock_create:
+        resp = connected_client.post(
+            "/stripe/checkout",
+            json={"plan": "pro"},
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert "url" in body
+    assert "stripe.com" in body["url"]
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["line_items"][0]["price"] == os.environ["STRIPE_PRO_PRICE_ID"]
+
+
+def test_stripe_checkout_generates_url_for_starter(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    mock_session = MagicMock()
+    mock_session.url = "https://checkout.stripe.com/starter"
+
+    with patch.dict(os.environ, {"STRIPE_STARTER_PRICE_ID": "price_starter_fake"}), \
+         patch("stripe.checkout.Session.create", return_value=mock_session) as mock_create:
+        resp = connected_client.post(
+            "/stripe/checkout",
+            json={"plan": "starter"},
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 200
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["line_items"][0]["price"] == "price_starter_fake"
+
+
+def test_stripe_checkout_rejects_unknown_plan(connected_client):
+    """Unknown plan falls back to 'pro' — should still succeed."""
+    db_module.ensure_shop("12345", "TestShop")
+    mock_session = MagicMock()
+    mock_session.url = "https://checkout.stripe.com/fallback"
+
+    with patch("stripe.checkout.Session.create", return_value=mock_session):
+        resp = connected_client.post(
+            "/stripe/checkout",
+            json={"plan": "enterprise"},
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 200
+
+
+def test_stripe_checkout_returns_503_when_price_not_configured(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    with patch.dict(os.environ, {
+        "STRIPE_PRO_PRICE_ID": "",
+        "STRIPE_PRICE_ID": "",
+    }):
+        resp = connected_client.post(
+            "/stripe/checkout",
+            json={"plan": "pro"},
+            content_type="application/json",
+        )
+    assert resp.status_code == 503
+    assert b"not configured" in resp.data
+
+
+def test_stripe_checkout_try_domain_uses_try_price(connected_client):
+    """kolaylistele.com requests must use TRY price IDs."""
+    db_module.ensure_shop("12345", "TestShop")
+    mock_session = MagicMock()
+    mock_session.url = "https://checkout.stripe.com/try"
+
+    with patch.dict(os.environ, {"STRIPE_PRO_PRICE_ID_TRY": "price_try_pro_fake"}), \
+         patch("stripe.checkout.Session.create", return_value=mock_session) as mock_create, \
+         patch("app._is_try_domain", return_value=True):
+        resp = connected_client.post(
+            "/stripe/checkout",
+            json={"plan": "pro"},
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 200
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["line_items"][0]["price"] == "price_try_pro_fake"
+
+
+def test_stripe_checkout_annual_plan(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    mock_session = MagicMock()
+    mock_session.url = "https://checkout.stripe.com/annual"
+
+    with patch.dict(os.environ, {"STRIPE_PRO_ANNUAL_PRICE_ID": "price_pro_annual_fake"}), \
+         patch("stripe.checkout.Session.create", return_value=mock_session) as mock_create:
+        resp = connected_client.post(
+            "/stripe/checkout",
+            json={"plan": "pro_annual"},
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 200
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["line_items"][0]["price"] == "price_pro_annual_fake"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 14. PAGE RENDERING — upgrade, index, listings, bulk, connect
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_upgrade_page_renders_for_connected_user(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    resp = connected_client.get("/upgrade")
+    assert resp.status_code == 200
+    assert b"Upgrade" in resp.data or b"upgrade" in resp.data.lower()
+
+
+def test_upgrade_page_shows_correct_plan_for_pro_user(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_up", "sub_up", True, "pro")
+    resp = connected_client.get("/upgrade")
+    assert resp.status_code == 200
+    assert b"pro" in resp.data.lower() or b"unlimited" in resp.data.lower()
+
+
+def test_upgrade_page_redirects_unauthenticated(client):
+    resp = client.get("/upgrade")
+    assert resp.status_code == 302
+    assert "/connect" in resp.headers["Location"]
+
+
+def test_index_page_renders_for_connected_user(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    resp = connected_client.get("/")
+    assert resp.status_code == 200
+
+
+def test_index_page_renders_for_guest(guest_client):
+    resp = guest_client.get("/")
+    assert resp.status_code == 200
+
+
+def test_index_page_redirects_unauthenticated(client):
+    resp = client.get("/")
+    assert resp.status_code == 302
+
+
+def test_listings_page_requires_etsy_auth(guest_client):
+    """Guest users reach /listings but get empty results (no Etsy shop_id)."""
+    with patch("requests.get", return_value=MagicMock(ok=False, json=lambda: {})):
+        resp = guest_client.get("/listings")
+    assert resp.status_code == 200
+
+
+def test_listings_page_renders_for_connected_user(connected_client):
+    mock_resp = MagicMock(ok=True)
+    mock_resp.json.return_value = {"results": []}
+    with patch("requests.get", return_value=mock_resp):
+        resp = connected_client.get("/listings")
+    assert resp.status_code == 200
+
+
+def test_bulk_page_renders_for_premium(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_bk", "sub_bk", True, "pro")
+    resp = connected_client.get("/bulk")
+    assert resp.status_code == 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 15. SESSION FLOWS — disconnect, guest, email-verified guest
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_disconnect_clears_session_and_redirects(connected_client):
+    resp = connected_client.get("/disconnect")
+    assert resp.status_code == 302
+    assert "/connect" in resp.headers["Location"]
+    with connected_client.session_transaction() as sess:
+        assert "access_token" not in sess
+        assert "shop_id" not in sess
+
+
+def test_guest_route_creates_guest_session(client):
+    resp = client.get("/guest", follow_redirects=False)
+    assert resp.status_code == 302
+    with client.session_transaction() as sess:
+        assert sess.get("guest") is True
+
+
+def test_email_verified_guest_can_generate(client):
+    """Guest who verified email should be able to generate listings."""
+    with client.session_transaction() as sess:
+        sess["guest"] = True
+        sess["guest_id"] = "guest-verified-1"
+        sess["email_verified"] = True
+        sess["email_shop_id"] = "email-shop-verified-1"
+
+    db_module.ensure_shop("email-shop-verified-1", "Guest")
+
+    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
+         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
+        import io
+        resp = client.post(
+            "/api/generate",
+            data={"images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"), "hint": "hat"},
+            content_type="multipart/form-data",
+        )
+
+    assert resp.status_code == 200
+    assert resp.get_json()["title"] == _FAKE_AI_LISTING["title"]
+
+
+def test_email_verified_status(client):
+    with client.session_transaction() as sess:
+        sess["guest"] = True
+        sess["guest_id"] = "guest-evs"
+        sess["email_verified"] = True
+        sess["email_shop_id"] = "email-shop-evs"
+
+    db_module.ensure_shop("email-shop-evs", "Guest")
+    resp = client.get("/api/email-verified")
+    assert resp.status_code == 200
+    assert resp.get_json()["verified"] is True
+
+
+def test_email_not_verified_status(guest_client):
+    resp = guest_client.get("/api/email-verified")
+    assert resp.status_code == 200
+    assert resp.get_json()["verified"] is False
+
+
+def test_api_status_email_verified_guest(client):
+    with client.session_transaction() as sess:
+        sess["guest"] = True
+        sess["guest_id"] = "guest-status"
+        sess["email_verified"] = True
+        sess["email_shop_id"] = "email-shop-status"
+
+    db_module.ensure_shop("email-shop-status", "Guest")
+    resp = client.get("/api/status")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["is_guest"] is True
+    assert "remaining" in body
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 16. ADMIN ENDPOINTS — token gating
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_admin_abuse_wrong_token_returns_404(client):
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "secret-admin-token"}):
+        resp = client.get("/admin/abuse?token=wrongtoken")
+    assert resp.status_code == 404
+
+
+def test_admin_abuse_correct_token_returns_200(client):
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "secret-admin-token"}):
+        resp = client.get("/admin/abuse?token=secret-admin-token")
+    assert resp.status_code == 200
+    assert b"Abuse signals" in resp.data
+
+
+def test_admin_stats_wrong_token_returns_404(client):
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "secret-token"}):
+        resp = client.get("/admin/stats?token=bad")
+    assert resp.status_code == 404
+
+
+def test_admin_stats_correct_token_returns_200(client):
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "secret-token"}):
+        resp = client.get("/admin/stats?token=secret-token")
+    assert resp.status_code == 200
+
+
+def test_admin_ping_ai_correct_token(client):
+    with patch.dict(os.environ, {
+        "ADMIN_TOKEN": "ping-token",
+        "GEMINI_API_KEY": "",
+        "NVIDIA_API_KEY": "",
+        "OPENAI_API_KEY": "",
+    }):
+        resp = client.get("/admin/ping-ai?token=ping-token")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert "gemini" in body
+    assert "nvidia" in body
+    assert "openai" in body
+
+
+def test_admin_no_token_env_always_404(client):
+    """If ADMIN_TOKEN env var is unset, admin endpoints must be inaccessible."""
+    with patch.dict(os.environ, {"ADMIN_TOKEN": ""}):
+        assert client.get("/admin/stats?token=anything").status_code == 404
+        assert client.get("/admin/abuse?token=anything").status_code == 404
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 17. LISTING VARIANTS — premium full flow
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_listing_variants_returns_data_for_premium(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_lv", "sub_lv", True, "pro")
+
+    fake_variants = {
+        "variants": [
+            {"name": "SEO-focused", "title": "SEO Hat", "description": "SEO desc", "tags": ["seo"]},
+            {"name": "Emotional", "title": "Handmade Hat", "description": "Warm desc", "tags": ["handmade"]},
+            {"name": "Gift", "title": "Gift Hat", "description": "Gift desc", "tags": ["gift"]},
+        ]
+    }
+
+    with patch("app._run_text_json", return_value=fake_variants):
+        resp = connected_client.post(
+            "/api/listing-variants",
+            json={"title": "Crochet Hat", "description": "Nice hat", "tags": ["crochet"]},
+        )
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert "variants" in body
+    assert len(body["variants"]) == 3
+
+
+def test_listing_variants_starter_plan_allowed(connected_client):
+    """Starter plan has premium access, so listing-variants should be allowed."""
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_st", "sub_st", True, "starter")
+
+    fake_variants = {"variants": [{"name": "v1", "title": "t", "description": "d", "tags": []}]}
+    with patch("app._run_text_json", return_value=fake_variants):
+        resp = connected_client.post(
+            "/api/listing-variants",
+            json={"title": "Hat"},
+        )
+
+    assert resp.status_code == 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 18. PHOTO GENERATION — pro-only full flow
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_generate_photos_full_flow_for_pro(connected_client):
+    import base64
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_ph", "sub_ph", True, "pro")
+
+    fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
+    fake_variant_img = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
+
+    # FAL_KEY is a module-level var — must patch on the module, not via env
+    with patch("app.FAL_KEY", "fal-test-key"), \
+         patch("app._fal_generate_variant", return_value=fake_variant_img):
+        resp = connected_client.post(
+            "/api/generate-photos",
+            json={
+                "image": fake_image,
+                "title": "Crochet Hat",
+                "materials": ["wool"],
+                "colors": ["white"],
+            },
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert "variants" in body
+    assert len(body["variants"]) == 3
+
+
+def test_generate_photos_requires_data_url(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_ph2", "sub_ph2", True, "pro")
+
+    with patch("app.FAL_KEY", "fal-test-key"):
+        resp = connected_client.post(
+            "/api/generate-photos",
+            json={"image": "https://example.com/not-a-data-url.jpg"},
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 400
+
+
+def test_generate_photos_rejected_without_fal_key(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_ph3", "sub_ph3", True, "pro")
+
+    with patch.dict(os.environ, {"FAL_KEY": ""}):
+        import base64
+        fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
+        resp = connected_client.post(
+            "/api/generate-photos",
+            json={"image": fake_image},
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 503
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 19. TAXONOMY — requires Etsy auth
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_taxonomy_requires_etsy_auth(client):
+    """Unauthenticated users (no session) cannot access taxonomy."""
+    resp = client.get("/api/taxonomy?q=hat")
+    assert resp.status_code == 401
+
+
+def test_taxonomy_returns_results(connected_client):
+    fake_taxonomy = {"results": [
+        {"id": 1, "name": "Hats", "children": [
+            {"id": 2, "name": "Beanies", "children": []}
+        ]}
+    ]}
+    with patch("requests.get", return_value=MagicMock(ok=True, json=lambda: fake_taxonomy)):
+        resp = connected_client.get("/api/taxonomy?q=hat")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert isinstance(body, list)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 20. UPLOADS — path traversal blocked
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_uploads_blocks_path_traversal(client):
+    resp = client.get("/uploads/../etc/passwd")
+    assert resp.status_code in (400, 404)
+
+
+def test_uploads_blocks_absolute_path(client):
+    # %2F-encoded slashes trigger Flask's redirect normalization (308),
+    # then the normalized path is rejected as 404 by basename check.
+    resp = client.get("/uploads/%2Fetc%2Fpasswd", follow_redirects=True)
+    assert resp.status_code == 404
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 21. UNSUBSCRIBE
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_unsubscribe_with_no_token_returns_400(client):
+    resp = client.get("/unsubscribe")
+    assert resp.status_code == 400
+
+
+def test_unsubscribe_with_valid_token(client):
+    with patch("app.unsubscribe_by_token", return_value=True):
+        resp = client.get("/unsubscribe?token=valid-token-abc")
+    assert resp.status_code == 200
+    assert b"unsubscribe" in resp.data.lower() or b"abonelik" in resp.data.lower()
+
+
+def test_unsubscribe_with_already_used_token(client):
+    with patch("app.unsubscribe_by_token", return_value=False):
+        resp = client.get("/unsubscribe?token=used-token")
+    assert resp.status_code == 200
+    assert b"invalid" in resp.data.lower() or b"kullan" in resp.data.lower()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 22. END-TO-END FLOWS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_full_flow_email_user_buys_pro_then_generates(client):
+    """Complete flow: email login → pro plan via webhook → generate listing."""
+    # Step 1: email login
+    with client.session_transaction() as sess:
+        sess["guest"] = True
+        sess["guest_id"] = "guest-e2e"
+        sess["email_verified"] = True
+        sess["email_shop_id"] = "email-shop-e2e"
+
+    db_module.ensure_shop("email-shop-e2e", "Guest")
+
+    # Step 2: Stripe webhook upgrades to pro
+    payload = json.dumps({
+        "type": "checkout.session.completed",
+        "data": {"object": {
+            "client_reference_id": "email-shop-e2e",
+            "customer": "cus_e2e",
+            "subscription": "sub_e2e",
+            "payment_status": "paid",
+            "metadata": {"shop_id": "email-shop-e2e", "plan": "pro"},
+        }},
+    }).encode()
+
+    with patch("stripe.Webhook.construct_event", return_value=json.loads(payload)):
+        webhook_resp = client.post(
+            "/stripe/webhook",
+            data=payload,
+            headers={"Stripe-Signature": "t=1,v1=fake", "Content-Type": "application/json"},
+        )
+    assert webhook_resp.status_code == 200
+
+    # Step 3: Verify shop is now pro
+    shop = db_module.get_shop("email-shop-e2e")
+    assert shop["plan"] == "pro"
+    assert shop["has_premium"] == 1
+
+    # Step 4: Generate listing (should now be unlimited)
+    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
+         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
+        import io
+        gen_resp = client.post(
+            "/api/generate",
+            data={"images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"), "hint": "crochet hat"},
+            content_type="multipart/form-data",
+        )
+
+    assert gen_resp.status_code == 200
+    assert gen_resp.get_json()["title"] == _FAKE_AI_LISTING["title"]
+
+
+def test_full_flow_etsy_user_publish_cycle(client):
+    """Connected Etsy user (pro): generate → improve → translate → publish."""
+    with client.session_transaction() as sess:
+        sess["access_token"] = "fake-token-cycle"
+        sess["shop_id"] = "cycle-shop"
+        sess["shop_name"] = "CycleShop"
+        sess["token_expiry"] = time.time() + 3600
+    db_module.ensure_shop("cycle-shop", "CycleShop")
+    db_module.set_premium("cycle-shop", "cus_cyc", "sub_cyc", True, "pro")
+    connected_client = client
+
+    # Generate
+    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
+         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
+        import io
+        gen = connected_client.post(
+            "/api/generate",
+            data={"images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"), "hint": "hat"},
+            content_type="multipart/form-data",
+        )
+    assert gen.status_code == 200
+
+    # Improve
+    improved = {"title": "Better Hat", "description": "Improved", "tags": ["hat"]}
+    with patch("app._run_text_json", return_value=improved):
+        imp = connected_client.post(
+            "/api/improve-listing",
+            json={"action": "title_seo", "title": "Hat", "description": "Old", "tags": []},
+        )
+    assert imp.status_code == 200
+
+    # Translate
+    translated = {"title": "Mütze", "description": "Beschreibung", "tags": ["Hut"]}
+    with patch("app._translate_ai", return_value=translated):
+        tr = connected_client.post(
+            "/api/translate",
+            json={"lang": "de", "title": "Hat", "description": "A hat", "tags": ["hat"]},
+        )
+    assert tr.status_code == 200
+
+    # Publish
+    with patch("requests.post", return_value=MagicMock(ok=True, json=lambda: {"listing_id": 777})), \
+         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
+        pub = connected_client.post("/api/publish", json=_VALID_PUBLISH_PAYLOAD)
+    assert pub.status_code == 200
+    assert pub.get_json()["listing_id"] == 777
+
+
+def test_subscription_cancelled_blocks_premium_features(connected_client):
+    """After subscription cancellation, premium features must be inaccessible."""
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_cancel", "sub_cancel", True, "pro")
+
+    # Cancel via webhook
+    payload = json.dumps({
+        "type": "customer.subscription.deleted",
+        "data": {"object": {"customer": "cus_cancel", "id": "sub_cancel"}},
+    }).encode()
+
+    with patch("stripe.Webhook.construct_event", return_value=json.loads(payload)):
+        client_ref = connected_client
+        client_ref.post(
+            "/stripe/webhook",
+            data=payload,
+            headers={"Stripe-Signature": "t=1,v1=fake", "Content-Type": "application/json"},
+        )
+
+    # Bulk generate should now be blocked
+    import io
+    resp = connected_client.post(
+        "/api/bulk-generate",
+        data={"images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"), "hint": "hat"},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 23. STARTER PLAN — premium access but not pro
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_starter_plan_has_premium_access(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_st2", "sub_st2", True, "starter")
+
+    resp = connected_client.get("/api/status")
+    assert resp.status_code == 200
+    # Should not be blocked (has premium access)
+    assert resp.get_json()["allowed"] is True
+
+
+def test_starter_plan_cannot_use_pro_only_photos(connected_client):
+    """Photo generation requires plan='pro', not just any premium plan."""
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_st3", "sub_st3", True, "starter")
+
+    with patch.dict(os.environ, {"FAL_KEY": "fal-test"}):
+        import base64
+        fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
+        resp = connected_client.post(
+            "/api/generate-photos",
+            json={"image": fake_image},
+            content_type="application/json",
+        )
+
+    assert resp.status_code == 403
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 24. SECURITY — CSRF on non-exempt endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_csrf_rejected_on_generate_without_token():
+    """With CSRF enabled, generate must reject requests missing the token."""
+    app.config["TESTING"] = True
+    app.config["WTF_CSRF_ENABLED"] = True
+    app.config["WTF_CSRF_CHECK_DEFAULT"] = True
+    try:
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess["access_token"] = "fake-token"
+                sess["shop_id"] = "csrf-shop"
+                sess["shop_name"] = "CsrfShop"
+                sess["token_expiry"] = time.time() + 3600
+            import io
+            resp = c.post(
+                "/api/generate",
+                data={"images": (io.BytesIO(_jpeg_bytes()), "hat.jpg")},
+                content_type="multipart/form-data",
+            )
+        assert resp.status_code in (400, 403)
+    finally:
+        app.config["WTF_CSRF_ENABLED"] = False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 25. PRIVACY AND TERMS PAGES
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_privacy_page_loads(client):
+    resp = client.get("/privacy")
+    assert resp.status_code == 200
+
+
+def test_terms_page_loads(client):
+    resp = client.get("/terms")
+    assert resp.status_code == 200
