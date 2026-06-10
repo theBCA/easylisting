@@ -160,12 +160,12 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 
   <!-- Billing toggle -->
   <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:28px;">
-    <span style="font-size:14px;font-weight:700;" id="t-monthly">Aylık</span>
+    <span style="font-size:14px;font-weight:700;" id="t-monthly">Monthly</span>
     <button id="billingToggle" style="width:48px;height:26px;border-radius:13px;border:none;background:#5B47E0;cursor:pointer;position:relative;transition:background .2s;" aria-label="Toggle billing">
       <span id="billingThumb" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:white;transition:left .2s;"></span>
     </button>
-    <span style="font-size:14px;font-weight:700;" id="t-annual">Yıllık</span>
-    <span style="background:#D1FAE5;color:#065F46;font-size:11px;font-weight:800;padding:3px 9px;border-radius:10px;" id="t-save-badge">2 ay bedava</span>
+    <span style="font-size:14px;font-weight:700;" id="t-annual">Annually</span>
+    <span style="background:#D1FAE5;color:#065F46;font-size:11px;font-weight:800;padding:3px 9px;border-radius:10px;" id="t-save-badge">2 months free</span>
   </div>
 
   <div class="plans">
@@ -213,7 +213,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       {% else %}
         <button class="btn-plan ghost" id="t-start-btn" disabled>Coming soon</button>
       {% endif %}
-      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;display:none;" id="starter-annual-note">veya <strong id="starter-annual-price">{% if use_try %}₺2.490/yıl{% else %}€49.99/yıl{% endif %}</strong> — 2 ay bedava</div>
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;display:none;" id="starter-annual-note"><span id="t-annual-or-s">or</span> <strong id="starter-annual-price">{% if use_try %}₺2.490{% else %}€49.99{% endif %}<span id="t-annual-year-s">/year</span></strong> <span id="t-annual-free-s">— 2 months free</span></div>
     </div>
 
     <!-- PRO -->
@@ -239,7 +239,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       {% else %}
         <button class="btn-plan ghost" id="t-pro-btn" disabled>Coming soon</button>
       {% endif %}
-      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;" id="pro-annual-note">veya <strong id="pro-annual-price">{% if use_try %}₺4.990/yıl{% else %}€99/yıl{% endif %}</strong> — 2 ay bedava</div>
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;" id="pro-annual-note"><span id="t-annual-or-p">or</span> <strong id="pro-annual-price">{% if use_try %}₺4.990{% else %}€99{% endif %}<span id="t-annual-year-p">/year</span></strong> <span id="t-annual-free-p">— 2 months free</span></div>
     </div>
 
   </div>
@@ -285,6 +285,8 @@ const T = {
     title:'Upgrade — EasyListing', back:'← Back',
     h1:'Simple, Transparent Pricing',
     sub:'Start free, upgrade when you need more AI generations for your shop.',
+    monthly:'Monthly', annual:'Annually', saveBadge:'2 months free',
+    annualOr:'or', annualYearSuffix:'/year', annualFreeLabel:'— 2 months free',
     pillFree:'free generations left', pillStart:'Starter — 100 generations / month', pillPro:'Pro — unlimited generations',
     freeName:'Free', freePeriod:'forever',
     f1:'5 AI-generated listings', f2:'Gemini + NVIDIA AI models', f3:'Multi-image upload',
@@ -319,6 +321,8 @@ const T = {
     title:'Upgrade — EasyListing', back:'← Zurück',
     h1:'Einfache, transparente Preise',
     sub:'Starte kostenlos, upgrade wenn du mehr KI-Generierungen benötigst.',
+    monthly:'Monatlich', annual:'Jährlich', saveBadge:'2 Monate gratis',
+    annualOr:'oder', annualYearSuffix:'/Jahr', annualFreeLabel:'— 2 Monate gratis',
     pillFree:'kostenlose Generierungen übrig', pillStart:'Starter — 100 Generierungen / Monat', pillPro:'Pro — unbegrenzte Generierungen',
     freeName:'Kostenlos', freePeriod:'für immer',
     f1:'5 KI-generierte Listings', f2:'Gemini + NVIDIA KI-Modelle', f3:'Mehrere Bilder hochladen',
@@ -353,6 +357,8 @@ const T = {
     title:'Yükselt — kolaylistele', back:'← Geri',
     h1:'Sade, Şeffaf Fiyatlandırma',
     sub:'Ücretsiz başla, mağazana daha fazla YZ üretimi gerektiğinde yükselt.',
+    monthly:'Aylık', annual:'Yıllık', saveBadge:'2 ay bedava',
+    annualOr:'veya', annualYearSuffix:'/yıl', annualFreeLabel:'— 2 ay bedava',
     pillFree:'ücretsiz ilan hakkı kaldı', pillStart:'Starter — ayda 100 üretim', pillPro:'Pro — sınırsız üretim',
     freeName:'Ücretsiz', freePeriod:'sonsuza dek',
     f1:'5 YZ ile oluşturulan ilan', f2:'Gemini + NVIDIA YZ modelleri', f3:'Çoklu görsel yükleme',
@@ -427,6 +433,16 @@ function setLang(lang) {
   // FAQ
   setText('t-faq-h', s.faqH);
   ['q1','a1','q2','a2','q3','a3','q4','a4'].forEach(k => setText('t-' + k, s[k]));
+  // Billing toggle labels
+  setText('t-monthly', s.monthly);
+  setText('t-annual', s.annual);
+  setText('t-save-badge', s.saveBadge);
+  // Annual note translatable parts
+  ['s','p'].forEach(x => {
+    setText('t-annual-or-' + x, s.annualOr);
+    setText('t-annual-year-' + x, s.annualYearSuffix);
+    setText('t-annual-free-' + x, s.annualFreeLabel);
+  });
   // Banners
   const bs = byId('banner-success');
   const bc = byId('banner-cancel');
@@ -472,9 +488,10 @@ function setBilling(annual) {
   const pb = document.getElementById('t-pro-btn');
   if (pb && pb.dataset.checkoutPlan) pb.dataset.checkoutPlan = annual ? 'pro_annual' : 'pro';
 
-  // Period text
-  const startAnnualLabel = USE_TRY ? '₺2.490/yıl · 2 ay bedava' : '€49.99/yıl · 2 ay bedava';
-  const proAnnualLabel   = USE_TRY ? '₺4.990/yıl · 2 ay bedava' : '€99/yıl · 2 ay bedava';
+  // Period text (use translated year/free strings)
+  const L = T[currentLang] || T.en;
+  const startAnnualLabel = (USE_TRY ? '₺2.490' : '€49.99') + (L.annualYearSuffix || '/year') + ' · ' + (L.saveBadge || '2 months free');
+  const proAnnualLabel   = (USE_TRY ? '₺4.990' : '€99')    + (L.annualYearSuffix || '/year') + ' · ' + (L.saveBadge || '2 months free');
   const sp2 = document.getElementById('t-start-period');
   if (sp2) sp2.textContent = annual ? startAnnualLabel : (T[currentLang]?.startPeriod || 'per month · cancel anytime');
   const pp2 = document.getElementById('t-pro-period');
