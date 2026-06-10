@@ -325,13 +325,13 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
 {% if is_guest %}
 {% if email_verified %}
 <div id="guestBanner" style="background:#F0FDF4;border-bottom:1px solid #86EFAC;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-  <span style="font-size:13px;font-weight:600;color:#166534;">✅ E-posta ile giriş yapıldı — içerik oluşturabilir, kopyalayabilirsiniz. Etsy'ye göndermek için mağazanızı bağlayın.</span>
-  <a href="/connect" style="font-size:12px;font-weight:800;color:#5B47E0;white-space:nowrap;text-decoration:none;">Etsy Bağla →</a>
+  <span id="t-guest-text" style="font-size:13px;font-weight:600;color:#166534;" data-i18n="guest_verified">Signed in with email — you can create and copy content. Connect your store to publish to Etsy.</span>
+  <a href="/connect" id="t-guest-link" style="font-size:12px;font-weight:800;color:#5B47E0;white-space:nowrap;text-decoration:none;" data-i18n="guest_connect_etsy">Connect Etsy →</a>
 </div>
 {% else %}
 <div id="guestBanner" style="background:#FFF8E7;border-bottom:1px solid #F59E0B;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-  <span style="font-size:13px;font-weight:600;color:#92400E;">⚡ Misafir modundasınız — içerik oluşturabilir, kopyalayabilirsiniz. Etsy'ye göndermek için mağazanızı bağlayın.</span>
-  <a href="/connect" style="font-size:12px;font-weight:800;color:#5B47E0;white-space:nowrap;text-decoration:none;">Mağazanı Bağla →</a>
+  <span id="t-guest-text" style="font-size:13px;font-weight:600;color:#92400E;" data-i18n="guest_mode">You're in guest mode — you can create and copy content. Connect your store to publish to Etsy.</span>
+  <a href="/connect" id="t-guest-link" style="font-size:12px;font-weight:800;color:#5B47E0;white-space:nowrap;text-decoration:none;" data-i18n="guest_connect">Connect Store →</a>
 </div>
 {% endif %}
 {% endif %}
@@ -813,6 +813,10 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
 // ── i18n ──────────────────────────────────────────────────────────────────────
 const STRINGS = {
   en: {
+    guest_verified:"Signed in with email — you can create and copy content. Connect your store to publish to Etsy.",
+    guest_connect_etsy:"Connect Etsy →",
+    guest_mode:"You're in guest mode — you can create and copy content. Connect your store to publish to Etsy.",
+    guest_connect:"Connect Store →",
     nav_listings:"My Listings", nav_bulk:"Bulk Upload", nav_upgrade:"Upgrade",
     nav_disconnect:"Disconnect", nav_free_left:"free left",
     label_platform:"Sell on",
@@ -876,6 +880,10 @@ const STRINGS = {
     sc_shipping:'Shipping profile selected',
   },
   de: {
+    guest_verified:"Mit E-Mail angemeldet — du kannst Inhalte erstellen und kopieren. Verbinde deinen Shop, um auf Etsy zu veröffentlichen.",
+    guest_connect_etsy:"Etsy verbinden →",
+    guest_mode:"Du bist im Gastmodus — du kannst Inhalte erstellen und kopieren. Verbinde deinen Shop, um auf Etsy zu veröffentlichen.",
+    guest_connect:"Shop verbinden →",
     nav_listings:"Meine Listings", nav_bulk:"Massen-Upload", nav_upgrade:"Upgrade",
     nav_disconnect:"Trennen", nav_free_left:"kostenlose übrig",
     label_platform:"Verkaufen auf",
@@ -937,6 +945,10 @@ const STRINGS = {
     sc_shipping:'Versandprofil ausgewählt',
   },
   tr: {
+    guest_verified:"E-posta ile giriş yapıldı — içerik oluşturabilir, kopyalayabilirsiniz. Etsy'ye göndermek için mağazanızı bağlayın.",
+    guest_connect_etsy:"Etsy Bağla →",
+    guest_mode:"Misafir modundasınız — içerik oluşturabilir, kopyalayabilirsiniz. Etsy'ye göndermek için mağazanızı bağlayın.",
+    guest_connect:"Mağazanı Bağla →",
     nav_listings:"Listelerim", nav_bulk:"Toplu Yükleme", nav_upgrade:"Yükselt",
     nav_disconnect:"Bağlantıyı Kes", nav_free_left:"ücretsiz kaldı",
     label_platform:"Platform seç",
