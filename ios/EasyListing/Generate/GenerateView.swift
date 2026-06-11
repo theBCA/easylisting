@@ -9,98 +9,110 @@ struct GenerateView: View {
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
-
             ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Hello\(appState.shopName.map { ", \($0)" } ?? "")!")
-                                .font(.title2.bold())
+                VStack(spacing: Theme.Space.md) {
+                    // ── Header ────────────────────────────────────────
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(appState.shopName.map { "Hello, \($0) 👋" } ?? "Create a Listing")
+                                .font(.title3.bold())
                             if appState.isPremium {
-                                Label("Premium", systemImage: "crown.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.orange)
+                                PremiumBadge()
                             } else {
-                                Text("\(appState.remaining) free generations left")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.textSecondary)
+                                RemainingPill(count: appState.remaining)
                             }
                         }
                         Spacer()
+                        // App icon mark
+                        ZStack {
+                            Circle()
+                                .fill(Theme.purpleGradient)
+                                .frame(width: 42, height: 42)
+                            Image(systemName: "tag.fill")
+                                .font(.system(size: 17))
+                                .foregroundStyle(.white)
+                        }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, Theme.Space.md)
+                    .padding(.top, 4)
 
+                    // ── Photo picker ──────────────────────────────────
                     PhotoPickerSection(selectedImages: $vm.selectedImages)
 
-                    SectionCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Product Hint (Optional)")
-                                .font(.caption.bold())
-                                .foregroundStyle(Theme.textSecondary)
-                                .textCase(.uppercase)
-                            TextField("E.g. handmade ceramic mug, vintage style...", text: $vm.hint, axis: .vertical)
-                                .lineLimit(3, reservesSpace: false)
+                    // ── Product description ───────────────────────────
+                    SectionCard(title: "Product Description") {
+                        TextField(
+                            "E.g. handmade ceramic mug, vintage-style glaze, 350 ml…",
+                            text: $vm.hint,
+                            axis: .vertical
+                        )
+                        .lineLimit(3, reservesSpace: false)
+                        .font(.body)
+                    }
+                    .padding(.horizontal, Theme.Space.md)
+
+                    // ── Language & Platform ───────────────────────────
+                    HStack(spacing: 10) {
+                        PickerCard(label: "Language", systemImage: "globe") {
+                            Picker("Language", selection: $vm.lang) {
+                                Text(verbatim: "English").tag("en")
+                                Text(verbatim: "Türkçe").tag("tr")
+                                Text(verbatim: "Deutsch").tag("de")
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Theme.purple)
+                        }
+
+                        PickerCard(label: "Platform", systemImage: "storefront") {
+                            Picker("Platform", selection: $vm.platform) {
+                                Text(verbatim: "Etsy").tag("etsy")
+                                Text(verbatim: "Trendyol").tag("trendyol")
+                                Text(verbatim: "Shopify").tag("shopify")
+                                Text(verbatim: "Amazon").tag("amazon")
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Theme.purple)
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, Theme.Space.md)
 
-                    SectionCard {
-                        HStack(spacing: 16) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Language").font(.caption.bold()).foregroundStyle(Theme.textSecondary).textCase(.uppercase)
-                                Picker("Language", selection: $vm.lang) {
-                                    Text(verbatim: "English").tag("en")
-                                    Text(verbatim: "Türkçe").tag("tr")
-                                    Text(verbatim: "Deutsch").tag("de")
-                                }
-                                .pickerStyle(.menu)
-                            }
-                            Divider()
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Platform").font(.caption.bold()).foregroundStyle(Theme.textSecondary).textCase(.uppercase)
-                                Picker("Platform", selection: $vm.platform) {
-                                    Text(verbatim: "Etsy").tag("etsy")
-                                    Text(verbatim: "Trendyol").tag("trendyol")
-                                    Text(verbatim: "Shopify").tag("shopify")
-                                    Text(verbatim: "Amazon").tag("amazon")
-                                }
-                                .pickerStyle(.menu)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-
+                    // ── Error ─────────────────────────────────────────
                     if let error = vm.error {
-                        ErrorBanner(message: error).padding(.horizontal)
+                        ErrorBanner(message: error)
+                            .padding(.horizontal, Theme.Space.md)
+                            .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
-                    PrimaryButton(
-                        vm.isGenerating ? "Generating…" : "Create Listing",
-                        isLoading: vm.isGenerating
-                    ) {
-                        Task { await generate() }
+                    // ── CTA ───────────────────────────────────────────
+                    VStack(spacing: 8) {
+                        PrimaryButton(vm.isGenerating ? "Generating…" : "Create Listing",
+                                      isLoading: vm.isGenerating) {
+                            Task { await generate() }
+                        }
+                        .disabled(vm.selectedImages.isEmpty)
+                        .opacity(vm.selectedImages.isEmpty ? 0.45 : 1)
+
+                        if vm.selectedImages.isEmpty {
+                            Text("Add at least one photo to continue")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textTertiary)
+                        }
                     }
-                    .padding(.horizontal)
-                    .disabled(vm.selectedImages.isEmpty)
-                    .opacity(vm.selectedImages.isEmpty ? 0.5 : 1)
+                    .padding(.horizontal, Theme.Space.md)
+                    .padding(.bottom, Theme.Space.xl)
+                    .animation(.easeInOut(duration: 0.2), value: vm.selectedImages.isEmpty)
                 }
-                .padding(.vertical)
+                .padding(.top, Theme.Space.sm)
+                .animation(.easeInOut(duration: 0.2), value: vm.error)
             }
         }
-        .navigationTitle("Create Listing")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("Create")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showResult) {
-            if let result = vm.result {
-                ResultView(result: result)
-            }
+            if let result = vm.result { ResultView(result: result) }
         }
-        .sheet(isPresented: $vm.needsEmailVerification) {
-            MagicLinkView()
-        }
-        .sheet(isPresented: $vm.limitReached) {
-            UpgradeView()
-        }
+        .sheet(isPresented: $vm.needsEmailVerification) { MagicLinkView() }
+        .sheet(isPresented: $vm.limitReached) { UpgradeView() }
     }
 
     private func generate() async {
@@ -112,6 +124,37 @@ struct GenerateView: View {
     }
 }
 
+// MARK: - Picker card
+
+private struct PickerCard<Content: View>: View {
+    let label: String
+    let systemImage: String
+    let content: Content
+
+    init(label: String, systemImage: String, @ViewBuilder content: () -> Content) {
+        self.label = label; self.systemImage = systemImage; self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 5) {
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.semibold))
+                Text(label)
+                    .font(.footnote.weight(.semibold))
+            }
+            .foregroundStyle(Theme.textSecondary)
+            content
+        }
+        .padding(.horizontal, Theme.Space.md)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.card)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+        .shadow(color: Theme.cardShadow, radius: Theme.cardShadowRadius, y: 3)
+    }
+}
+
 // MARK: - Photo picker section
 
 struct PhotoPickerSection: View {
@@ -120,70 +163,125 @@ struct PhotoPickerSection: View {
     @State private var showCamera = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Photos")
-                    .font(.caption.bold())
+                Text("Product Photos")
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.textSecondary)
-                    .textCase(.uppercase)
                 Spacer()
-                Text(verbatim: "\(selectedImages.count)/5")
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
+                Text("\(selectedImages.count)/5")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(selectedImages.isEmpty ? Theme.textTertiary : Theme.purple)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Theme.Space.md)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    if selectedImages.count < 5 {
-                        Menu {
-                            PhotosPicker(selection: $pickerItems,
-                                         maxSelectionCount: 5 - selectedImages.count,
-                                         matching: .images) {
-                                Label("Photo Library", systemImage: "photo.on.rectangle")
-                            }
-                            Button {
-                                showCamera = true
-                            } label: {
-                                Label("Camera", systemImage: "camera")
-                            }
-                        } label: {
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Theme.purple, style: StrokeStyle(lineWidth: 2, dash: [6]))
-                                .frame(width: 100, height: 100)
-                                .overlay {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "plus").font(.title2)
-                                        Text("Add").font(.caption)
-                                    }
-                                    .foregroundStyle(Theme.purple)
-                                }
+            if selectedImages.isEmpty {
+                // ── Empty drop-zone ───────────────────────────────
+                PhotosPicker(
+                    selection: $pickerItems,
+                    maxSelectionCount: 5,
+                    matching: .images
+                ) {
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Theme.purpleLight)
+                                .frame(width: 64, height: 64)
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 26))
+                                .foregroundStyle(Theme.purple)
+                        }
+                        VStack(spacing: 4) {
+                            Text("Add Product Photos")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
+                            Text("Tap to choose from library • up to 5")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
                         }
                     }
-
-                    ForEach(Array(selectedImages.enumerated()), id: \.offset) { i, img in
-                        ZStack(alignment: .topTrailing) {
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 100, height: 100)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                            Button {
-                                withAnimation(.spring(duration: 0.25)) {
-                                    _ = selectedImages.remove(at: i)
-                                }
-                                pickerItems = []
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.white, .black.opacity(0.6))
-                                    .font(.title3)
-                            }
-                            .padding(4)
-                        }
-                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 168)
+                    .background(Theme.card)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.radius))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.radius)
+                            .strokeBorder(
+                                Theme.purple.opacity(0.35),
+                                style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
+                            )
+                    )
+                    .shadow(color: Theme.cardShadow, radius: 8, y: 2)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, Theme.Space.md)
+                .buttonStyle(.plain)
+            } else {
+                // ── Thumbnail strip ───────────────────────────────
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(Array(selectedImages.enumerated()), id: \.offset) { i, img in
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 110, height: 110)
+                                    .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSmall))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: Theme.radiusSmall)
+                                            .stroke(Theme.border, lineWidth: 1)
+                                    )
+
+                                Button {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        selectedImages.remove(at: i)
+                                    }
+                                    pickerItems = []
+                                } label: {
+                                    ZStack {
+                                        Circle().fill(.black.opacity(0.55)).frame(width: 22, height: 22)
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                .offset(x: 4, y: -4)
+                            }
+                        }
+
+                        if selectedImages.count < 5 {
+                            Menu {
+                                PhotosPicker(
+                                    selection: $pickerItems,
+                                    maxSelectionCount: 5 - selectedImages.count,
+                                    matching: .images
+                                ) {
+                                    Label("Photo Library", systemImage: "photo.on.rectangle")
+                                }
+                                Button { showCamera = true } label: {
+                                    Label("Camera", systemImage: "camera")
+                                }
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Image(systemName: "plus")
+                                        .font(.title3.weight(.semibold))
+                                        .foregroundStyle(Theme.purple)
+                                    Text("Add")
+                                        .font(.caption.weight(.medium))
+                                        .foregroundStyle(Theme.purple)
+                                }
+                                .frame(width: 110, height: 110)
+                                .background(Theme.purpleLight)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSmall))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Theme.radiusSmall)
+                                        .stroke(Theme.purple.opacity(0.3), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+                    .padding(.horizontal, Theme.Space.md)
+                    .padding(.vertical, 2)
+                }
             }
         }
         .onChange(of: pickerItems) { _, items in
@@ -191,9 +289,9 @@ struct PhotoPickerSection: View {
             Task {
                 for item in items {
                     if let data = try? await item.loadTransferable(type: Data.self),
-                       let img  = UIImage(data: data),
+                       let img = UIImage(data: data),
                        selectedImages.count < 5 {
-                        withAnimation(.spring(duration: 0.25)) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             selectedImages.append(img)
                         }
                     }
@@ -203,7 +301,7 @@ struct PhotoPickerSection: View {
         }
         .fullScreenCover(isPresented: $showCamera) {
             CameraView { img in
-                withAnimation(.spring(duration: 0.25)) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     selectedImages.append(img)
                 }
             }
@@ -219,14 +317,12 @@ struct CameraView: UIViewControllerRepresentable {
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.delegate = context.coordinator
-        return picker
+        let p = UIImagePickerController()
+        p.sourceType = .camera
+        p.delegate = context.coordinator
+        return p
     }
-
     func updateUIViewController(_ vc: UIImagePickerController, context: Context) {}
-
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
@@ -235,13 +331,9 @@ struct CameraView: UIViewControllerRepresentable {
 
         func imagePickerController(_ picker: UIImagePickerController,
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let img = info[.originalImage] as? UIImage {
-                parent.onCapture(img)
-            }
+            if let img = info[.originalImage] as? UIImage { parent.onCapture(img) }
             parent.dismiss()
         }
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
-        }
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.dismiss() }
     }
 }
