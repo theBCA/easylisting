@@ -62,6 +62,23 @@ struct RootView: View {
 
     var body: some View {
         Group {
+            #if DEBUG
+            if SnapshotData.isActive {
+                snapshotRoot
+            } else {
+                normalRoot
+            }
+            #else
+            normalRoot
+            #endif
+        }
+        .task {
+            await appState.refresh()
+        }
+    }
+
+    private var normalRoot: some View {
+        Group {
             if appState.isLoading {
                 SplashView()
             } else if appState.isAuthenticated {
@@ -70,10 +87,25 @@ struct RootView: View {
                 AuthView()
             }
         }
-        .task {
-            await appState.refresh()
+    }
+
+    #if DEBUG
+    @ViewBuilder
+    private var snapshotRoot: some View {
+        switch SnapshotData.screen {
+        case "auth":
+            AuthView()
+        case "result":
+            MainTabView(snapshotResult: SnapshotData.mockResult)
+        case "listings":
+            MainTabView(initialTab: 1)
+        case "settings":
+            MainTabView(initialTab: 2)
+        default:
+            MainTabView()
         }
     }
+    #endif
 }
 
 // MARK: - Splash
@@ -97,17 +129,28 @@ struct SplashView: View {
 // MARK: - Main tab view
 
 struct MainTabView: View {
+    var initialTab: Int = 0
+    var snapshotResult: GenerateResponse? = nil
+
+    @State private var selectedTab: Int = 0
+
     var body: some View {
-        TabView {
-            NavigationStack { GenerateView() }
-                .tabItem { Label("Create", systemImage: "sparkles") }
+        TabView(selection: $selectedTab) {
+            NavigationStack {
+                GenerateView(snapshotResult: snapshotResult)
+            }
+            .tabItem { Label("Create", systemImage: "sparkles") }
+            .tag(0)
 
             NavigationStack { ListingsView() }
                 .tabItem { Label("My Listings", systemImage: "list.bullet") }
+                .tag(1)
 
             NavigationStack { SettingsView() }
                 .tabItem { Label("Settings", systemImage: "gear") }
+                .tag(2)
         }
         .tint(Theme.purple)
+        .onAppear { selectedTab = initialTab }
     }
 }

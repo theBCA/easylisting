@@ -17,9 +17,23 @@ demo/
 
 # iOS secrets & build artifacts
 *.p8
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.p12
 mobile/ios/DerivedData/
 mobile/ios/build/
 mobile/ios/fastlane/report.xml
 mobile/ios/fastlane/.env
 *.ipa
 *.dSYM.zip
+
+mobile/ios/EasyListing/Assets.xcassets/AppIcon.appiconset/AppIcon-20@2x.png
+mobile/ios/EasyListing/Assets.xcassets/AppIcon.appiconset/AppIcon-20@3x.png
+mobile/ios/EasyListing/Assets.xcassets/AppIcon.appiconset/AppIcon-29@2x.png
+mobile/ios/EasyListing/Assets.xcassets/AppIcon.appiconset/AppIcon-29@3x.png
+mobile/ios/EasyListing/Assets.xcassets/AppIcon.appiconset/AppIcon-40@2x.png
+mobile/ios/EasyListing/Assets.xcassets/AppIcon.appiconset/AppIcon-40@3x.png
+mobile/ios/EasyListing/Assets.xcassets/AppIcon.appiconset/AppIcon-60@3x.png
+mobile/ios/EasyListing/Assets.xcassets/AppIcon.appiconset/AppIcon-60@2x.png
+mobile/ios/EasyListing/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png

@@ -2,6 +2,8 @@ import SwiftUI
 import PhotosUI
 
 struct GenerateView: View {
+    var snapshotResult: GenerateResponse? = nil
+
     @Environment(AppState.self) private var appState
     @State private var vm = GenerateViewModel()
     @State private var showResult = false
@@ -113,7 +115,25 @@ struct GenerateView: View {
         }
         .sheet(isPresented: $vm.needsEmailVerification) { MagicLinkView() }
         .sheet(isPresented: $vm.limitReached) { UpgradeView() }
+        #if DEBUG
+        .onAppear { applySnapshotState() }
+        #endif
     }
+
+    #if DEBUG
+    private func applySnapshotState() {
+        guard SnapshotData.isActive else { return }
+        if let result = snapshotResult {
+            vm.result = result
+            vm.selectedImages = [SnapshotData.sampleProductImage]
+            vm.hint = "Handmade ceramic mug, vintage-style glaze, 350ml"
+            showResult = true
+        } else if SnapshotData.screen == "generate" {
+            vm.selectedImages = [SnapshotData.sampleProductImage]
+            vm.hint = "Handmade ceramic mug, vintage-style glaze, 350ml"
+        }
+    }
+    #endif
 
     private func generate() async {
         await vm.generate()

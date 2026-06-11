@@ -17,6 +17,12 @@ final class AppState {
 
     @MainActor
     func refresh() async {
+        #if DEBUG
+        if SnapshotData.isActive {
+            SnapshotData.applyAppState(to: self)
+            return
+        }
+        #endif
         guard APIClient.shared.mobileToken != nil else {
             isAuthenticated = false
             isLoading = false

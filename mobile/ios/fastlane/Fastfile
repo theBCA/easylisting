@@ -2,12 +2,30 @@ default_platform :ios
 
 SCHEME    = "EasyListing"
 BUNDLE_ID = "com.easylisting"
+APP_STORE_PROFILE = "com.easylisting AppStore"
 
 def asc_api_key
   app_store_connect_api_key(
     key_id:      ENV.fetch("ASC_KEY_ID"),
     issuer_id:   ENV.fetch("ASC_ISSUER_ID"),
     key_filepath: File.expand_path(ENV.fetch("ASC_KEY_PATH", "../AuthKey_AQ3R6QJM84.p8"), __dir__),
+  )
+end
+
+def app_store_export_options
+  {
+    method: "app-store",
+    provisioningProfiles: {
+      BUNDLE_ID => APP_STORE_PROFILE,
+    },
+  }
+end
+
+def prepare_app_store_signing(api_key)
+  get_certificates(api_key: api_key)
+  get_provisioning_profile(
+    api_key:        api_key,
+    app_identifier: BUNDLE_ID,
   )
 end
 
@@ -25,22 +43,20 @@ platform :ios do
   desc "Fetch/create signing certs + profiles via App Store Connect API (no match repo needed)"
   lane :certs do
     api_key = asc_api_key
-    get_certificates(api_key: api_key) rescue UI.message("cert step skipped")
-    get_provisioning_profile(
-      api_key:        api_key,
-      app_identifier: BUNDLE_ID,
-    )
+    prepare_app_store_signing(api_key)
   end
 
   desc "Build + upload to TestFlight"
   lane :beta do
     api_key = asc_api_key
+    prepare_app_store_signing(api_key)
     increment_build_number(xcodeproj: "#{SCHEME}.xcodeproj")
     build_app(
-      scheme:        SCHEME,
-      clean:         true,
-      export_method: "app-store",
-      xcargs:        "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')} -allowProvisioningUpdates",
+      scheme:         SCHEME,
+      clean:          true,
+      export_method:  "app-store",
+      export_options: app_store_export_options,
+      xcargs:         "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')} -allowProvisioningUpdates",
     )
     upload_to_testflight(
       api_key:                            api_key,
@@ -52,12 +68,14 @@ platform :ios do
   desc "Build + upload to App Store (metadata + binary, no auto-submit)"
   lane :release do
     api_key = asc_api_key
+    prepare_app_store_signing(api_key)
     increment_build_number(xcodeproj: "#{SCHEME}.xcodeproj")
     build_app(
-      scheme:        SCHEME,
-      clean:         true,
-      export_method: "app-store",
-      xcargs:        "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')} -allowProvisioningUpdates",
+      scheme:         SCHEME,
+      clean:          true,
+      export_method:  "app-store",
+      export_options: app_store_export_options,
+      xcargs:         "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')} -allowProvisioningUpdates",
     )
     upload_to_app_store(
       api_key:           api_key,
@@ -67,6 +85,32 @@ platform :ios do
       precheck_include_in_app_purchases: false,
     )
     clean_build_artifacts
+  end
+
+  desc "Upload App Store metadata + screenshots only (no binary, no auto-submit)"
+  lane :store_assets do
+    api_key = asc_api_key
+    upload_to_app_store(
+      api_key:                            api_key,
+      force:                              true,
+      skip_binary_upload:                 true,
+      submit_for_review:                  false,
+      precheck_include_in_app_purchases:  false,
+      metadata_path:                      "./fastlane/metadata",
+      screenshots_path:                   "./fastlane/screenshots",
+      overwrite_screenshots:              true,
+    )
+  end
+
+  desc "Capture App Store screenshots via UITests (fastlane snapshot)"
+  lane :screenshots do
+    capture_screenshots(
+      scheme:                  SCHEME,
+      output_directory:        "./fastlane/screenshots",
+      clear_previous_screenshots: true,
+      override_status_bar:     true,
+      reinstall_app:           true,
+    )
   end
 
   desc "Build locally for simulator (no signing)"

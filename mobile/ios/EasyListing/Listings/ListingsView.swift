@@ -59,6 +59,13 @@ struct ListingsView: View {
     }
 
     private func load() async {
+        #if DEBUG
+        if SnapshotData.isActive {
+            listings = SnapshotData.mockListings
+            isLoading = false
+            return
+        }
+        #endif
         isLoading = true
         error = nil
         do {

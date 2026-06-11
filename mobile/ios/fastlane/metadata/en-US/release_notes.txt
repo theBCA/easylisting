@@ -1,0 +1,1 @@
+Initial release of EasyListing — AI-powered listing generator for Etsy and Trendyol sellers.

@@ -1,0 +1,22 @@
+# Devices to capture (6.7" covers App Store requirement)
+devices(["iPhone 16 Pro Max"])
+
+languages(["en-US"])
+
+scheme("EasyListing")
+
+# Where to save the screenshots
+output_directory("./fastlane/screenshots")
+
+# Clear previous screenshots before each run
+clear_previous_screenshots(true)
+
+# Don't stop on first failure
+stop_after_first_error(false)
+
+# Reinstall the app fresh on each run
+reinstall_app(true)
+app_identifier("com.easylisting")
+
+# Override status bar for clean screenshots (iOS 17+)
+override_status_bar(true)
