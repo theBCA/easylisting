@@ -56,7 +56,23 @@ def init_db():
         con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_fp   ON abuse_signals(fp_hash)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_time ON abuse_signals(created_at)")
         init_magic_tables(con)
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS mobile_tokens (
+                token         TEXT PRIMARY KEY,
+                shop_id       TEXT NOT NULL,
+                access_token  TEXT,
+                refresh_token TEXT,
+                expires_at    INTEGER,
+                shop_name     TEXT,
+                is_guest      INTEGER DEFAULT 0,
+                guest_id      TEXT,
+                is_email      INTEGER DEFAULT 0,
+                created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         for ddl in (
+            "ALTER TABLE mobile_tokens ADD COLUMN refresh_token TEXT",
+            "ALTER TABLE mobile_tokens ADD COLUMN expires_at INTEGER",
             "ALTER TABLE shops ADD COLUMN stripe_customer_id TEXT DEFAULT NULL",
             "ALTER TABLE shops ADD COLUMN stripe_subscription_id TEXT DEFAULT NULL",
             "ALTER TABLE shops ADD COLUMN plan TEXT DEFAULT 'free'",
@@ -520,3 +536,56 @@ def get_fp_session(fp_id: str) -> str | None:
             "SELECT email_shop_id FROM fp_sessions WHERE fp_id = ?", (fp_id,)
         ).fetchone()
         return row["email_shop_id"] if row else None
+
+
+# ── Mobile token auth ─────────────────────────────────────────────────────────
+
+def create_mobile_token(
+    shop_id: str,
+    access_token: str = None,
+    shop_name: str = None,
+    is_guest: bool = False,
+    guest_id: str = None,
+    is_email: bool = False,
+    refresh_token: str = None,
+    expires_at: int = None,
+) -> str:
+    import secrets as _sec
+    token = _sec.token_urlsafe(32)
+    with _conn() as con:
+        con.execute(
+            """INSERT INTO mobile_tokens
+               (token, shop_id, access_token, refresh_token, expires_at,
+                shop_name, is_guest, guest_id, is_email)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (token, str(shop_id), access_token, refresh_token, expires_at,
+             shop_name, int(is_guest), guest_id, int(is_email)),
+        )
+    return token
+
+
+def update_mobile_token_access(token: str, access_token: str,
+                               refresh_token: str = None, expires_at: int = None):
+    with _conn() as con:
+        con.execute(
+            """UPDATE mobile_tokens
+               SET access_token = ?, refresh_token = COALESCE(?, refresh_token),
+                   expires_at = ?
+               WHERE token = ?""",
+            (access_token, refresh_token, expires_at, token),
+        )
+
+
+def get_by_mobile_token(token: str) -> dict | None:
+    if not token:
+        return None
+    with _conn() as con:
+        row = con.execute(
+            "SELECT * FROM mobile_tokens WHERE token = ?", (token,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def delete_mobile_token(token: str):
+    with _conn() as con:
+        con.execute("DELETE FROM mobile_tokens WHERE token = ?", (token,))

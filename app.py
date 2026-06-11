@@ -29,6 +29,8 @@ from db import (
     add_marketing_consent, unsubscribe_by_token, get_marketing_stats,
     save_platform_credentials, get_platform_credentials, delete_platform_credentials,
     save_fp_session, get_fp_session,
+    create_mobile_token, get_by_mobile_token, delete_mobile_token,
+    update_mobile_token_access,
 )
 
 load_dotenv()
@@ -199,21 +201,105 @@ def _is_valid_image_bytes(data: bytes) -> bool:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _refresh_etsy_token(mob: dict) -> dict:
+    """Refresh an expired Etsy access token for a mobile session. Returns updated row."""
+    try:
+        resp = requests.post(
+            "https://api.etsy.com/v3/public/oauth/token",
+            data={
+                "grant_type":    "refresh_token",
+                "client_id":     ETSY_CLIENT_ID,
+                "refresh_token": mob["refresh_token"],
+            },
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.ok:
+            j = resp.json()
+            new_access  = j.get("access_token")
+            new_refresh = j.get("refresh_token")
+            expires_at  = int(time.time()) + int(j.get("expires_in", 3600))
+            if new_access:
+                update_mobile_token_access(mob["token"], new_access, new_refresh, expires_at)
+                mob = dict(mob, access_token=new_access,
+                           refresh_token=new_refresh or mob.get("refresh_token"),
+                           expires_at=expires_at)
+        else:
+            logger.warning("Etsy token refresh failed (%s) for mobile session", resp.status_code)
+    except Exception as e:
+        logger.warning("Etsy token refresh error: %s", e)
+    return mob
+
+def _refresh_web_etsy_token() -> None:
+    """Refresh an expired Etsy access token stored in the web session (in-place)."""
+    rt = session.get("refresh_token")
+    if not rt:
+        return
+    try:
+        resp = requests.post(
+            "https://api.etsy.com/v3/public/oauth/token",
+            data={
+                "grant_type":    "refresh_token",
+                "client_id":     ETSY_CLIENT_ID,
+                "refresh_token": rt,
+            },
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.ok:
+            j = resp.json()
+            new_access  = j.get("access_token")
+            new_refresh = j.get("refresh_token")
+            expires_at  = int(time.time()) + int(j.get("expires_in", 3600))
+            if new_access:
+                session["access_token"]  = new_access
+                session["refresh_token"] = new_refresh or rt
+                session["token_expires"] = expires_at
+                logger.info("Web Etsy token refreshed successfully")
+        else:
+            logger.warning("Web Etsy token refresh failed (%s)", resp.status_code)
+    except Exception as e:
+        logger.warning("Web Etsy token refresh error: %s", e)
+
+def _mobile_auth() -> dict | None:
+    """Return mobile token row for the current request, cached on g. None for web requests."""
+    if not hasattr(g, "_mob"):
+        tok = request.headers.get("X-Mobile-Token", "")
+        mob = get_by_mobile_token(tok) if tok else None
+        if (mob and mob.get("access_token") and mob.get("refresh_token")
+                and mob.get("expires_at") and time.time() > mob["expires_at"] - 120):
+            mob = _refresh_etsy_token(mob)
+        g._mob = mob
+    return g._mob
+
 def etsy_headers():
-    token = session.get("access_token", "")
+    # Auto-refresh web session token if close to expiry (within 2 minutes)
+    if session.get("access_token") and session.get("token_expires"):
+        if time.time() > session["token_expires"] - 120:
+            _refresh_web_etsy_token()
+    tok = session.get("access_token") or ((_mobile_auth() or {}).get("access_token") or "")
     return {
         "x-api-key":     ETSY_API_KEY_HEADER,
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"Bearer {tok}",
     }
 
 def shop_id():
-    return session.get("shop_id")
+    if session.get("shop_id"):
+        return session["shop_id"]
+    mob = _mobile_auth()
+    if mob and not mob.get("is_guest"):
+        return mob["shop_id"]
+    return None
 
 def is_connected():
-    return bool(session.get("access_token") and session.get("shop_id"))
+    if session.get("access_token") and session.get("shop_id"):
+        return True
+    mob = _mobile_auth()
+    return bool(mob and not mob.get("is_guest") and mob.get("access_token"))
 
 def is_guest():
-    return bool(session.get("guest"))
+    if session.get("guest"):
+        return True
+    mob = _mobile_auth()
+    return bool(mob and mob.get("is_guest"))
 
 def is_authorized():
     return is_connected() or is_guest()
@@ -243,7 +329,14 @@ def _get_or_create_guest_id():
     return guest_id
 
 def guest_shop_id():
-    # Email-verified ID is the most authoritative — set by /auth/magic
+    # Mobile: email-verified guest or plain guest
+    mob = _mobile_auth()
+    if mob and mob.get("is_guest"):
+        if mob.get("is_email") and mob.get("shop_id"):
+            return mob["shop_id"]
+        if mob.get("guest_id"):
+            return mob["guest_id"]
+    # Web: Email-verified ID is the most authoritative — set by /auth/magic
     email_id = session.get("email_shop_id")
     if email_id and isinstance(email_id, str) and email_id.startswith("guest_email_"):
         return email_id
@@ -269,6 +362,9 @@ def _try_restore_email_session():
             session.permanent         = True
 
 def is_email_verified():
+    mob = _mobile_auth()
+    if mob and mob.get("is_email"):
+        return True
     _try_restore_email_session()
     return bool(session.get("email_verified") and session.get("email_shop_id"))
 
@@ -292,10 +388,12 @@ def has_premium_access():
 def has_pro_access():
     if is_connected() and shop_id():
         shop = get_shop(str(shop_id()))
-        return bool(shop and shop.get("has_premium") and shop.get("plan") == "pro")
+        plan = (shop.get("plan") or "free") if shop else "free"
+        return bool(shop and shop.get("has_premium") and plan in ("pro", "starter"))
     if is_guest() and is_email_verified():
         shop = get_shop(guest_shop_id())
-        return bool(shop and shop.get("has_premium") and shop.get("plan") == "pro")
+        plan = (shop.get("plan") or "free") if shop else "free"
+        return bool(shop and shop.get("has_premium") and plan in ("pro", "starter"))
     return False
 
 def usage_shop_id():
@@ -303,7 +401,8 @@ def usage_shop_id():
         sid = guest_shop_id()
         ensure_shop(sid, "Guest")
         return sid
-    return str(shop_id())
+    sid = shop_id()
+    return str(sid) if sid else ""
 
 def require_connection():
     if not is_authorized():
@@ -808,11 +907,13 @@ def auth_start():
 
     redirect_uri = _dynamic_redirect_uri()
 
+    is_mobile_oauth = request.args.get("mobile") == "1"
     pre_oauth_guest = guest_shop_id() if is_guest() else None
     session.clear()  # prevent session fixation
-    session["pkce_verifier"]   = verifier
-    session["oauth_state"]     = state
-    session["_redirect_uri"]   = redirect_uri  # store for callback
+    session["pkce_verifier"]    = verifier
+    session["oauth_state"]      = state
+    session["_redirect_uri"]    = redirect_uri  # store for callback
+    session["_is_mobile_oauth"] = is_mobile_oauth
     if pre_oauth_guest:
         session["_pre_oauth_guest_id"] = pre_oauth_guest
 
@@ -852,11 +953,16 @@ def auth_callback():
         session.clear()
         return render_template("connect.html", error="Could not get access token. Please try again.")
 
-    access_token = resp.json().get("access_token")
+    token_json    = resp.json()
+    access_token  = token_json.get("access_token")
+    refresh_token = token_json.get("refresh_token")
+    token_expires = int(time.time()) + int(token_json.get("expires_in", 3600))
     if not access_token:
         session.clear()
         return render_template("connect.html", error="No access token returned.")
 
+    # Capture the mobile flag before the anti-fixation clear wipes it
+    is_mobile_oauth = bool(session.get("_is_mobile_oauth", False))
     session.clear()  # prevent session fixation
 
     h = {"x-api-key": ETSY_API_KEY_HEADER, "Authorization": f"Bearer {access_token}"}
@@ -879,12 +985,29 @@ def auth_callback():
         logger.exception("Etsy auth callback error: %s", e)
         return render_template("connect.html", error="Could not reach Etsy. Please try again.")
 
-    session.permanent = True
-    session["access_token"] = access_token
-    session["shop_id"]      = shop_id_v
-    session["shop_name"]    = shop.get("shop_name", "Your Shop")
+    shop_name_v = shop.get("shop_name", "Your Shop")
+    ensure_shop(str(shop_id_v), shop_name_v)
 
-    ensure_shop(str(shop_id_v), session["shop_name"])
+    session.permanent        = True
+    session["access_token"]  = access_token
+    session["shop_id"]       = shop_id_v
+    session["shop_name"]     = shop_name_v
+    session["refresh_token"] = refresh_token
+    session["token_expires"] = token_expires
+
+    if is_mobile_oauth:
+        mob_tok = create_mobile_token(
+            shop_id=str(shop_id_v),
+            access_token=access_token,
+            shop_name=shop_name_v,
+            refresh_token=refresh_token,
+            expires_at=token_expires,
+        )
+        return redirect(
+            "easylisting://auth?mobile_token="
+            + urllib.parse.quote(mob_tok)
+            + "&shop_name=" + urllib.parse.quote(shop_name_v)
+        )
 
     return redirect(url_for("index"))
 
@@ -900,6 +1023,42 @@ def start_guest():
     session["guest"] = True
     log_abuse_signal("new_guest", ip_hash=_ip_hash())
     return redirect(url_for("index"))
+
+# ── Mobile-specific endpoints ──────────────────────────────────────────────────
+
+@app.route("/api/csrf-token")
+@limiter.limit("60 per minute")
+def api_csrf_token():
+    """Return a CSRF token for the current session. iOS app calls this once, then
+    includes the returned token as X-CSRFToken on every subsequent POST request."""
+    return jsonify({"csrf_token": generate_csrf()})
+
+
+@app.route("/auth/mobile/guest", methods=["POST"])
+@csrf.exempt
+@limiter.limit("5 per hour; 10 per day")
+def auth_mobile_guest():
+    """Create a guest mobile token for anonymous iOS users.
+    Tight rate limit: each call mints a fresh guest with free quota, so this is
+    the main abuse vector for free-limit resets."""
+    guest_id = f"mobile_guest_{secrets.token_urlsafe(12)}"
+    ensure_shop(guest_id, "Guest")
+    log_abuse_signal("new_mobile_guest", ip_hash=_ip_hash(), guest_id=guest_id)
+    mob_tok = create_mobile_token(
+        shop_id=guest_id, is_guest=True, guest_id=guest_id,
+    )
+    return jsonify({"ok": True, "mobile_token": mob_tok})
+
+
+@app.route("/auth/mobile/logout", methods=["POST"])
+@csrf.exempt
+@limiter.limit("30 per minute")
+def auth_mobile_logout():
+    """Invalidate a mobile token (logout from iOS app)."""
+    tok = request.headers.get("X-Mobile-Token", "")
+    if tok:
+        delete_mobile_token(tok)
+    return jsonify({"ok": True})
 
 @app.route("/api/fingerprint", methods=["POST"])
 @csrf.exempt
@@ -955,23 +1114,23 @@ def api_fingerprint():
 @csrf.exempt
 @limiter.limit("5 per minute; 10 per hour")
 def api_magic_link():
-    if not is_guest():
-        if is_connected():
-            return jsonify({"error": "not_guest"}), 400
-        # Session was invalidated by a server restart (new SECRET_KEY) — reinitialize as guest
-        session["guest"] = True
-        session.permanent = True
-    if is_email_verified():
-        # Session already active — ensure DB has a record for this email shop
-        from db import FREE_LIMIT as _FL
-        sid  = guest_shop_id()
-        shop = get_shop(sid)
-        if shop and not shop.get("has_premium") and int(shop.get("free_used", 0)) >= _FL:
-            return jsonify({"error": "limit_reached"}), 403
-        # Backfill verified_emails if missing (e.g. after a DB reset)
-        if sid and sid.startswith("guest_email_"):
-            ensure_shop(sid, "Guest")
-        return jsonify({"ok": True, "already_verified": True})
+    is_mobile = bool(request.headers.get("X-Mobile-Request"))
+
+    if not is_mobile:
+        if not is_guest():
+            if is_connected():
+                return jsonify({"error": "not_guest"}), 400
+            session["guest"] = True
+            session.permanent = True
+        if is_email_verified():
+            from db import FREE_LIMIT as _FL
+            sid  = guest_shop_id()
+            shop = get_shop(sid)
+            if shop and not shop.get("has_premium") and int(shop.get("free_used", 0)) >= _FL:
+                return jsonify({"error": "limit_reached"}), 403
+            if sid and sid.startswith("guest_email_"):
+                ensure_shop(sid, "Guest")
+            return jsonify({"ok": True, "already_verified": True})
 
     body             = request.get_json(silent=True) or {}
     email            = (body.get("email") or "").strip().lower()
@@ -1010,6 +1169,11 @@ def api_magic_link():
 
         if email_shop and not email_shop.get("has_premium") and int(email_shop.get("free_used", 0)) >= _FL2:
             return jsonify({"error": "limit_reached"}), 403
+        if is_mobile:
+            mob_tok = create_mobile_token(
+                shop_id=shop_id_for_email, is_guest=True, is_email=True,
+            )
+            return jsonify({"ok": True, "already_verified": True, "mobile_token": mob_tok})
         session["guest"]          = True
         session["email_verified"] = True
         session["email_shop_id"]  = shop_id_for_email
@@ -1044,8 +1208,11 @@ def api_magic_link():
     create_magic_link(token, email_hash, shop_id_for_email)
 
     base  = REDIRECT_URI.replace("/auth/callback", "")
-    link  = f"{base}/auth/magic?token={token}"
     is_tr = "kolaylistele" in base or request.host and "kolaylistele" in request.host
+    if is_mobile:
+        link = f"easylisting://auth/magic?token={token}"
+    else:
+        link = f"{base}/auth/magic?token={token}"
 
     if marketing_opt_in:
         locale = "tr" if is_tr else "en"
@@ -1148,14 +1315,27 @@ def api_magic_link():
 @app.route("/auth/magic")
 @limiter.limit("20 per minute")
 def auth_magic():
-    token = request.args.get("token", "")
-    row   = use_magic_link(token) if token else None
+    token     = request.args.get("token", "")
+    is_mobile = bool(request.headers.get("X-Mobile-Request"))
+    row       = use_magic_link(token) if token else None
     if not row:
+        if is_mobile:
+            return jsonify({"error": "invalid_or_expired"}), 400
         return render_template("connect.html",
             error="Bu bağlantı geçersiz veya süresi dolmuş. Lütfen tekrar deneyin.")
 
     email_shop_id = row["shop_id"]
-    # Migrate usage from current guest shop → email shop before switching
+    ensure_shop(email_shop_id, "Guest")
+
+    if is_mobile:
+        mob_tok = create_mobile_token(
+            shop_id=email_shop_id,
+            is_guest=True,
+            is_email=True,
+        )
+        return jsonify({"ok": True, "mobile_token": mob_tok, "shop_id": email_shop_id})
+
+    # Web path: migrate usage from current guest shop → email shop before switching
     current_sid = session.get("fp_guest_id") or session.get("guest_id")
     if current_sid and current_sid != email_shop_id:
         current_shop = get_shop(current_sid)
@@ -1235,6 +1415,23 @@ def listings():
     return render_template("listings.html", items=items, state=state,
                            shop_name=session.get("shop_name"))
 
+@app.route("/api/listings")
+@limiter.limit("30 per minute")
+def api_listings():
+    """JSON version of /listings for the mobile app."""
+    if not is_connected():
+        return jsonify({"error": "Not connected"}), 401
+    state = request.args.get("state", "active")
+    if state not in ("draft", "active"):
+        state = "active"
+    r = requests.get(
+        f"https://openapi.etsy.com/v3/application/shops/{shop_id()}/listings"
+        f"?state={state}&limit=100&includes[]=images",
+        headers=etsy_headers(), timeout=HTTP_TIMEOUT,
+    )
+    items = r.json().get("results", []) if r.ok else []
+    return jsonify({"results": items})
+
 @app.route("/api/status")
 @limiter.limit("60 per minute")
 def api_status():
@@ -1252,6 +1449,7 @@ def api_status():
         "allowed":            allowed,
         "remaining":          remaining,
         "is_guest":           is_guest(),
+        "is_email":           is_email_verified(),
         "trendyol_connected": bool(get_platform_credentials(sid, "trendyol")),
     })
 
@@ -1449,7 +1647,7 @@ def api_publish():
 
     # Upload images
     os.makedirs("images", exist_ok=True)
-    access_token = session.get("access_token")
+    access_token = session.get("access_token") or ((_mobile_auth() or {}).get("access_token"))
     safe_lid = str(int(listing_id))  # ensure numeric, no path traversal
     for i, b64 in enumerate(data["image_previews"][:10], 1):
         path = None
@@ -1868,7 +2066,7 @@ def upgrade():
         "upgrade.html",
         shop_name=session.get("shop_name"),
         remaining=remaining,
-        current_plan=s.get("plan", "free"),
+        current_plan=s.get("plan") or "free",
         stripe_key=os.getenv("STRIPE_PUBLISHABLE_KEY", ""),
         has_starter=bool(
             os.getenv("STRIPE_STARTER_PRICE_ID") or os.getenv("STRIPE_STARTER_PRICE_ID_TRY")
@@ -1943,6 +2141,71 @@ def stripe_checkout():
     except Exception as e:
         logger.exception("Stripe checkout error: %s", e)
         return jsonify({"error": safe_error(str(e))}), 500
+
+@app.route("/api/stripe/checkout", methods=["POST"])
+@limiter.limit("10 per minute")
+def api_stripe_checkout():
+    """Mobile-friendly Stripe checkout. Returns {"url": "..."} for the app to open in Safari."""
+    if not is_authorized():
+        return jsonify({"error": "Not connected"}), 401
+    if is_guest() and not is_email_verified():
+        return jsonify({"error": "Please connect with Etsy or verify your email to upgrade."}), 403
+    if not os.getenv("STRIPE_SECRET_KEY"):
+        return jsonify({"error": "Stripe not configured"}), 503
+    body = request.get_json(silent=True) or {}
+    plan = body.get("plan", "pro")
+    if plan not in _PLAN_PRICE_IDS:
+        plan = "pro"
+    price_map = _PLAN_PRICE_IDS_TRY if _is_try_domain() else _PLAN_PRICE_IDS
+    price_env = price_map.get(plan, "STRIPE_PRO_PRICE_ID")
+    price_id  = os.getenv(price_env) or os.getenv("STRIPE_PRICE_ID")
+    if not price_id:
+        return jsonify({"error": "Stripe price not configured for this plan"}), 503
+    base_plan = plan.replace("_annual", "")
+    sid = str(usage_shop_id())
+    mob = _mobile_auth()
+    shop_name_val = (mob or {}).get("shop_name", "") or session.get("shop_name", "")
+    base = request.url_root.rstrip("/")
+    try:
+        import stripe as stripe_lib
+        stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+        checkout = stripe_lib.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=base + f"/upgrade/mobile/return?status=success&plan={plan}",
+            cancel_url=base  + "/upgrade/mobile/return?status=cancel",
+            client_reference_id=sid,
+            metadata={"shop_id": sid, "shop_name": shop_name_val, "plan": base_plan},
+        )
+        return jsonify({"url": checkout.url})
+    except Exception as e:
+        logger.exception("Stripe checkout error (mobile): %s", e)
+        return jsonify({"error": safe_error(str(e))}), 500
+
+@app.route("/upgrade/mobile/return")
+def upgrade_mobile_return():
+    """Redirect page shown after Stripe checkout on mobile. Deeplinks back to the app."""
+    status = request.args.get("status", "cancel")
+    plan   = request.args.get("plan", "pro")
+    if status == "success":
+        deeplink = f"easylisting://upgrade/success?plan={urllib.parse.quote(plan)}"
+        msg      = "Payment complete! Returning to EasyListing…"
+    else:
+        deeplink = "easylisting://upgrade/cancel"
+        msg      = "Returning to EasyListing…"
+    html = f"""<!doctype html>
+<html><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="1;url={deeplink}">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EasyListing</title>
+<style>body{{font-family:-apple-system,sans-serif;display:flex;align-items:center;
+justify-content:center;height:100vh;margin:0;background:#F6F7FB;color:#111827}}</style>
+</head><body>
+<p>{msg}</p>
+<script>setTimeout(()=>window.location='{deeplink}',800)</script>
+</body></html>"""
+    return html, 200
 
 @app.route("/stripe/webhook", methods=["POST"])
 @csrf.exempt
@@ -2408,7 +2671,78 @@ def admin_stats():
     except Exception as e:
         lines.append(f"  ERROR reading tables: {e}")
     lines.append("</pre>")
+
+    # Shops list
+    lines.append("<h3>Shops</h3><pre>")
+    try:
+        import sqlite3 as _sq2
+        con2 = _sq2.connect(_db.DB_PATH)
+        con2.row_factory = _sq2.Row
+        rows = con2.execute(
+            "SELECT shop_id, shop_name, plan, has_premium, free_used FROM shops ORDER BY rowid DESC LIMIT 100"
+        ).fetchall()
+        for r in rows:
+            lines.append(f"  {str(r['shop_id']):<20} {str(r['shop_name'] or ''):<25} plan={r['plan'] or 'free':<10} premium={r['has_premium']} used={r['free_used']}")
+        con2.close()
+    except Exception as e:
+        lines.append(f"  ERROR: {e}")
+    lines.append("</pre>")
     return "\n".join(lines), 200, {"Content-Type": "text/html"}
+
+
+@app.route("/admin/shops-json")
+def admin_shops_json():
+    token = request.args.get("token", "")
+    expected = os.getenv("ADMIN_TOKEN", "")
+    if not expected or not secrets.compare_digest(token, expected):
+        return "", 404
+    import db as _db
+    import sqlite3 as _sq4
+    con = _sq4.connect(_db.DB_PATH)
+    con.row_factory = _sq4.Row
+    rows = con.execute("SELECT shop_id, shop_name, plan, has_premium, free_used FROM shops ORDER BY rowid DESC").fetchall()
+    con.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/admin/set-plan", methods=["POST"])
+@csrf.exempt
+def admin_set_plan():
+    token = request.args.get("token", "")
+    expected = os.getenv("ADMIN_TOKEN", "")
+    if not expected or not secrets.compare_digest(token, expected):
+        return "", 404
+    body = request.get_json(silent=True) or {}
+    shop_id  = str(body.get("shop_id", "")).strip()
+    shop_name = str(body.get("shop_name", "")).strip()
+    plan = body.get("plan", "pro")
+    if plan not in ("free", "starter", "pro"):
+        return jsonify({"error": "invalid plan"}), 400
+    import db as _db
+    import sqlite3 as _sq3
+    # Look up by shop_name if shop_id not provided
+    if not shop_id and shop_name:
+        con3 = _sq3.connect(_db.DB_PATH)
+        con3.row_factory = _sq3.Row
+        rows = con3.execute(
+            "SELECT shop_id, shop_name FROM shops WHERE LOWER(shop_name) = LOWER(?) LIMIT 5",
+            (shop_name,)
+        ).fetchall()
+        con3.close()
+        if not rows:
+            return jsonify({"error": f"no shop found with name '{shop_name}'"}), 404
+        if len(rows) > 1:
+            return jsonify({"error": "multiple shops match", "shops": [dict(r) for r in rows]}), 400
+        shop_id = rows[0]["shop_id"]
+    if not shop_id:
+        return jsonify({"error": "shop_id or shop_name required"}), 400
+    shop = _db.get_shop(shop_id)
+    if not shop:
+        # Create the shop record if it doesn't exist (handles fresh DB after deploy)
+        _db.ensure_shop(shop_id, shop_name or "Shop")
+        shop = _db.get_shop(shop_id) or {}
+    _db.set_premium(shop_id, shop.get("stripe_customer_id") or "admin", "admin", plan != "free", plan)
+    return jsonify({"ok": True, "shop_id": shop_id, "shop_name": shop.get("shop_name") or shop_name, "plan": plan})
 
 
 @app.route("/unsubscribe")

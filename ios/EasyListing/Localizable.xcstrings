@@ -1,0 +1,1066 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%lld free generations left": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ücretsiz hakkınız kaldı"
+          }
+        }
+      }
+    },
+    "%lld generations left": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld oluşturma hakkı kaldı"
+          }
+        }
+      }
+    },
+    "AI improvement": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI iyileştirme"
+          }
+        }
+      }
+    },
+    "AI photo variants": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI fotoğraf varyantları"
+          }
+        }
+      }
+    },
+    "Account": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hesap"
+          }
+        }
+      }
+    },
+    "Active": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktif"
+          }
+        }
+      }
+    },
+    "Add": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekle"
+          }
+        }
+      }
+    },
+    "Add Product": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ürün Ekle"
+          }
+        }
+      }
+    },
+    "Add a new listing from the \"Create\" tab.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"Oluştur\" sekmesinden yeni ilan ekleyin."
+          }
+        }
+      }
+    },
+    "Add tag…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etiket ekle…"
+          }
+        }
+      }
+    },
+    "App": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulama"
+          }
+        }
+      }
+    },
+    "Bulk Create": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toplu İlan Oluştur"
+          }
+        }
+      }
+    },
+    "Bulk Generate": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toplu Oluştur"
+          }
+        }
+      }
+    },
+    "Bulk creation works best with Premium — free plans are limited.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toplu oluşturma Premium ile en iyi çalışır — ücretsiz planlar sınırlıdır."
+          }
+        }
+      }
+    },
+    "Bulk upload": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toplu yükleme"
+          }
+        }
+      }
+    },
+    "By continuing you accept the [Terms of Service](https://easylisting.app/terms) and [Privacy Policy](https://easylisting.app/privacy).": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devam ederek [Kullanım Şartları](https://easylisting.app/terms) ve [Gizlilik Politikası](https://easylisting.app/privacy)'nı kabul etmiş olursunuz."
+          }
+        }
+      }
+    },
+    "Camera": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İptal"
+          }
+        }
+      }
+    },
+    "Connect": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlan"
+          }
+        }
+      }
+    },
+    "Connect with Etsy": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etsy ile Bağlan"
+          }
+        }
+      }
+    },
+    "Connected Account": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlı Hesap"
+          }
+        }
+      }
+    },
+    "Continue as guest": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misafir olarak devam et"
+          }
+        }
+      }
+    },
+    "Could not open the sign-in window.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giriş penceresi açılamadı."
+          }
+        }
+      }
+    },
+    "Could not parse response: %@": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yanıt çözümlenemedi: %@"
+          }
+        }
+      }
+    },
+    "Create": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oluştur"
+          }
+        }
+      }
+    },
+    "Create Etsy listings with AI": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etsy ilanlarını yapay zeka ile oluştur"
+          }
+        }
+      }
+    },
+    "Create Listing": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İlan Oluştur"
+          }
+        }
+      }
+    },
+    "Description": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Açıklama"
+          }
+        }
+      }
+    },
+    "Disconnect": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlantıyı Kes"
+          }
+        }
+      }
+    },
+    "Draft": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taslak"
+          }
+        }
+      }
+    },
+    "E.g. handmade ceramic mug, vintage style...": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ör: el yapımı seramik fincan, vintage tarz..."
+          }
+        }
+      }
+    },
+    "Enter a valid email address.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geçerli bir e-posta adresi girin."
+          }
+        }
+      }
+    },
+    "Etsy category could not be determined. Publish from the web app instead.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etsy kategorisi belirlenemedi. Web uygulamasından yayınlayın."
+          }
+        }
+      }
+    },
+    "Features": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Özellikler"
+          }
+        }
+      }
+    },
+    "Found in Trendyol Seller Panel > API Integration.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trendyol Satıcı Paneli > API Entegrasyonu bölümünden alınır."
+          }
+        }
+      }
+    },
+    "Generated Listing": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oluşturulan İlan"
+          }
+        }
+      }
+    },
+    "Generating…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oluşturuluyor…"
+          }
+        }
+      }
+    },
+    "Guest": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misafir"
+          }
+        }
+      }
+    },
+    "Hello%@!": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merhaba%@!"
+          }
+        }
+      }
+    },
+    "Improve": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İyileştir"
+          }
+        }
+      }
+    },
+    "Improve with AI": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI ile İyileştir"
+          }
+        }
+      }
+    },
+    "Improvements are previews — copy the text into Etsy to apply them.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İyileştirmeler önizlemedir — uygulamak için metni Etsy'ye kopyalayın."
+          }
+        }
+      }
+    },
+    "Invalid URL.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geçersiz URL."
+          }
+        }
+      }
+    },
+    "Keep me updated": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haberdar olmak istiyorum"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dil"
+          }
+        }
+      }
+    },
+    "Link Sent": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlantı Gönderildi"
+          }
+        }
+      }
+    },
+    "Listing improved.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İlan iyileştirildi."
+          }
+        }
+      }
+    },
+    "Listing published on Etsy! 🎉": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İlan Etsy'de yayınlandı! 🎉"
+          }
+        }
+      }
+    },
+    "Multi-language support": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çok dil desteği"
+          }
+        }
+      }
+    },
+    "My Listings": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listelerim"
+          }
+        }
+      }
+    },
+    "No internet connection.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İnternet bağlantısı yok."
+          }
+        }
+      }
+    },
+    "No listings yet": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz ilan yok"
+          }
+        }
+      }
+    },
+    "No response from server.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sunucudan yanıt alınamadı."
+          }
+        }
+      }
+    },
+    "Payment is completed in a secure web browser.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ödeme işlemi güvenli web tarayıcısında tamamlanır."
+          }
+        }
+      }
+    },
+    "Photo Library": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraf Kitaplığı"
+          }
+        }
+      }
+    },
+    "Photos": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar"
+          }
+        }
+      }
+    },
+    "Platform": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Platform"
+          }
+        }
+      }
+    },
+    "Please verify your email to continue.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devam etmek için e-postanızı doğrulayın."
+          }
+        }
+      }
+    },
+    "Premium": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium"
+          }
+        }
+      }
+    },
+    "Premium Member": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium Üye"
+          }
+        }
+      }
+    },
+    "Price": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fiyat"
+          }
+        }
+      }
+    },
+    "Privacy Policy": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gizlilik Politikası"
+          }
+        }
+      }
+    },
+    "Product Hint (Optional)": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ürün İpucu (İsteğe Bağlı)"
+          }
+        }
+      }
+    },
+    "Product hint…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ürün ipucu…"
+          }
+        }
+      }
+    },
+    "Publish to Etsy": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etsy'de Yayınla"
+          }
+        }
+      }
+    },
+    "Regenerate Tags": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etiketleri Yenile"
+          }
+        }
+      }
+    },
+    "SEO Title": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SEO Başlığı"
+          }
+        }
+      }
+    },
+    "Select": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçin"
+          }
+        }
+      }
+    },
+    "Send Link": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlantı Gönder"
+          }
+        }
+      }
+    },
+    "Session expired. Please sign in again.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oturum süresi doldu. Lütfen tekrar giriş yapın."
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarlar"
+          }
+        }
+      }
+    },
+    "Shipping": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kargo"
+          }
+        }
+      }
+    },
+    "Shipping Profile": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kargo Profili"
+          }
+        }
+      }
+    },
+    "Shorten": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kısalt"
+          }
+        }
+      }
+    },
+    "Sign Out": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çıkış Yap"
+          }
+        }
+      }
+    },
+    "Sign in with Email": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-posta ile Giriş"
+          }
+        }
+      }
+    },
+    "Sign-in could not be completed. Please try again.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giriş tamamlanamadı. Lütfen tekrar deneyin."
+          }
+        }
+      }
+    },
+    "Something went wrong. Please try again.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
+          }
+        }
+      }
+    },
+    "Status": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durum"
+          }
+        }
+      }
+    },
+    "Supplier ID": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tedarikçi ID"
+          }
+        }
+      }
+    },
+    "Support": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destek"
+          }
+        }
+      }
+    },
+    "Tags": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etiketler"
+          }
+        }
+      }
+    },
+    "Target Language": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hedef Dil"
+          }
+        }
+      }
+    },
+    "Terms of Service": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kullanım Şartları"
+          }
+        }
+      }
+    },
+    "This feature requires a Premium plan.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu özellik Premium plan gerektirir."
+          }
+        }
+      }
+    },
+    "This feature requires the Pro plan.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu özellik Pro plan gerektirir."
+          }
+        }
+      }
+    },
+    "Title": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başlık"
+          }
+        }
+      }
+    },
+    "Translate": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çevir"
+          }
+        }
+      }
+    },
+    "Trendyol API Credentials": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trendyol API Bilgileri"
+          }
+        }
+      }
+    },
+    "Trendyol Connection": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trendyol Bağlantısı"
+          }
+        }
+      }
+    },
+    "Trendyol connected!": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trendyol bağlantısı başarılı!"
+          }
+        }
+      }
+    },
+    "Try Again": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekrar Dene"
+          }
+        }
+      }
+    },
+    "Unexpected server response. Please update the app and try again.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beklenmeyen sunucu yanıtı. Uygulamayı güncelleyip tekrar deneyin."
+          }
+        }
+      }
+    },
+    "Unlimited listing generation": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sınırsız ilan oluşturma"
+          }
+        }
+      }
+    },
+    "Upgrade to Premium": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium'a Geç"
+          }
+        }
+      }
+    },
+    "Upgrade to Premium (Web)": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium'a Geç (Web)"
+          }
+        }
+      }
+    },
+    "Use a different email": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farklı e-posta kullan"
+          }
+        }
+      }
+    },
+    "Verifying…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğrulanıyor…"
+          }
+        }
+      }
+    },
+    "Warmer Description": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daha Sıcak Açıklama"
+          }
+        }
+      }
+    },
+    "We sent a sign-in link to **%@**. Tap the link and the app will open automatically.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**%@** adresine giriş bağlantısı gönderdik. Bağlantıya tıklayın, uygulama otomatik açılacaktır."
+          }
+        }
+      }
+    },
+    "We'll send a sign-in link to your email.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-posta adresinize giriş bağlantısı göndereceğiz."
+          }
+        }
+      }
+    },
+    "You will be signed out of your account.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hesabınızdan çıkış yapılacak."
+          }
+        }
+      }
+    },
+    "You've used all your free generations.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ücretsiz oluşturma hakkınız doldu."
+          }
+        }
+      }
+    },
+    "You've used all your free generations. Upgrade to Premium.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ücretsiz oluşturma hakkınız doldu. Premium'a geçin."
+          }
+        }
+      }
+    },
+    "Your Email": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-posta Adresiniz"
+          }
+        }
+      }
+    },
+    "you@example.com": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ornek@email.com"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

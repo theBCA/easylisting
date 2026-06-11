@@ -14,3 +14,12 @@ demo/
 .dev.vars*
 !.dev.vars.example
 .gitignore.local
+
+# iOS secrets & build artifacts
+*.p8
+ios/DerivedData/
+ios/build/
+ios/fastlane/report.xml
+ios/fastlane/.env
+*.ipa
+*.dSYM.zip
