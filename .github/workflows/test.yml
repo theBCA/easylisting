@@ -19,7 +19,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt pytest
 
       - name: Run tests
         env:
@@ -31,4 +31,4 @@ jobs:
           STRIPE_WEBHOOK_SECRET: "whsec_test_fake"
           STRIPE_STARTER_PRICE_ID: "price_starter_fake"
           STRIPE_PRO_PRICE_ID: "price_pro_fake"
-        run: python -m pytest test_app.py -v --tb=short
+        run: python -m pytest web/tests -m "not integration" -v --tb=short

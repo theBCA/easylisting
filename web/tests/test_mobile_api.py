@@ -193,7 +193,7 @@ class TestMobileTokenAuth:
         r = client.get("/api/listings", headers={"X-Mobile-Token": mobile_guest_token})
         assert r.status_code == 401
 
-    @patch("app.requests.get")
+    @patch("requests.get")
     def test_listings_endpoint_with_etsy_token(self, mock_get, client):
         tok = _etsy_token()
         mock_get.return_value = MagicMock(
@@ -207,7 +207,7 @@ class TestMobileTokenAuth:
 
     def test_listings_rejects_invalid_state(self, client):
         tok = _etsy_token()
-        with patch("app.requests.get") as mock_get:
+        with patch("requests.get") as mock_get:
             mock_get.return_value = MagicMock(ok=True, json=lambda: {"results": []})
             client.get("/api/listings?state=<script>", headers={"X-Mobile-Token": tok})
             assert "state=active" in mock_get.call_args.args[0]
@@ -216,7 +216,7 @@ class TestMobileTokenAuth:
 # ── Etsy token refresh ────────────────────────────────────────────────────────
 
 class TestEtsyTokenRefresh:
-    @patch("app.requests.post")
+    @patch("requests.post")
     def test_expired_token_triggers_refresh(self, mock_post, client):
         tok = _etsy_token(refresh_token="ref_tok", expires_at=int(time.time()) - 10)
         mock_post.return_value = MagicMock(ok=True, json=lambda: {
@@ -229,14 +229,14 @@ class TestEtsyTokenRefresh:
         assert row["refresh_token"] == "new_ref"
         assert row["expires_at"] > time.time()
 
-    @patch("app.requests.post")
+    @patch("requests.post")
     def test_valid_token_skips_refresh(self, mock_post, client):
         tok = _etsy_token(refresh_token="ref", expires_at=int(time.time()) + 3000)
         db_module.ensure_shop("12345", "TestShop")
         client.get("/api/status", headers={"X-Mobile-Token": tok})
         mock_post.assert_not_called()
 
-    @patch("app.requests.post")
+    @patch("requests.post")
     def test_failed_refresh_keeps_old_token(self, mock_post, client):
         tok = _etsy_token(refresh_token="ref", expires_at=int(time.time()) - 10)
         mock_post.return_value = MagicMock(ok=False, status_code=400)
@@ -262,8 +262,8 @@ class TestMobileOAuth:
         with client.session_transaction() as sess:
             assert sess["_is_mobile_oauth"] is False
 
-    @patch("app.requests.get")
-    @patch("app.requests.post")
+    @patch("requests.get")
+    @patch("requests.post")
     def test_mobile_callback_redirects_to_app_scheme(self, mock_post, mock_get, client):
         with client.session_transaction() as sess:
             sess["oauth_state"]      = "state123"
@@ -288,8 +288,8 @@ class TestMobileOAuth:
         assert row["shop_id"] == "777"
         assert row["refresh_token"] == "rt"
 
-    @patch("app.requests.get")
-    @patch("app.requests.post")
+    @patch("requests.get")
+    @patch("requests.post")
     def test_web_callback_still_redirects_to_index(self, mock_post, mock_get, client):
         with client.session_transaction() as sess:
             sess["oauth_state"]   = "state123"
@@ -309,7 +309,7 @@ class TestMobileOAuth:
 # ── mobile magic link flow ────────────────────────────────────────────────────
 
 class TestMobileMagicLink:
-    @patch("app.send_email", return_value=(True, None))
+    @patch("apis.auth.send_email", return_value=(True, None))
     def test_new_email_sends_app_scheme_link(self, mock_send, client):
         r = client.post("/api/magic-link",
                         headers={"X-Mobile-Request": "true"},
@@ -319,7 +319,7 @@ class TestMobileMagicLink:
         link_text = mock_send.call_args.args[2]
         assert "easylisting://auth/magic?token=" in link_text
 
-    @patch("app.send_email", return_value=(True, None))
+    @patch("apis.auth.send_email", return_value=(True, None))
     def test_returning_email_gets_instant_token(self, mock_send, client):
         import hashlib
         email_hash = hashlib.sha256(b"ret@example.com").hexdigest()

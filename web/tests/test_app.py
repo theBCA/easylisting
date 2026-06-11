@@ -592,7 +592,7 @@ def _jpeg_bytes():
 def test_generate_returns_listing_for_connected_shop(connected_client):
     db_module.ensure_shop("12345", "TestShop")
 
-    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)) as mock_ai, \
+    with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)) as mock_ai, \
          patch("requests.get") as mock_get:
         mock_get.return_value = MagicMock(ok=True, json=lambda: {"results": []})
 
@@ -653,7 +653,7 @@ def test_generate_all_providers_quota_returns_503(connected_client):
     def raise_quota(*args, **kwargs):
         raise RuntimeError("quota_exceeded")
 
-    with patch("app._run_provider", side_effect=raise_quota), \
+    with patch("apis.listings._run_provider", side_effect=raise_quota), \
          patch.dict(os.environ, {"NVIDIA_API_KEY": "fake", "GEMINI_API_KEY": "fake", "OPENAI_API_KEY": "fake"}):
         import io
         resp = connected_client.post(
@@ -694,7 +694,10 @@ def test_publish_creates_listing_on_etsy(connected_client):
 
 
 def test_publish_returns_400_on_etsy_error(connected_client):
+    # Etsy returns a non-JSON error body ("shop not ready") — .json() raises,
+    # so the route falls back to its default user-facing message.
     etsy_fail = MagicMock(ok=False, text="shop not ready")
+    etsy_fail.json.side_effect = ValueError("not json")
     etsy_readiness = MagicMock(ok=True, json=lambda: {"results": []})
 
     with patch("requests.post", return_value=etsy_fail), \
@@ -736,7 +739,7 @@ def test_improve_listing_returns_improved_data(connected_client):
     db_module.ensure_shop("12345", "TestShop")
     improved = {"title": "Better SEO Hat", "description": "Improved desc", "tags": ["tag1"]}
 
-    with patch("app._run_text_json", return_value=improved):
+    with patch("apis.listings._run_text_json", return_value=improved):
         resp = connected_client.post(
             "/api/improve-listing",
             json={"action": "title_seo", "title": "Hat", "description": "Old desc", "tags": []},
@@ -753,7 +756,7 @@ def test_improve_listing_premium_does_not_increment(connected_client):
     db_module.set_premium("12345", "cus_x", "sub_x", True, "pro")
     improved = {"title": "SEO Hat", "description": "desc", "tags": []}
 
-    with patch("app._run_text_json", return_value=improved):
+    with patch("apis.listings._run_text_json", return_value=improved):
         resp = connected_client.post(
             "/api/improve-listing",
             json={"action": "title_seo", "title": "Hat", "description": "desc", "tags": []},
@@ -785,7 +788,7 @@ def test_translate_returns_translated_data(connected_client):
     db_module.ensure_shop("12345", "TestShop")
     translated = {"title": "Gehäkelte Mütze", "description": "Beschreibung", "tags": ["handgemacht"]}
 
-    with patch("app._translate_ai", return_value=translated):
+    with patch("apis.translate._translate_ai", return_value=translated):
         resp = connected_client.post(
             "/api/translate",
             json={"lang": "de", "title": "Crochet Hat", "description": "Nice hat", "tags": ["handmade"]},
@@ -841,10 +844,10 @@ def test_magic_link_sent_to_guest(client):
         sess["guest"]    = True
         sess["guest_id"] = "guest-ml-test"
 
-    with patch("app.send_email", return_value=(True, None)) as mock_mail, \
-         patch("app.count_recent_magic_links", return_value=0), \
-         patch("app.get_or_create_email_shop", return_value="email-shop-1"), \
-         patch("app.create_magic_link"):
+    with patch("apis.auth.send_email", return_value=(True, None)) as mock_mail, \
+         patch("apis.auth.count_recent_magic_links", return_value=0), \
+         patch("apis.auth.get_or_create_email_shop", return_value="email-shop-1"), \
+         patch("apis.auth.create_magic_link"):
         db_module.ensure_shop("email-shop-1", "Guest")
         resp = client.post(
             "/api/magic-link",
@@ -876,7 +879,7 @@ def test_magic_link_rate_limited(client):
         sess["guest"]    = True
         sess["guest_id"] = "guest-ml-ratelimit"
 
-    with patch("app.count_recent_magic_links", return_value=5):
+    with patch("apis.auth.count_recent_magic_links", return_value=5):
         resp = client.post(
             "/api/magic-link",
             json={"email": "user@example.com"},
@@ -897,7 +900,7 @@ def test_magic_link_rejects_non_guest(connected_client):
 
 def test_auth_magic_valid_token_sets_session(client):
     fake_row = {"shop_id": "email-shop-42"}
-    with patch("app.use_magic_link", return_value=fake_row):
+    with patch("apis.auth.use_magic_link", return_value=fake_row):
         resp = client.get("/auth/magic?token=valid-token-abc")
     assert resp.status_code == 200
     with client.session_transaction() as sess:
@@ -918,7 +921,7 @@ def test_bulk_generate_returns_data_for_premium(connected_client):
     db_module.ensure_shop("12345", "TestShop")
     db_module.set_premium("12345", "cus_bulk", "sub_bulk", True, "pro")
 
-    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)):
+    with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)):
         import io
         data = {
             "images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"),
@@ -1031,7 +1034,7 @@ def test_stripe_checkout_try_domain_uses_try_price(connected_client):
 
     with patch.dict(os.environ, {"STRIPE_PRO_PRICE_ID_TRY": "price_try_pro_fake"}), \
          patch("stripe.checkout.Session.create", return_value=mock_session) as mock_create, \
-         patch("app._is_try_domain", return_value=True):
+         patch("apis.payments._is_try_domain", return_value=True):
         resp = connected_client.post(
             "/stripe/checkout",
             json={"plan": "pro"},
@@ -1154,7 +1157,7 @@ def test_email_verified_guest_can_generate(client):
 
     db_module.ensure_shop("email-shop-verified-1", "Guest")
 
-    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
+    with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
          patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
         import io
         resp = client.post(
@@ -1268,7 +1271,7 @@ def test_listing_variants_returns_data_for_premium(connected_client):
         ]
     }
 
-    with patch("app._run_text_json", return_value=fake_variants):
+    with patch("apis.listings._run_text_json", return_value=fake_variants):
         resp = connected_client.post(
             "/api/listing-variants",
             json={"title": "Crochet Hat", "description": "Nice hat", "tags": ["crochet"]},
@@ -1286,7 +1289,7 @@ def test_listing_variants_starter_plan_allowed(connected_client):
     db_module.set_premium("12345", "cus_st", "sub_st", True, "starter")
 
     fake_variants = {"variants": [{"name": "v1", "title": "t", "description": "d", "tags": []}]}
-    with patch("app._run_text_json", return_value=fake_variants):
+    with patch("apis.listings._run_text_json", return_value=fake_variants):
         resp = connected_client.post(
             "/api/listing-variants",
             json={"title": "Hat"},
@@ -1308,8 +1311,8 @@ def test_generate_photos_full_flow_for_pro(connected_client):
     fake_variant_img = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
 
     # FAL_KEY is a module-level var — must patch on the module, not via env
-    with patch("app.FAL_KEY", "fal-test-key"), \
-         patch("app._fal_generate_variant", return_value=fake_variant_img):
+    with patch("apis.photos.FAL_KEY", "fal-test-key"), \
+         patch("apis.photos._fal_generate_variant", return_value=fake_variant_img):
         resp = connected_client.post(
             "/api/generate-photos",
             json={
@@ -1331,7 +1334,7 @@ def test_generate_photos_requires_data_url(connected_client):
     db_module.ensure_shop("12345", "TestShop")
     db_module.set_premium("12345", "cus_ph2", "sub_ph2", True, "pro")
 
-    with patch("app.FAL_KEY", "fal-test-key"):
+    with patch("apis.photos.FAL_KEY", "fal-test-key"):
         resp = connected_client.post(
             "/api/generate-photos",
             json={"image": "https://example.com/not-a-data-url.jpg"},
@@ -1345,7 +1348,7 @@ def test_generate_photos_rejected_without_fal_key(connected_client):
     db_module.ensure_shop("12345", "TestShop")
     db_module.set_premium("12345", "cus_ph3", "sub_ph3", True, "pro")
 
-    with patch("app.FAL_KEY", None):
+    with patch("apis.photos.FAL_KEY", None):
         import base64
         fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
         resp = connected_client.post(
@@ -1406,14 +1409,14 @@ def test_unsubscribe_with_no_token_returns_400(client):
 
 
 def test_unsubscribe_with_valid_token(client):
-    with patch("app.unsubscribe_by_token", return_value=True):
+    with patch("apis.pages.unsubscribe_by_token", return_value=True):
         resp = client.get("/unsubscribe?token=valid-token-abc")
     assert resp.status_code == 200
     assert b"unsubscribe" in resp.data.lower() or b"abonelik" in resp.data.lower()
 
 
 def test_unsubscribe_with_already_used_token(client):
-    with patch("app.unsubscribe_by_token", return_value=False):
+    with patch("apis.pages.unsubscribe_by_token", return_value=False):
         resp = client.get("/unsubscribe?token=used-token")
     assert resp.status_code == 200
     assert b"invalid" in resp.data.lower() or b"kullan" in resp.data.lower()
@@ -1460,7 +1463,7 @@ def test_full_flow_email_user_buys_pro_then_generates(client):
     assert shop["has_premium"] == 1
 
     # Step 4: Generate listing (should now be unlimited)
-    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
+    with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
          patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
         import io
         gen_resp = client.post(
@@ -1485,7 +1488,7 @@ def test_full_flow_etsy_user_publish_cycle(client):
     connected_client = client
 
     # Generate
-    with patch("app._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
+    with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
          patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
         import io
         gen = connected_client.post(
@@ -1497,7 +1500,7 @@ def test_full_flow_etsy_user_publish_cycle(client):
 
     # Improve
     improved = {"title": "Better Hat", "description": "Improved", "tags": ["hat"]}
-    with patch("app._run_text_json", return_value=improved):
+    with patch("apis.listings._run_text_json", return_value=improved):
         imp = connected_client.post(
             "/api/improve-listing",
             json={"action": "title_seo", "title": "Hat", "description": "Old", "tags": []},
@@ -1506,7 +1509,7 @@ def test_full_flow_etsy_user_publish_cycle(client):
 
     # Translate
     translated = {"title": "Mütze", "description": "Beschreibung", "tags": ["Hut"]}
-    with patch("app._translate_ai", return_value=translated):
+    with patch("apis.translate._translate_ai", return_value=translated):
         tr = connected_client.post(
             "/api/translate",
             json={"lang": "de", "title": "Hat", "description": "A hat", "tags": ["hat"]},
@@ -1726,7 +1729,7 @@ def test_trendyol_connect_missing_fields(connected_client):
 
 
 def test_trendyol_connect_success(connected_client):
-    with patch("app._tr_get") as mock_get:
+    with patch("apis.trendyol._tr_get") as mock_get:
         mock_get.return_value = _make_tr_response(200, {"supplierAddresses": []})
         resp = connected_client.post("/api/trendyol/connect", json={
             "supplier_id": "sup-1", "api_key": "key-1", "api_secret": "sec-1"
@@ -1739,7 +1742,7 @@ def test_trendyol_connect_success(connected_client):
 
 
 def test_trendyol_connect_invalid_credentials(connected_client):
-    with patch("app._tr_get") as mock_get:
+    with patch("apis.trendyol._tr_get") as mock_get:
         mock_get.return_value = _make_tr_response(401)
         resp = connected_client.post("/api/trendyol/connect", json={
             "supplier_id": "bad", "api_key": "bad", "api_secret": "bad"
@@ -1748,7 +1751,7 @@ def test_trendyol_connect_invalid_credentials(connected_client):
 
 
 def test_trendyol_connect_api_down(connected_client):
-    with patch("app._tr_get", side_effect=Exception("timeout")):
+    with patch("apis.trendyol._tr_get", side_effect=Exception("timeout")):
         resp = connected_client.post("/api/trendyol/connect", json={
             "supplier_id": "s", "api_key": "k", "api_secret": "x"
         })
@@ -1781,7 +1784,7 @@ def test_trendyol_addresses_requires_connection(connected_client):
 def test_trendyol_addresses_returns_list(connected_client):
     db_module.save_platform_credentials("12345", "trendyol",
         {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
-    with patch("app._tr_get") as mock_get:
+    with patch("apis.trendyol._tr_get") as mock_get:
         mock_get.return_value = _make_tr_response(200, {
             "supplierAddresses": [{"id": 10, "fullAddress": "Istanbul"}]
         })
@@ -1800,7 +1803,7 @@ def test_trendyol_categories_returns_and_caches(connected_client):
     db_module.save_platform_credentials("12345", "trendyol",
         {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
     cats = [{"id": 1, "name": "Electronics"}]
-    with patch("app._tr_get") as mock_get:
+    with patch("apis.trendyol._tr_get") as mock_get:
         mock_get.return_value = _make_tr_response(200, {"categories": cats})
         resp1 = connected_client.get("/api/trendyol/categories")
         resp2 = connected_client.get("/api/trendyol/categories")  # should use cache
@@ -1816,7 +1819,7 @@ def test_trendyol_cat_attributes_requires_auth(client):
 def test_trendyol_cat_attributes_returns_data(connected_client):
     db_module.save_platform_credentials("12345", "trendyol",
         {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
-    with patch("app._tr_get") as mock_get:
+    with patch("apis.trendyol._tr_get") as mock_get:
         mock_get.return_value = _make_tr_response(200, {"categoryAttributes": []})
         resp = connected_client.get("/api/trendyol/categories/42/attributes")
     assert resp.status_code == 200
@@ -1837,7 +1840,7 @@ def test_trendyol_brands_short_query_returns_empty(connected_client):
 def test_trendyol_brands_returns_results(connected_client):
     db_module.save_platform_credentials("12345", "trendyol",
         {"supplier_id": "s", "api_key": "k", "api_secret": "x"})
-    with patch("app._tr_get") as mock_get:
+    with patch("apis.trendyol._tr_get") as mock_get:
         mock_get.return_value = _make_tr_response(200, [{"id": 5, "name": "Nike"}])
         resp = connected_client.get("/api/trendyol/brands?q=nike")
     assert resp.status_code == 200
@@ -1902,8 +1905,8 @@ def test_trendyol_publish_success(connected_client):
     # Minimal valid JPEG data URL
     fake_b64 = "data:image/jpeg;base64," + base64.b64encode(
         b"\xff\xd8\xff\xe0" + b"\x00" * 12).decode()
-    with patch("app._tr_post") as mock_post, \
-         patch("app._save_image_for_upload", return_value="test.jpg"):
+    with patch("apis.trendyol._tr_post") as mock_post, \
+         patch("apis.trendyol._save_image_for_upload", return_value="test.jpg"):
         mock_post.return_value = _make_tr_response(200, {"batchRequestId": "batch-1"})
         resp = connected_client.post("/api/trendyol/publish", json={
             "barcode": "1234", "title": "My Product", "description": "A product",

@@ -30,7 +30,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>3</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is needed to take product photos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
