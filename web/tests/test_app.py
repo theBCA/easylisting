@@ -724,8 +724,16 @@ def test_publish_uploads_images(connected_client):
             return etsy_img_upload
         return etsy_create
 
+    # Bypass the background thread so the mock captures upload calls synchronously.
+    import apis.listings as listings_mod
+
+    def sync_bg(safe_lid, data, access_token):
+        sid = "12345"
+        listings_mod._upload_images(safe_lid, sid, data["image_previews"], access_token)
+
     with patch("requests.post", side_effect=mock_post), \
-         patch("requests.get",  return_value=etsy_readiness):
+         patch("requests.get",  return_value=etsy_readiness), \
+         patch("apis.listings._bg_post_listing", side_effect=sync_bg):
         resp = connected_client.post("/api/publish", json=payload)
 
     assert resp.status_code == 200

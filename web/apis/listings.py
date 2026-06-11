@@ -4,6 +4,7 @@ import json
 import time
 import base64
 import tempfile
+import threading
 
 import requests
 from flask import (
@@ -256,6 +257,76 @@ def api_taxonomy():
                 yield from flatten(n["children"], full)
     return jsonify(list(flatten(r.json().get("results", [])))[:40])
 
+def _bg_post_listing(safe_lid, data, access_token):
+    """Upload images + personalization after listing creation, in a daemon thread.
+
+    shop_id() and etsy_headers() read from Flask session, which only exists in
+    a request context. Snapshot them here (still in-context) and pass as plain
+    values so the thread runs without a request context.
+    """
+    sid          = str(shop_id())
+    auth_headers = etsy_headers()
+
+    def _run():
+        _upload_images(safe_lid, sid, data["image_previews"], access_token)
+        _post_personalization(safe_lid, sid, auth_headers, data["personalization_instructions"])
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _upload_images(safe_lid, sid, image_previews, access_token):
+    os.makedirs("images", exist_ok=True)
+    for i, b64 in enumerate(image_previews[:10], 1):
+        path = None
+        try:
+            if "," in b64:
+                b64 = b64.split(",", 1)[1]
+            img_bytes = base64.b64decode(b64)
+            if len(img_bytes) > 10 * 1024 * 1024:
+                continue
+            if not _is_valid_image_bytes(img_bytes):
+                logger.warning("Skipping invalid image bytes for listing %s", safe_lid)
+                continue
+            with tempfile.NamedTemporaryFile(suffix=".jpg", dir="images", delete=False) as tmp:
+                tmp.write(img_bytes)
+                path = tmp.name
+            with open(path, "rb") as f:
+                requests.post(
+                    f"https://openapi.etsy.com/v3/application/shops/{sid}/listings/{safe_lid}/images",
+                    headers={"x-api-key": ETSY_API_KEY_HEADER,
+                             "Authorization": f"Bearer {access_token}"},
+                    files={"image": f},
+                    data={"rank": i},
+                    timeout=HTTP_TIMEOUT,
+                )
+            time.sleep(0.2)
+        except Exception as e:
+            logger.error("Image upload error for listing %s: %s", safe_lid, e)
+        finally:
+            if path and os.path.exists(path):
+                os.remove(path)
+
+
+def _post_personalization(safe_lid, sid, auth_headers, pi):
+    if not pi:
+        return
+    try:
+        requests.post(
+            f"https://openapi.etsy.com/v3/application/shops/{sid}/listings/{safe_lid}/personalization",
+            headers={**auth_headers, "Content-Type": "application/json"},
+            json={"personalization_questions": [{
+                "question_text": "Personalization",
+                "instructions":  pi,
+                "question_type": "text_input",
+                "required":      False,
+                "max_allowed_characters": 256,
+            }]},
+            timeout=HTTP_TIMEOUT,
+        )
+    except Exception as e:
+        logger.error("Personalization error for listing %s: %s", safe_lid, e)
+
+
 @bp.route("/api/publish", methods=["POST"])
 @limiter.limit("20 per minute")
 def api_publish():
@@ -319,56 +390,13 @@ def api_publish():
         return jsonify({"error": user_msg}), 400
 
     listing_id = r.json()["listing_id"]
+    safe_lid   = str(int(listing_id))  # ensure numeric, no path traversal
 
-    # Upload images
-    os.makedirs("images", exist_ok=True)
+    # Upload images + personalization in a background thread so the response
+    # returns immediately (image uploads can take 60–120s for 5+ images,
+    # easily exceeding the gunicorn 120s worker timeout).
     access_token = session.get("access_token") or ((_mobile_auth() or {}).get("access_token"))
-    safe_lid = str(int(listing_id))  # ensure numeric, no path traversal
-    for i, b64 in enumerate(data["image_previews"][:10], 1):
-        path = None
-        try:
-            if "," in b64:
-                b64 = b64.split(",", 1)[1]
-            img_bytes = base64.b64decode(b64)
-            if len(img_bytes) > 10 * 1024 * 1024:
-                continue
-            if not _is_valid_image_bytes(img_bytes):
-                logger.warning("Skipping invalid image bytes for listing %s", safe_lid)
-                continue
-            with tempfile.NamedTemporaryFile(suffix=".jpg", dir="images", delete=False) as tmp:
-                tmp.write(img_bytes)
-                path = tmp.name
-            with open(path, "rb") as f:
-                requests.post(
-                    f"https://openapi.etsy.com/v3/application/shops/{shop_id()}/listings/{safe_lid}/images",
-                    headers={"x-api-key": ETSY_API_KEY_HEADER,
-                             "Authorization": f"Bearer {access_token}"},
-                    files={"image": f},
-                    data={"rank": i},
-                    timeout=HTTP_TIMEOUT,
-                )
-            time.sleep(0.2)
-        except Exception as e:
-            logger.error("Image upload error for listing %s: %s", safe_lid, e)
-        finally:
-            if path and os.path.exists(path):
-                os.remove(path)
-
-    # Personalization
-    pi = data["personalization_instructions"]
-    if pi:
-        requests.post(
-            f"https://openapi.etsy.com/v3/application/shops/{shop_id()}/listings/{safe_lid}/personalization",
-            headers={**etsy_headers(), "Content-Type": "application/json"},
-            json={"personalization_questions": [{
-                "question_text": "Personalization",
-                "instructions":  pi,
-                "question_type": "text_input",
-                "required":      False,
-                "max_allowed_characters": 256,
-            }]},
-            timeout=HTTP_TIMEOUT,
-        )
+    _bg_post_listing(safe_lid, data, access_token)
 
     return jsonify({"success": True, "listing_id": listing_id})
 
