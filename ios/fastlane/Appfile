@@ -1,0 +1,5 @@
+app_identifier "com.easylisting"
+
+# Set in ios/fastlane/.env (gitignored) — do NOT hardcode here.
+# apple_id  ENV["FASTLANE_APPLE_ID"]
+team_id ENV["APPLE_TEAM_ID"]
