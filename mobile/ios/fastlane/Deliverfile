@@ -8,9 +8,6 @@ screenshots_path "./screenshots"
 # App Store categories  (primary / secondary)
 primary_category "PRODUCTIVITY"
 
-# Rating — no objectionable content
-app_rating_config_path nil   # App Store Connect default
-
 # Never auto-submit; operator decides when to press the button
 submit_for_review false
 automatic_release false

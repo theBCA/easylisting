@@ -1,5 +1,5 @@
 # Devices to capture (6.7" covers App Store requirement)
-devices(["iPhone 16 Pro Max"])
+devices(["iPhone 15 Pro Max"])
 
 languages(["en-US"])
 

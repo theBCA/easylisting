@@ -1,1 +1,1 @@
-EasyListing
+EasyListing: AI Listing Tool
