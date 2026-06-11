@@ -4,84 +4,132 @@ import AuthenticationServices
 struct AuthView: View {
     @Environment(AppState.self) private var appState
     @State private var showMagicLink = false
-    @State private var isLoading     = false
+    @State private var isLoadingEtsy  = false
+    @State private var isLoadingGuest = false
     @State private var error: String?
     @State private var oauth = OAuthCoordinator()
 
     var body: some View {
-        ZStack {
-            Theme.bg.ignoresSafeArea()
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
+                // ── Hero background ──────────────────────────────────
+                Theme.heroGradient
+                    .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 32) {
-                    // Logo
-                    VStack(spacing: 8) {
-                        Image(systemName: "tag.fill")
-                            .font(.system(size: 72))
-                            .foregroundStyle(Theme.purpleGradient)
-                        HStack(spacing: 0) {
-                            Text(verbatim: "Easy").font(.largeTitle.bold()).foregroundStyle(Theme.purple)
-                            Text(verbatim: "Listing").font(.largeTitle.bold()).foregroundStyle(Theme.textPrimary)
+                // ── Hero content ─────────────────────────────────────
+                VStack(spacing: 0) {
+                    Spacer()
+                    VStack(spacing: Theme.Space.lg) {
+                        // Logo mark
+                        ZStack {
+                            Circle()
+                                .fill(.white.opacity(0.15))
+                                .frame(width: 100, height: 100)
+                            Image(systemName: "tag.fill")
+                                .font(.system(size: 44))
+                                .foregroundStyle(.white)
                         }
-                        Text("Create Etsy listings with AI")
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.textSecondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 60)
 
-                    if let error {
-                        ErrorBanner(message: error)
-                            .padding(.horizontal)
+                        VStack(spacing: 6) {
+                            HStack(spacing: 0) {
+                                Text(verbatim: "Easy")
+                                    .font(.system(size: 38, weight: .black))
+                                    .foregroundStyle(.white)
+                                Text(verbatim: "Listing")
+                                    .font(.system(size: 38, weight: .light))
+                                    .foregroundStyle(.white.opacity(0.9))
+                            }
+                            Text("AI-powered Etsy listing creator")
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.75))
+                        }
+
+                        // Feature bullets
+                        VStack(spacing: 10) {
+                            HeroBullet(icon: "sparkles",       text: "Generate titles, descriptions & tags")
+                            HeroBullet(icon: "arrow.up.circle", text: "Publish directly to your Etsy shop")
+                            HeroBullet(icon: "globe",           text: "Multi-language support")
+                        }
+                        .padding(.horizontal, Theme.Space.xl)
                     }
+                    .padding(.bottom, 280)
+                    Spacer()
+                }
+
+                // ── Action card ──────────────────────────────────────
+                VStack(spacing: 0) {
+                    // Pull indicator
+                    Capsule()
+                        .fill(.white.opacity(0.3))
+                        .frame(width: 36, height: 4)
+                        .padding(.top, 12)
+                        .padding(.bottom, 20)
 
                     VStack(spacing: 12) {
-                        PrimaryButton("Connect with Etsy", isLoading: isLoading) {
+                        if let error {
+                            ErrorBanner(message: error)
+                                .padding(.bottom, 4)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+
+                        PrimaryButton("Connect with Etsy", isLoading: isLoadingEtsy) {
                             Task { await startEtsyOAuth() }
                         }
-                        .padding(.horizontal)
 
                         SecondaryButton("Sign in with Email") {
                             showMagicLink = true
                         }
-                        .padding(.horizontal)
 
-                        Button("Continue as guest") {
+                        Button {
                             Task { await startGuest() }
+                        } label: {
+                            HStack(spacing: 6) {
+                                if isLoadingGuest {
+                                    ProgressView().scaleEffect(0.7)
+                                        .tint(Theme.textSecondary)
+                                }
+                                Text("Continue as guest")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                            .frame(height: 44)
                         }
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
+                        .disabled(isLoadingGuest)
                     }
+                    .padding(.horizontal, Theme.Space.md)
 
                     Text("By continuing you accept the [Terms of Service](https://easylisting.app/terms) and [Privacy Policy](https://easylisting.app/privacy).")
                         .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(Theme.textTertiary)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                        .padding(.bottom, 32)
+                        .padding(.horizontal, Theme.Space.lg)
+                        .padding(.top, 16)
+                        .padding(.bottom, max(geo.safeAreaInsets.bottom + 8, 24))
                 }
+                .background(Theme.bg)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLarge))
+                .shadow(color: .black.opacity(0.18), radius: 30, y: -8)
             }
         }
-        .sheet(isPresented: $showMagicLink) {
-            MagicLinkView()
-        }
+        .ignoresSafeArea()
+        .animation(.easeInOut(duration: 0.2), value: error)
+        .sheet(isPresented: $showMagicLink) { MagicLinkView() }
     }
 
     // MARK: - Etsy OAuth
 
     private func startEtsyOAuth() async {
-        isLoading = true
+        isLoadingEtsy = true
         error = nil
-        defer { isLoading = false }
-
+        defer { isLoadingEtsy = false }
         do {
-            let callbackURL = try await oauth.authenticate(
+            let url = try await oauth.authenticate(
                 startURL: URL(string: "\(Config.baseURL)/auth/start?mobile=1")!,
                 callbackScheme: "easylisting"
             )
-            handleOAuthCallback(callbackURL)
+            handleOAuthCallback(url)
         } catch let err as ASWebAuthenticationSessionError where err.code == .canceledLogin {
-            // user dismissed the sheet — not an error
+            // user dismissed — not an error
         } catch {
             self.error = error.localizedDescription
         }
@@ -100,9 +148,9 @@ struct AuthView: View {
     // MARK: - Guest
 
     private func startGuest() async {
-        isLoading = true
+        isLoadingGuest = true
         error = nil
-        defer { isLoading = false }
+        defer { isLoadingGuest = false }
         do {
             let token = try await APIClient.shared.guestLogin()
             appState.login(mobileToken: token, shopName: nil, isGuest: true)
@@ -112,10 +160,27 @@ struct AuthView: View {
     }
 }
 
+// MARK: - Hero bullet
+
+private struct HeroBullet: View {
+    let icon: String
+    let text: String
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .frame(width: 28, height: 28)
+                .background(.white.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+            Text(text)
+                .font(.subheadline)
+            Spacer()
+        }
+        .foregroundStyle(.white.opacity(0.9))
+    }
+}
+
 // MARK: - OAuth coordinator
-// ASWebAuthenticationSession requires a presentation anchor; without one it
-// fails to start on a real device. This coordinator provides the key window
-// and keeps the session alive for the duration of the flow.
 
 @MainActor
 final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationContextProviding {
@@ -128,13 +193,9 @@ final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPr
                 callbackURLScheme: callbackScheme
             ) { [weak self] callbackURL, error in
                 self?.activeSession = nil
-                if let error {
-                    continuation.resume(throwing: error)
-                } else if let callbackURL {
-                    continuation.resume(returning: callbackURL)
-                } else {
-                    continuation.resume(throwing: NetworkError.noData)
-                }
+                if let error { continuation.resume(throwing: error) }
+                else if let callbackURL { continuation.resume(returning: callbackURL) }
+                else { continuation.resume(throwing: NetworkError.noData) }
             }
             session.presentationContextProvider = self
             session.prefersEphemeralWebBrowserSession = false
