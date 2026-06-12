@@ -140,7 +140,6 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
   .result-area { min-height: 220px; }
 }
 </style>
-{% include '_posthog.html' %}
 </head>
 <body>
 <nav>
@@ -236,11 +235,11 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
           </div>
         </div>
         <div class="step-actions">
-          <button class="btn-generate" id="btnGenerate" onclick="generateCurrent()">
+          <button class="btn-generate" id="btnGenerate">
             ✨ Generate Shot 1
           </button>
-          <button class="btn-next" id="btnNext" onclick="nextStep()">Next →</button>
-          <button class="btn-dl" id="btnDl" onclick="downloadCurrent()">⬇ Download</button>
+          <button class="btn-next" id="btnNext">Next →</button>
+          <button class="btn-dl" id="btnDl">⬇ Download</button>
           <span class="step-hint" id="stepHint"></span>
         </div>
       </div>
@@ -249,7 +248,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
       <div class="collage-card" id="collageCard">
         <div class="collage-header">
           <h3>🎨 Collage Preview</h3>
-          <button class="btn-collage-dl" id="btnCollageDl" onclick="downloadCollage()" style="display:none">⬇ Download Collage</button>
+          <button class="btn-collage-dl" id="btnCollageDl" style="display:none">⬇ Download Collage</button>
         </div>
         <div class="collage-area">
           <div class="collage-grid" id="collageGrid">
@@ -269,6 +268,66 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 <div class="toast" id="toast"></div>
 
 <script nonce="{{ csp_nonce }}">
+// ── i18n ─────────────────────────────────────────────────────────────────────
+const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
+const _lang = localStorage.getItem(LANG_KEY) || 'en';
+const PAGE_STRINGS = {
+  en: { nav_listings:'My Listings', nav_bulk:'Bulk Upload', nav_single:'Single Listing',
+        page_title:'Etsy Photo Set Generator',
+        page_sub:'Upload one product photo — get a professional 6-shot Etsy listing set, one image at a time.',
+        credits_left:'photo credits left this month', upgrade_cta:'Upgrade for more →',
+        drop_title:'Drop your product photo here', drop_sub:'One photo → 6 professional Etsy shots + collage preview',
+        gen_btn:'Generate Shot', regen_btn:'↻ Regenerate', next_btn:'Next →', dl_btn:'⬇ Download',
+        collage_title:'🎨 Collage Preview', collage_dl:'⬇ Download Collage',
+        pro_limit:'Monthly photo limit reached — resets next cycle.',
+        starter_limit:'Out of photo credits — upgrade to Pro for 5 sets/month.',
+        change_photo:'Change photo', click_generate:'Click Generate to create this shot' },
+  de: { nav_listings:'Meine Listings', nav_bulk:'Massen-Upload', nav_single:'Einzel-Listing',
+        page_title:'Etsy Foto-Set Generator',
+        page_sub:'Lade ein Produktfoto hoch – erhalte 6 professionelle Etsy-Fotos, eines nach dem anderen.',
+        credits_left:'Foto-Credits diesen Monat', upgrade_cta:'Mehr kaufen →',
+        drop_title:'Produktfoto hier ablegen', drop_sub:'Ein Foto → 6 professionelle Etsy-Fotos + Collage-Vorschau',
+        gen_btn:'Bild erstellen', regen_btn:'↻ Neu erstellen', next_btn:'Weiter →', dl_btn:'⬇ Herunterladen',
+        collage_title:'🎨 Collage-Vorschau', collage_dl:'⬇ Collage herunterladen',
+        pro_limit:'Monatliches Fotolimit erreicht — wird nächsten Monat zurückgesetzt.',
+        starter_limit:'Keine Foto-Credits mehr — upgrade zu Pro für 5 Sets/Monat.',
+        change_photo:'Foto ändern', click_generate:'Klicke auf Erstellen, um dieses Foto zu erzeugen' },
+  tr: { nav_listings:'Listelerim', nav_bulk:'Toplu Yükleme', nav_single:'Tekil İlan',
+        page_title:'Etsy Foto Seti Oluşturucu',
+        page_sub:'Bir ürün fotoğrafı yükle — 6 profesyonel Etsy fotoğrafı al, birer birer.',
+        credits_left:'bu ay foto kredisi kaldı', upgrade_cta:'Daha fazlası için yükselt →',
+        drop_title:'Ürün fotoğrafını buraya bırak', drop_sub:'Bir fotoğraf → 6 profesyonel Etsy fotoğrafı + kolaj',
+        gen_btn:'Çekim Oluştur', regen_btn:'↻ Yeniden Oluştur', next_btn:'İleri →', dl_btn:'⬇ İndir',
+        collage_title:'🎨 Kolaj Önizlemesi', collage_dl:'⬇ Kolaj İndir',
+        pro_limit:'Aylık fotoğraf limitine ulaşıldı — sonraki dönemde sıfırlanır.',
+        starter_limit:'Foto krediniz bitti — 5 set/ay için Pro\'ya yükseltin.',
+        change_photo:'Fotoğrafı değiştir', click_generate:'Bu çekimi oluşturmak için Oluştur\'a tıkla' },
+};
+const S = PAGE_STRINGS[_lang] || PAGE_STRINGS.en;
+
+function applyLang() {
+  const listingsEl = document.querySelector('a[href="/listings"]');
+  const bulkEl     = document.querySelector('a[href="/bulk"]');
+  const singleEl   = document.querySelector('a[href="/"]');
+  if (listingsEl) listingsEl.textContent = S.nav_listings;
+  if (bulkEl)     bulkEl.textContent     = S.nav_bulk;
+  if (singleEl)   singleEl.textContent   = S.nav_single;
+  const ph = document.querySelector('.page-header > p');
+  if (ph) ph.textContent = S.page_sub;
+  const pill = document.getElementById('creditsPill');
+  if (pill) pill.innerHTML = '📸 <strong id="creditsLeft">…</strong> ' + S.credits_left;
+  const up = document.getElementById('creditsUpgrade');
+  if (up) up.textContent = S.upgrade_cta;
+  const dzt = document.querySelector('.upload-zone h3');
+  if (dzt) dzt.textContent = S.drop_title;
+  const dzp = document.querySelector('.upload-zone p');
+  if (dzp) dzp.textContent = S.drop_sub;
+  const ch = document.querySelector('.collage-header h3');
+  if (ch) ch.textContent = S.collage_title;
+  const cdl = document.getElementById('btnCollageDl');
+  if (cdl) cdl.textContent = S.collage_dl;
+}
+
 const SHOT_META = {
   1: { title: 'Worn / In-Use Scale Shot',      desc: 'Shows the product being worn, held, or used in a realistic human-scale context — helps buyers understand size.' },
   2: { title: 'Clean Studio Product Shot',      desc: 'Bright, uncluttered image on a neutral background showing the whole product clearly.' },
@@ -314,7 +373,10 @@ dropZone.addEventListener('drop', e => {
   const f = e.dataTransfer.files[0];
   if (f) handleFile(f);
 });
-dropZone.addEventListener('click', () => { if (!dropZone.classList.contains('has-image')) fileInput.click(); });
+dropZone.addEventListener('click', e => {
+  if (e.target.classList.contains('change-btn')) { resetAll(); return; }
+  if (!dropZone.classList.contains('has-image')) fileInput.click();
+});
 fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
 
 function handleFile(file) {
@@ -322,10 +384,10 @@ function handleFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
     sourceImage = e.target.result;
-    // Show preview inside upload zone
+    // Show preview inside upload zone (no inline onclick — handled via delegation on dropZone)
     dropZone.innerHTML = `
       <img id="sourcePreview" src="${sourceImage}" alt="Product">
-      <button class="change-btn" onclick="event.stopPropagation();resetAll()">Change photo</button>`;
+      <button class="change-btn">${S.change_photo}</button>`;
     dropZone.classList.add('has-image');
     // Reset state
     description = ''; generated = {}; currentStep = 1;
@@ -381,12 +443,14 @@ function renderStep(step) {
     ra.innerHTML = `<img src="${generated[step]}" alt="${meta.title}">`;
     document.getElementById('btnNext').style.display = step < 6 ? '' : 'none';
     document.getElementById('btnDl').style.display   = '';
-    document.getElementById('btnGenerate').textContent = '↻ Regenerate';
+    document.getElementById('btnDl').textContent     = S.dl_btn;
+    document.getElementById('btnNext').textContent   = S.next_btn;
+    document.getElementById('btnGenerate').textContent = S.regen_btn;
   } else {
-    ra.innerHTML = `<div class="result-placeholder"><div class="ph-icon">📷</div><p>Click Generate to create this shot</p></div>`;
+    ra.innerHTML = `<div class="result-placeholder"><div class="ph-icon">📷</div><p>${S.click_generate}</p></div>`;
     document.getElementById('btnNext').style.display = 'none';
     document.getElementById('btnDl').style.display   = 'none';
-    document.getElementById('btnGenerate').textContent = `✨ Generate Shot ${step}`;
+    document.getElementById('btnGenerate').textContent = `✨ ${S.gen_btn} ${step}`;
   }
   document.getElementById('btnGenerate').disabled = generating;
   document.getElementById('stepHint').textContent = step > 1 && step < 6 ? `Shot ${step} of 6` : (step === 6 ? 'Last shot — then collage!' : '');
@@ -412,8 +476,7 @@ async function generateCurrent() {
   const step = currentStep;
   if (step === 'collage') return;
   if (photoCredits <= 0) {
-    showToast(IS_PRO ? 'Monthly photo limit reached — resets next cycle.'
-                     : 'Out of photo credits — upgrade to Pro for 5 sets/month.', 4500);
+    showToast(IS_PRO ? S.pro_limit : S.starter_limit, 4500);
     return;
   }
   generating = true;
@@ -442,8 +505,7 @@ async function generateCurrent() {
     const data = await resp.json();
     if (data.error === 'photo_limit_reached') {
       photoCredits = 0; renderCredits();
-      throw new Error(IS_PRO ? 'Monthly photo limit reached.'
-                             : 'Out of photo credits — upgrade to Pro for more.');
+      throw new Error(IS_PRO ? S.pro_limit : S.starter_limit);
     }
     if (!resp.ok || data.error) throw new Error(data.error || 'Generation failed');
 
@@ -460,7 +522,7 @@ async function generateCurrent() {
   } catch (e) {
     ra.innerHTML = `<div class="result-placeholder"><div class="ph-icon">❌</div><p>${e.message}</p></div>`;
     btn.disabled = false;
-    btn.textContent = `✨ Generate Shot ${step}`;
+    btn.textContent = `✨ ${S.gen_btn} ${step}`;
     showToast(e.message, 4000);
   } finally {
     generating = false;
@@ -557,7 +619,14 @@ document.querySelectorAll('.step-item[data-step]').forEach(el => {
   });
 });
 
+// ── Button wiring (replaces inline onclick attrs — required by CSP) ───────────
+document.getElementById('btnGenerate').addEventListener('click', generateCurrent);
+document.getElementById('btnNext').addEventListener('click', nextStep);
+document.getElementById('btnDl').addEventListener('click', downloadCurrent);
+document.getElementById('btnCollageDl').addEventListener('click', downloadCollage);
+
 // ── Init ──────────────────────────────────────────────────────────────────────
+applyLang();
 renderCredits();
 </script>
 </body>
