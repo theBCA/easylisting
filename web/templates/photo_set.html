@@ -115,9 +115,11 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 .collage-header h3 { font-size: 17px; font-weight: 800; }
 .collage-area { padding: 0 24px 24px; }
 .collage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; border-radius: 12px; overflow: hidden; }
-.collage-cell { aspect-ratio: 1; background: var(--bg); overflow: hidden; }
-.collage-cell img { width: 100%; height: 100%; object-fit: cover; }
+.collage-cell { aspect-ratio: 1; background: var(--bg); overflow: hidden; position: relative; }
+.collage-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .collage-empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; font-weight: 600; }
+.cell-dl { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,.55); color: white; border: none; border-radius: 6px; padding: 4px 9px; font-size: 11px; font-weight: 700; cursor: pointer; opacity: 0; transition: opacity .15s; }
+.collage-cell:hover .cell-dl { opacity: 1; }
 .btn-collage-dl { background: var(--amber); color: white; border: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
 .btn-collage-dl:hover { background: #B45309; }
 
@@ -555,7 +557,7 @@ function updateCollageGrid() {
     const cell = document.getElementById('cc-' + s);
     if (!cell) continue;
     if (generated[s]) {
-      cell.innerHTML = `<img src="${generated[s]}" alt="Shot ${s}">`;
+      cell.innerHTML = `<img src="${generated[s]}" alt="Shot ${s}"><button class="cell-dl" data-shot="${s}">⬇ ${s}</button>`;
       cell.classList.remove('collage-empty');
     } else {
       cell.innerHTML = String(s);
@@ -617,6 +619,18 @@ document.querySelectorAll('.step-item[data-step]').forEach(el => {
     const s = el.dataset.step;
     renderStep(s === 'collage' ? 'collage' : parseInt(s));
   });
+});
+
+// ── Collage grid: per-image download via event delegation ────────────────────
+document.getElementById('collageGrid').addEventListener('click', e => {
+  const btn = e.target.closest('.cell-dl');
+  if (!btn) return;
+  const s = parseInt(btn.dataset.shot);
+  if (!generated[s]) return;
+  const a = document.createElement('a');
+  a.href = generated[s];
+  a.download = `etsy-shot-${s}.jpg`;
+  a.click();
 });
 
 // ── Button wiring (replaces inline onclick attrs — required by CSP) ───────────
