@@ -246,6 +246,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
   .nav-logo { font-size: 15px; }
   .nav-links { gap: 4px; width: 100%; flex-wrap: wrap; }
   .nav-links a[href="/bulk"] { display: none; }
+  .nav-links a[href="/photo-set"] { display: none; }
   .nav-sep { display: none; }
   .btn-icon { font-size: 12px; padding: 4px 8px; background: var(--primary-light); color: var(--primary); border-radius: 6px; }
   .lang-switcher { display: none; }
@@ -295,6 +296,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     <a href="/listings" data-i18n="nav_listings">My Listings</a>
     {% if has_premium %}
     <a href="/bulk" data-i18n="nav_bulk">Bulk Upload</a>
+    <a href="/photo-set" data-i18n="nav_photo_set">Photo Set</a>
     {% endif %}
     <span class="nav-sep">|</span>
     {% if unlimited %}
@@ -818,7 +820,7 @@ const STRINGS = {
     guest_connect_etsy:"Connect Etsy →",
     guest_mode:"You're in guest mode — you can create and copy content. Connect your store to publish to Etsy.",
     guest_connect:"Connect Store →",
-    nav_listings:"My Listings", nav_bulk:"Bulk Upload", nav_upgrade:"Upgrade",
+    nav_listings:"My Listings", nav_bulk:"Bulk Upload", nav_photo_set:"Photo Set", nav_upgrade:"Upgrade",
     nav_disconnect:"Disconnect", nav_free_left:"free left",
     label_platform:"Sell on",
     hero_label:"AI-powered listing tool",
@@ -885,7 +887,7 @@ const STRINGS = {
     guest_connect_etsy:"Etsy verbinden →",
     guest_mode:"Du bist im Gastmodus — du kannst Inhalte erstellen und kopieren. Verbinde deinen Shop, um auf Etsy zu veröffentlichen.",
     guest_connect:"Shop verbinden →",
-    nav_listings:"Meine Listings", nav_bulk:"Massen-Upload", nav_upgrade:"Upgrade",
+    nav_listings:"Meine Listings", nav_bulk:"Massen-Upload", nav_photo_set:"Foto-Set", nav_upgrade:"Upgrade",
     nav_disconnect:"Trennen", nav_free_left:"kostenlose übrig",
     label_platform:"Verkaufen auf",
     hero_label:"KI-gestütztes Listing-Tool",
@@ -950,7 +952,7 @@ const STRINGS = {
     guest_connect_etsy:"Etsy Bağla →",
     guest_mode:"Misafir modundasınız — içerik oluşturabilir, kopyalayabilirsiniz. Etsy'ye göndermek için mağazanızı bağlayın.",
     guest_connect:"Mağazanı Bağla →",
-    nav_listings:"Listelerim", nav_bulk:"Toplu Yükleme", nav_upgrade:"Yükselt",
+    nav_listings:"Listelerim", nav_bulk:"Toplu Yükleme", nav_photo_set:"Foto Seti", nav_upgrade:"Yükselt",
     nav_disconnect:"Bağlantıyı Kes", nav_free_left:"ücretsiz kaldı",
     label_platform:"Platform seç",
     hero_label:"YZ destekli ilan aracı",

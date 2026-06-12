@@ -276,14 +276,16 @@ def test_can_generate_free_at_limit():
     assert remaining == 0
 
 
-def test_can_generate_premium_bypasses_limit():
+def test_can_generate_premium_uses_plan_monthly_cap():
+    """Premium plans aren't bound by the free limit; they use the per-plan monthly cap."""
     db_module.ensure_shop("shop3", "Shop Three")
     for _ in range(10):
-        db_module.increment_usage("shop3")
+        db_module.increment_usage("shop3")  # also bumps the monthly counter to 10
     db_module.set_premium("shop3", "cus_fake", "sub_fake", True, "pro")
     allowed, remaining = db_module.can_generate("shop3", limit=3)
     assert allowed is True
-    assert remaining == 999
+    # Pro monthly cap defaults to 800; 10 already used this period → 790 left.
+    assert remaining == 790
 
 
 def test_generate_api_rejects_bad_image_type(connected_client):
@@ -359,6 +361,43 @@ def test_photo_variants_api_rejects_non_pro(connected_client):
         content_type="application/json",
     )
     assert resp.status_code in (403, 400)
+
+
+def test_starter_plan_listing_monthly_cap_enforced():
+    """Starter plans get a finite monthly listing cap, not unlimited generation."""
+    from core.config import plan_limit
+    db_module.ensure_shop("starter_cap", "StarterCap")
+    db_module.set_premium("starter_cap", "cus_sc", "sub_sc", True, "starter")
+    cap = plan_limit("starter", "listings")
+    for _ in range(cap):
+        db_module.increment_usage("starter_cap")
+    allowed, remaining = db_module.can_generate("starter_cap")
+    assert allowed is False
+    assert remaining == 0
+
+
+def test_pro_plan_listing_cap_higher_than_starter():
+    from core.config import plan_limit
+    assert plan_limit("pro", "listings") > plan_limit("starter", "listings")
+    assert plan_limit("free", "photo_images") == 0
+    assert plan_limit("pro", "photo_images") > 0
+
+
+def test_monthly_counter_resets_next_period():
+    """Usage from a prior month must not count against the current month."""
+    db_module.ensure_shop("rollover_shop", "Rollover")
+    db_module.set_premium("rollover_shop", "cus_ro", "sub_ro", True, "starter")
+    # Simulate usage stamped in a past period.
+    with db_module._conn() as con:
+        con.execute(
+            "UPDATE shops SET listing_used = 9999, listing_period = ? WHERE shop_id = ?",
+            ("2000-01", "rollover_shop"),
+        )
+    allowed, remaining = db_module.can_generate("rollover_shop")
+    assert allowed is True
+    # Full starter cap available again because the stale period is ignored.
+    from core.config import plan_limit
+    assert remaining == plan_limit("starter", "listings")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -599,14 +638,15 @@ def test_can_improve_free_limit():
     assert remaining == 0
 
 
-def test_can_improve_premium_unlimited():
+def test_can_improve_premium_uses_plan_monthly_cap():
     db_module.ensure_shop("shop_imppro", "ImpProShop")
     db_module.set_premium("shop_imppro", "cus_ip", "sub_ip", True, "pro")
     for _ in range(10):
         db_module.increment_improve_usage("shop_imppro")
     allowed, remaining = db_module.can_improve("shop_imppro")
     assert allowed is True
-    assert remaining == 999
+    # Pro improve cap defaults to 200; 10 used this period → 190 left.
+    assert remaining == 190
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1665,9 +1705,9 @@ def test_generate_photos_full_flow_for_pro(connected_client):
     fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
     fake_variant_img = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
 
-    # FAL_KEY is a module-level var — must patch on the module, not via env
-    with patch("apis.photos.FAL_KEY", "fal-test-key"), \
-         patch("apis.photos._fal_generate_variant", return_value=fake_variant_img):
+    # Image generation needs GEMINI_API_KEY (checked via env) + the Gemini call patched.
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test-key"}), \
+         patch("apis.photos._generate_product_image", return_value=fake_variant_img):
         resp = connected_client.post(
             "/api/generate-photos",
             json={
@@ -1689,7 +1729,7 @@ def test_generate_photos_requires_data_url(connected_client):
     db_module.ensure_shop("12345", "TestShop")
     db_module.set_premium("12345", "cus_ph2", "sub_ph2", True, "pro")
 
-    with patch("apis.photos.FAL_KEY", "fal-test-key"):
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test-key"}):
         resp = connected_client.post(
             "/api/generate-photos",
             json={"image": "https://example.com/not-a-data-url.jpg"},
@@ -1699,11 +1739,11 @@ def test_generate_photos_requires_data_url(connected_client):
     assert resp.status_code == 400
 
 
-def test_generate_photos_rejected_without_fal_key(connected_client):
+def test_generate_photos_rejected_without_api_key(connected_client):
     db_module.ensure_shop("12345", "TestShop")
     db_module.set_premium("12345", "cus_ph3", "sub_ph3", True, "pro")
 
-    with patch("apis.photos.FAL_KEY", None):
+    with patch.dict(os.environ, {"GEMINI_API_KEY": ""}):
         import base64
         fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
         resp = connected_client.post(
@@ -1924,21 +1964,36 @@ def test_starter_plan_has_premium_access(connected_client):
     assert resp.get_json()["allowed"] is True
 
 
-def test_starter_plan_cannot_use_pro_only_photos(connected_client):
-    """Photo generation requires plan='pro', not just any premium plan."""
-    db_module.ensure_shop("12345", "TestShop")
-    db_module.set_premium("12345", "cus_st3", "sub_st3", True, "starter")
+def test_free_plan_cannot_use_photos(connected_client):
+    """Photos require a paid plan — free shops have a 0 photo-image cap."""
+    db_module.ensure_shop("12345", "TestShop")  # free by default
 
-    with patch.dict(os.environ, {"FAL_KEY": "fal-test"}):
-        import base64
-        fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
+    import base64
+    fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test"}):
         resp = connected_client.post(
             "/api/generate-photos",
             json={"image": fake_image},
             content_type="application/json",
         )
-
     assert resp.status_code == 403
+
+
+def test_starter_plan_gets_photo_taster():
+    """Starter now gets a small photo allowance (1 set = 6 images)."""
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_st3", "sub_st3", True, "starter")
+    # The cap is non-zero for starter, so the DB gate allows generation.
+    allowed, remaining = db_module.can_generate_photo_variants("12345", 1)
+    assert allowed is True
+    assert remaining == 6
+
+
+def test_bulk_batch_limits_per_plan():
+    from core.config import plan_limit
+    assert plan_limit("free", "bulk_batch") == 0
+    assert plan_limit("starter", "bulk_batch") == 10
+    assert plan_limit("pro", "bulk_batch") == 20
 
 
 # ─────────────────────────────────────────────────────────────────────────────

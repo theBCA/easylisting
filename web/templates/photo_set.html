@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='security.js') }}"></script>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Etsy Photo Set — EasyListing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
+  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
+  --text: #111827; --muted: #6B7280; --green: #059669; --green-light: #ECFDF5;
+  --amber: #D97706; --amber-light: #FFFBEB;
+  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
+.nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; text-decoration: none; }
+.nav-links { display: flex; align-items: center; gap: 16px; }
+.nav-links a { text-decoration: none; font-size: 14px; font-weight: 600; color: var(--muted); transition: color .15s; }
+.nav-links a:hover { color: var(--text); }
+.pro-badge { background: linear-gradient(135deg, #5B47E0, #9333EA); color: white; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; letter-spacing: .5px; }
+
+.container { max-width: 1060px; margin: 0 auto; padding: 36px 24px 80px; }
+
+/* Page header */
+.page-header { margin-bottom: 32px; }
+.page-header h1 { font-size: 26px; font-weight: 800; display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.page-header p { font-size: 15px; color: var(--muted); }
+.credits-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.credits-pill { background: var(--primary-light); color: var(--primary); font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 20px; }
+.credits-pill.empty { background: #FEF2F2; color: var(--red); }
+.credits-upgrade { background: linear-gradient(135deg, #5B47E0, #9333EA); color: white; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 20px; text-decoration: none; }
+.credits-upgrade:hover { opacity: .9; }
+
+/* Upload zone */
+.upload-zone { border: 2px dashed var(--border); border-radius: var(--radius); background: white; padding: 48px 24px; text-align: center; cursor: pointer; transition: all .2s; position: relative; }
+.upload-zone.drag { border-color: var(--primary); background: var(--primary-light); }
+.upload-zone.has-image { padding: 0; border: none; border-radius: var(--radius); overflow: hidden; }
+.upload-zone .icon { font-size: 36px; margin-bottom: 12px; }
+.upload-zone h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.upload-zone p { font-size: 14px; color: var(--muted); }
+.upload-zone .change-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,.55); color: white; border: none; border-radius: 8px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+#sourcePreview { width: 100%; max-height: 320px; object-fit: contain; background: #111; display: block; border-radius: var(--radius); }
+
+/* Product description chip */
+.desc-chip { background: var(--primary-light); border: 1px solid #C4B5FD; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #4C1D95; display: none; margin-top: 12px; }
+.desc-chip strong { font-weight: 700; display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; color: var(--primary); }
+
+/* Main layout */
+.main-grid { display: grid; grid-template-columns: 260px 1fr; gap: 24px; margin-top: 28px; }
+
+/* Step sidebar */
+.step-list { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 0; height: fit-content; }
+.step-list-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); padding: 0 20px 12px; }
+.step-item { display: flex; align-items: center; gap: 12px; padding: 10px 20px; cursor: pointer; transition: background .15s; position: relative; }
+.step-item:hover:not(.active):not(.done) { background: var(--bg); }
+.step-item.active { background: var(--primary-light); }
+.step-item.active::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--primary); border-radius: 0 2px 2px 0; }
+.step-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); flex-shrink: 0; transition: all .2s; background: white; }
+.step-item.active .step-dot { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.step-item.done .step-dot { border-color: var(--green); background: var(--green); color: white; font-size: 14px; }
+.step-item.collage-item.done .step-dot { border-color: var(--amber); background: var(--amber); }
+.step-info { flex: 1; min-width: 0; }
+.step-name { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+.step-item.active .step-name { color: var(--primary); }
+.step-item.done .step-name { color: var(--muted); }
+.step-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; display: none; }
+.step-item.done .step-thumb { display: block; }
+.step-divider { border: none; border-top: 1px dashed var(--border); margin: 8px 20px; }
+
+/* Right panel */
+.right-panel { display: flex; flex-direction: column; gap: 20px; }
+
+/* Current step card */
+.step-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.step-card-header { padding: 18px 24px 0; display: flex; align-items: center; gap: 12px; }
+.step-card-num { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: white; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-card-title { font-size: 18px; font-weight: 800; }
+.step-card-desc { font-size: 13px; color: var(--muted); padding: 8px 24px 0; line-height: 1.5; }
+
+/* Image result area */
+.result-area { margin: 20px 24px; border-radius: 12px; overflow: hidden; background: var(--bg); min-height: 340px; display: flex; align-items: center; justify-content: center; position: relative; }
+.result-area img { width: 100%; height: auto; display: block; border-radius: 12px; }
+.result-placeholder { text-align: center; padding: 60px 24px; color: var(--muted); }
+.result-placeholder .ph-icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
+.result-placeholder p { font-size: 14px; }
+.generating-overlay { position: absolute; inset: 0; background: rgba(246,247,251,.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; border-radius: 12px; }
+.generating-overlay .spin { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+.generating-overlay p { font-size: 14px; font-weight: 600; color: var(--primary); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Action bar */
+.step-actions { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: center; }
+.btn-generate { background: var(--primary); color: white; border: none; padding: 10px 28px; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s; display: flex; align-items: center; gap: 8px; }
+.btn-generate:disabled { opacity: .5; cursor: not-allowed; }
+.btn-generate:not(:disabled):hover { background: var(--primary-dark); }
+.btn-next { background: var(--green); color: white; border: none; padding: 10px 22px; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background .15s; display: none; }
+.btn-next:hover { background: #047857; }
+.btn-dl { border: 1.5px solid var(--border); background: white; color: var(--text); padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: none; transition: border-color .15s; }
+.btn-dl:hover { border-color: var(--primary); color: var(--primary); }
+.step-hint { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+/* Collage card */
+.collage-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.collage-header { padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.collage-header h3 { font-size: 17px; font-weight: 800; }
+.collage-area { padding: 0 24px 24px; }
+.collage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; border-radius: 12px; overflow: hidden; }
+.collage-cell { aspect-ratio: 1; background: var(--bg); overflow: hidden; }
+.collage-cell img { width: 100%; height: 100%; object-fit: cover; }
+.collage-empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; font-weight: 600; }
+.btn-collage-dl { background: var(--amber); color: white; border: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
+.btn-collage-dl:hover { background: #B45309; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A1A; color: white; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; transition: transform .3s; z-index: 9999; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 720px) {
+  nav { padding: 0 14px; }
+  .container { padding: 20px 14px 60px; }
+  .main-grid { grid-template-columns: 1fr; }
+  .step-list { display: flex; overflow-x: auto; padding: 0; gap: 0; border-radius: var(--radius); }
+  .step-list-title { display: none; }
+  .step-item { flex-direction: column; align-items: center; text-align: center; padding: 12px 14px; min-width: 80px; }
+  .step-item.active::before { top: 0; left: 0; right: 0; bottom: auto; height: 3px; width: auto; border-radius: 0 0 2px 2px; }
+  .step-thumb { display: none !important; }
+  .step-divider { display: none; }
+  .step-info { text-align: center; }
+  .step-name { font-size: 11px; }
+  .result-area { min-height: 220px; }
+}
+</style>
+{% include '_posthog.html' %}
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-logo">Easy<span style="color:var(--text)">Listing</span></a>
+  <div class="nav-links">
+    <span style="font-size:13px;font-weight:600;color:var(--muted)">🛍 {{ shop_name }}</span>
+    <a href="/listings">My Listings</a>
+    <a href="/bulk">Bulk Upload</a>
+    <a href="/">Single Listing</a>
+    <span class="pro-badge">Pro</span>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>📸 Etsy Photo Set Generator</h1>
+    <p>Upload one product photo — get a professional 7-shot Etsy listing set, one image at a time.</p>
+    <div class="credits-row" id="creditsRow">
+      <span class="credits-pill" id="creditsPill">📸 <strong id="creditsLeft">…</strong> photo credits left this month</span>
+      <a href="/upgrade" class="credits-upgrade" id="creditsUpgrade" style="display:none">Upgrade for more →</a>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="dropZone">
+    <div class="icon">🖼</div>
+    <h3>Drop your product photo here</h3>
+    <p>One photo → 6 professional Etsy shots + collage preview</p>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+  </div>
+  <div class="desc-chip" id="descChip">
+    <strong>AI product analysis</strong>
+    <span id="descText"></span>
+  </div>
+
+  <!-- Main grid (hidden until image uploaded) -->
+  <div class="main-grid" id="mainGrid" style="display:none">
+    <!-- Sidebar steps -->
+    <div class="step-list" id="stepList">
+      <div class="step-list-title">Photo set</div>
+      <div class="step-item active" data-step="1" id="si-1">
+        <div class="step-dot" id="sd-1">1</div>
+        <div class="step-info">
+          <div class="step-name">Worn / In-Use</div>
+        </div>
+        <img class="step-thumb" id="st-1" alt="">
+      </div>
+      <div class="step-item" data-step="2" id="si-2">
+        <div class="step-dot" id="sd-2">2</div>
+        <div class="step-info"><div class="step-name">Studio Shot</div></div>
+        <img class="step-thumb" id="st-2" alt="">
+      </div>
+      <div class="step-item" data-step="3" id="si-3">
+        <div class="step-dot" id="sd-3">3</div>
+        <div class="step-info"><div class="step-name">Macro Detail</div></div>
+        <img class="step-thumb" id="st-3" alt="">
+      </div>
+      <div class="step-item" data-step="4" id="si-4">
+        <div class="step-dot" id="sd-4">4</div>
+        <div class="step-info"><div class="step-name">Back / Construction</div></div>
+        <img class="step-thumb" id="st-4" alt="">
+      </div>
+      <div class="step-item" data-step="5" id="si-5">
+        <div class="step-dot" id="sd-5">5</div>
+        <div class="step-info"><div class="step-name">Lifestyle Flat Lay</div></div>
+        <img class="step-thumb" id="st-5" alt="">
+      </div>
+      <div class="step-item" data-step="6" id="si-6">
+        <div class="step-dot" id="sd-6">6</div>
+        <div class="step-info"><div class="step-name">Packaging / Gift</div></div>
+        <img class="step-thumb" id="st-6" alt="">
+      </div>
+      <hr class="step-divider">
+      <div class="step-item collage-item" data-step="collage" id="si-collage">
+        <div class="step-dot" id="sd-collage">🎨</div>
+        <div class="step-info"><div class="step-name">Collage Preview</div></div>
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-panel">
+      <!-- Current step card -->
+      <div class="step-card" id="stepCard">
+        <div class="step-card-header">
+          <div class="step-card-num" id="cardNum">1</div>
+          <div class="step-card-title" id="cardTitle">Worn / In-Use Scale Shot</div>
+        </div>
+        <div class="step-card-desc" id="cardDesc">Shows the product being worn, held, or used in a realistic human-scale context — helps buyers understand size.</div>
+        <div class="result-area" id="resultArea">
+          <div class="result-placeholder">
+            <div class="ph-icon">📷</div>
+            <p>Click Generate to create this shot</p>
+          </div>
+        </div>
+        <div class="step-actions">
+          <button class="btn-generate" id="btnGenerate" onclick="generateCurrent()">
+            ✨ Generate Shot 1
+          </button>
+          <button class="btn-next" id="btnNext" onclick="nextStep()">Next →</button>
+          <button class="btn-dl" id="btnDl" onclick="downloadCurrent()">⬇ Download</button>
+          <span class="step-hint" id="stepHint"></span>
+        </div>
+      </div>
+
+      <!-- Collage card -->
+      <div class="collage-card" id="collageCard">
+        <div class="collage-header">
+          <h3>🎨 Collage Preview</h3>
+          <button class="btn-collage-dl" id="btnCollageDl" onclick="downloadCollage()" style="display:none">⬇ Download Collage</button>
+        </div>
+        <div class="collage-area">
+          <div class="collage-grid" id="collageGrid">
+            <div class="collage-cell collage-empty" id="cc-1">1</div>
+            <div class="collage-cell collage-empty" id="cc-2">2</div>
+            <div class="collage-cell collage-empty" id="cc-3">3</div>
+            <div class="collage-cell collage-empty" id="cc-4">4</div>
+            <div class="collage-cell collage-empty" id="cc-5">5</div>
+            <div class="collage-cell collage-empty" id="cc-6">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script nonce="{{ csp_nonce }}">
+const SHOT_META = {
+  1: { title: 'Worn / In-Use Scale Shot',      desc: 'Shows the product being worn, held, or used in a realistic human-scale context — helps buyers understand size.' },
+  2: { title: 'Clean Studio Product Shot',      desc: 'Bright, uncluttered image on a neutral background showing the whole product clearly.' },
+  3: { title: 'Macro Detail Shot',              desc: 'Close-up of craftsmanship, texture, stitching, or construction details buyers care about.' },
+  4: { title: 'Back / Construction Shot',       desc: 'Shows the reverse side, closure, seam quality, or construction detail.' },
+  5: { title: 'Lifestyle Flat Lay',             desc: 'Product styled in a themed environment — wedding, baby gift, home, or seasonal use.' },
+  6: { title: 'Packaging / Gift-Ready Shot',    desc: 'Product beautifully packaged with ribbon, box, tissue paper, or a handmade insert.' },
+};
+
+let sourceImage  = null;   // base64 data URL of uploaded photo
+let description  = '';     // AI-generated product description
+let currentStep  = 1;
+let generated    = {};     // step -> base64 image
+let generating   = false;
+let photoCredits = {{ photo_credits|default(0)|int }};   // images left this month
+const IS_PRO     = {{ 'true' if is_pro else 'false' }};
+
+function showToast(msg, ms = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function renderCredits() {
+  const pill = document.getElementById('creditsPill');
+  const left = document.getElementById('creditsLeft');
+  const up   = document.getElementById('creditsUpgrade');
+  if (left) left.textContent = photoCredits;
+  if (pill) pill.classList.toggle('empty', photoCredits <= 0);
+  // Show "upgrade for more" once a Starter user is low/out (Pro has plenty).
+  if (up) up.style.display = (!IS_PRO && photoCredits <= 0) ? '' : 'none';
+}
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+dropZone.addEventListener('click', () => { if (!dropZone.classList.contains('has-image')) fileInput.click(); });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) { showToast('Please upload an image file.'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    sourceImage = e.target.result;
+    // Show preview inside upload zone
+    dropZone.innerHTML = `
+      <img id="sourcePreview" src="${sourceImage}" alt="Product">
+      <button class="change-btn" onclick="event.stopPropagation();resetAll()">Change photo</button>`;
+    dropZone.classList.add('has-image');
+    // Reset state
+    description = ''; generated = {}; currentStep = 1;
+    document.getElementById('descChip').style.display = 'none';
+    document.getElementById('mainGrid').style.display = 'grid';
+    renderStep(1);
+    updateCollageGrid();
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetAll() {
+  sourceImage = null; description = ''; generated = {}; currentStep = 1;
+  dropZone.innerHTML = `
+    <div class="icon">🖼</div>
+    <h3>Drop your product photo here</h3>
+    <p>One photo → 6 professional Etsy shots + collage preview</p>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">`;
+  dropZone.classList.remove('has-image');
+  document.getElementById('fileInput').addEventListener('change', () => {
+    if (document.getElementById('fileInput').files[0]) handleFile(document.getElementById('fileInput').files[0]);
+  });
+  dropZone.addEventListener('click', () => { if (!dropZone.classList.contains('has-image')) document.getElementById('fileInput').click(); });
+  document.getElementById('mainGrid').style.display = 'none';
+  document.getElementById('descChip').style.display = 'none';
+  [1,2,3,4,5,6].forEach(s => markStep(s, 'pending'));
+  markStep('collage', 'pending');
+  updateCollageGrid();
+}
+
+// ── Step rendering ────────────────────────────────────────────────────────────
+function renderStep(step) {
+  currentStep = step;
+
+  // Sidebar: active state
+  document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active'));
+  const si = document.getElementById('si-' + step);
+  if (si) si.classList.add('active');
+
+  if (step === 'collage') {
+    document.getElementById('stepCard').style.display = 'none';
+    return;
+  }
+  document.getElementById('stepCard').style.display = '';
+
+  const meta = SHOT_META[step];
+  document.getElementById('cardNum').textContent   = step;
+  document.getElementById('cardTitle').textContent = meta.title;
+  document.getElementById('cardDesc').textContent  = meta.desc;
+
+  const ra = document.getElementById('resultArea');
+  if (generated[step]) {
+    ra.innerHTML = `<img src="${generated[step]}" alt="${meta.title}">`;
+    document.getElementById('btnNext').style.display = step < 6 ? '' : 'none';
+    document.getElementById('btnDl').style.display   = '';
+    document.getElementById('btnGenerate').textContent = '↻ Regenerate';
+  } else {
+    ra.innerHTML = `<div class="result-placeholder"><div class="ph-icon">📷</div><p>Click Generate to create this shot</p></div>`;
+    document.getElementById('btnNext').style.display = 'none';
+    document.getElementById('btnDl').style.display   = 'none';
+    document.getElementById('btnGenerate').textContent = `✨ Generate Shot ${step}`;
+  }
+  document.getElementById('btnGenerate').disabled = generating;
+  document.getElementById('stepHint').textContent = step > 1 && step < 6 ? `Shot ${step} of 6` : (step === 6 ? 'Last shot — then collage!' : '');
+}
+
+function markStep(step, state, imgSrc) {
+  const dot = document.getElementById('sd-' + step);
+  const item = document.getElementById('si-' + step);
+  const thumb = document.getElementById('st-' + step);
+  if (!dot || !item) return;
+  item.classList.toggle('done', state === 'done');
+  if (state === 'done') {
+    dot.textContent = '✓';
+    if (thumb && imgSrc) { thumb.src = imgSrc; }
+  } else {
+    dot.textContent = typeof step === 'number' ? String(step) : '🎨';
+  }
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function generateCurrent() {
+  if (!sourceImage || generating) return;
+  const step = currentStep;
+  if (step === 'collage') return;
+  if (photoCredits <= 0) {
+    showToast(IS_PRO ? 'Monthly photo limit reached — resets next cycle.'
+                     : 'Out of photo credits — upgrade to Pro for 5 sets/month.', 4500);
+    return;
+  }
+  generating = true;
+
+  const btn = document.getElementById('btnGenerate');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px"></span>Generating…';
+
+  const ra = document.getElementById('resultArea');
+  ra.innerHTML = `
+    <div class="result-placeholder">
+      <div class="ph-icon">📷</div>
+      <p>Generating shot ${step}…</p>
+    </div>
+    <div class="generating-overlay">
+      <div class="spin"></div>
+      <p>Creating Shot ${step} · ~30s</p>
+    </div>`;
+
+  try {
+    const resp = await fetch('/api/etsy-photo-set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: sourceImage, shot: step, description }),
+    });
+    const data = await resp.json();
+    if (data.error === 'photo_limit_reached') {
+      photoCredits = 0; renderCredits();
+      throw new Error(IS_PRO ? 'Monthly photo limit reached.'
+                             : 'Out of photo credits — upgrade to Pro for more.');
+    }
+    if (!resp.ok || data.error) throw new Error(data.error || 'Generation failed');
+
+    generated[step] = data.image;
+    if (typeof data.remaining === 'number') { photoCredits = data.remaining; renderCredits(); }
+    if (data.description && !description) {
+      description = data.description;
+      document.getElementById('descText').textContent = description;
+      document.getElementById('descChip').style.display = '';
+    }
+    markStep(step, 'done', data.image);
+    updateCollageGrid();
+    renderStep(step);
+  } catch (e) {
+    ra.innerHTML = `<div class="result-placeholder"><div class="ph-icon">❌</div><p>${e.message}</p></div>`;
+    btn.disabled = false;
+    btn.textContent = `✨ Generate Shot ${step}`;
+    showToast(e.message, 4000);
+  } finally {
+    generating = false;
+  }
+}
+
+function nextStep() {
+  if (currentStep < 6) renderStep(currentStep + 1);
+  else if (currentStep === 6) {
+    renderStep('collage');
+    document.getElementById('stepCard').style.display = 'none';
+    markStep('collage', 'done');
+  }
+}
+
+// ── Download ──────────────────────────────────────────────────────────────────
+function downloadCurrent() {
+  const img = generated[currentStep];
+  if (!img) return;
+  const a = document.createElement('a');
+  a.href = img;
+  a.download = `etsy-shot-${currentStep}.jpg`;
+  a.click();
+}
+
+// ── Collage grid update ───────────────────────────────────────────────────────
+function updateCollageGrid() {
+  let allDone = true;
+  for (let s = 1; s <= 6; s++) {
+    const cell = document.getElementById('cc-' + s);
+    if (!cell) continue;
+    if (generated[s]) {
+      cell.innerHTML = `<img src="${generated[s]}" alt="Shot ${s}">`;
+      cell.classList.remove('collage-empty');
+    } else {
+      cell.innerHTML = String(s);
+      cell.classList.add('collage-empty');
+      allDone = false;
+    }
+  }
+  document.getElementById('btnCollageDl').style.display = allDone ? '' : 'none';
+}
+
+function downloadCollage() {
+  const cells = [1,2,3,4,5,6].map(s => generated[s]).filter(Boolean);
+  if (cells.length < 6) { showToast('Generate all 6 shots first.'); return; }
+
+  const SIZE = 600;
+  const GAP  = 4;
+  const COLS  = 3;
+  const ROWS  = 2;
+  const W = COLS * SIZE + (COLS - 1) * GAP;
+  const H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#F6F7FB';
+  ctx.fillRect(0, 0, W, H);
+
+  let loaded = 0;
+  cells.forEach((src, i) => {
+    const img = new Image();
+    img.onload = () => {
+      const col = i % COLS;
+      const row = Math.floor(i / COLS);
+      const x = col * (SIZE + GAP);
+      const y = row * (SIZE + GAP);
+      // Cover-fit
+      const scale = Math.max(SIZE / img.width, SIZE / img.height);
+      const sw = img.width * scale;
+      const sh = img.height * scale;
+      const sx = (sw - SIZE) / 2;
+      const sy = (sh - SIZE) / 2;
+      ctx.drawImage(img, -sx / scale, -sy / scale, sw / scale, sh / scale, x, y, SIZE, SIZE);
+      loaded++;
+      if (loaded === 6) {
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/jpeg', 0.92);
+        a.download = 'etsy-photo-set-collage.jpg';
+        a.click();
+      }
+    };
+    img.src = src;
+  });
+}
+
+// ── Sidebar click navigation ──────────────────────────────────────────────────
+document.querySelectorAll('.step-item[data-step]').forEach(el => {
+  el.addEventListener('click', () => {
+    const s = el.dataset.step;
+    renderStep(s === 'collage' ? 'collage' : parseInt(s));
+  });
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderCredits();
+</script>
+</body>
+</html>

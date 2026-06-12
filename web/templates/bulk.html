@@ -16,118 +16,146 @@
 :root {
   --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
   --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
-  --text: #111827; --muted: #6B7280; --green: #059669;
-  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.09);
+  --text: #111827; --muted: #6B7280; --green: #059669; --green-light: #ECFDF5;
+  --red: #DC2626; --red-light: #FEF2F2;
+  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.08);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+/* Nav */
 nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
 .nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; text-decoration: none; }
-.nav-logo span { color: var(--text); }
 .nav-links { display: flex; align-items: center; gap: 16px; }
 .nav-links a { text-decoration: none; font-size: 14px; font-weight: 600; color: var(--muted); }
 .nav-links a:hover { color: var(--text); }
-.btn-outline { border: 1.5px solid var(--border); background: white; color: var(--text); padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-outline { border: 1.5px solid var(--border); background: white; color: var(--text); padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s; }
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
 .lang-switcher { display: flex; gap: 2px; }
 .lang-btn { background: none; border: 1px solid var(--border); border-radius: 5px; font-size: 11px; font-weight: 700; padding: 3px 7px; cursor: pointer; color: var(--muted); }
 .lang-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-.container { max-width: 960px; margin: 0 auto; padding: 36px 24px; }
+.container { max-width: 980px; margin: 0 auto; padding: 36px 24px 80px; }
 h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 .sub { font-size: 15px; color: var(--muted); margin-bottom: 32px; }
 
-/* Upload area */
+/* Upload zone */
 .upload-zone { border: 2px dashed var(--border); border-radius: var(--radius); background: white; padding: 52px 24px; text-align: center; cursor: pointer; transition: all .2s; }
-.upload-zone.drag { border-color: var(--primary); background: #FFF7F4; }
+.upload-zone.drag { border-color: var(--primary); background: var(--primary-light); }
 .upload-zone h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
 .upload-zone p { font-size: 14px; color: var(--muted); }
 .upload-zone .icon { font-size: 38px; margin-bottom: 12px; }
 
 /* Thumbnails */
-.thumbs { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
-.thumb-wrap { position: relative; width: 90px; height: 90px; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); flex-shrink: 0; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.thumb-wrap { position: relative; width: 88px; height: 88px; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); flex-shrink: 0; }
 .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
-.thumb-wrap .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.thumb-wrap .status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); color: white; font-size: 13px; font-weight: 700; }
+.thumb-wrap .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,.65); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.thumb-wrap .status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.42); color: white; font-size: 14px; font-weight: 700; }
 
-/* Controls row */
-.controls { background: white; border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow); margin-top: 24px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
-.ctrl-group { display: flex; flex-direction: column; gap: 6px; }
-.ctrl-group label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
-.ctrl-group input, .ctrl-group select { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: white; min-width: 180px; }
-.ctrl-group input:focus, .ctrl-group select:focus { outline: none; border-color: var(--primary); }
-.btn-gen { background: var(--primary); color: white; border: none; padding: 10px 26px; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+/* Controls */
+.controls { background: white; border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow); margin-top: 24px; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+.ctrl-group { display: flex; flex-direction: column; gap: 5px; }
+.ctrl-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.ctrl-input { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: white; color: var(--text); }
+.ctrl-input:focus { outline: none; border-color: var(--primary); }
+.btn-gen { background: var(--primary); color: white; border: none; padding: 10px 26px; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .15s; }
 .btn-gen:disabled { opacity: .5; cursor: not-allowed; }
 .btn-gen:not(:disabled):hover { background: var(--primary-dark); }
 
 /* Progress */
-.progress-row { display: flex; align-items: center; gap: 14px; background: white; border-radius: 10px; padding: 14px 18px; box-shadow: var(--shadow); margin-top: 18px; display: none; }
+.progress-row { display: none; align-items: center; gap: 14px; background: white; border-radius: 10px; padding: 14px 18px; box-shadow: var(--shadow); margin-top: 18px; }
 .progress-row.show { display: flex; }
 .progress-bar-wrap { flex: 1; background: var(--bg); border-radius: 6px; height: 8px; overflow: hidden; }
-.progress-bar { height: 100%; background: var(--primary); border-radius: 6px; transition: width .4s ease; }
+.progress-bar { height: 100%; background: var(--primary); border-radius: 6px; transition: width .35s ease; }
 .progress-label { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 
-/* Results grid */
+/* Results section */
 .results { margin-top: 32px; display: none; }
 .results.show { display: block; }
-.results h2 { font-size: 20px; font-weight: 800; margin-bottom: 20px; }
-.result-grid { display: grid; gap: 20px; }
-.result-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-.result-card.error { border: 2px solid #f44; }
-.rc-top { display: flex; gap: 16px; padding: 16px; }
-.rc-img { width: 90px; height: 90px; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+
+/* Publish settings bar */
+.pub-settings { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 24px; margin-bottom: 20px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; border-left: 3px solid var(--primary); }
+.pub-settings-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 5px; }
+.shipping-select { padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: white; color: var(--text); min-width: 220px; }
+.shipping-select:focus { outline: none; border-color: var(--primary); }
+.shipping-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* Results header */
+.results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+.results-header h2 { font-size: 20px; font-weight: 800; }
+.results-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-export { border: 1.5px solid var(--border); background: white; color: var(--text); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s; }
+.btn-export:hover { border-color: var(--primary); color: var(--primary); }
+.btn-pub-all { background: var(--green); color: white; border: none; padding: 9px 22px; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background .15s; }
+.btn-pub-all:disabled { opacity: .5; cursor: not-allowed; }
+.btn-pub-all:not(:disabled):hover { background: #047857; }
+
+/* Result cards */
+.result-grid { display: grid; gap: 16px; }
+.result-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border: 1.5px solid transparent; transition: border-color .2s; }
+.result-card:hover { border-color: var(--border); }
+.result-card.published { border-color: var(--green); }
+.result-card.error-card { border: 2px solid #FECACA; background: var(--red-light); }
+
+/* Card header strip */
+.rc-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px 0; }
+.rc-num { width: 22px; height: 22px; border-radius: 50%; background: var(--primary-light); color: var(--primary); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.rc-check-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; margin-left: auto; }
+.rc-check-label input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
+
+/* Card body */
+.rc-body { display: flex; gap: 16px; padding: 12px 16px 14px; }
+.rc-img { width: 110px; height: 110px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: var(--bg); }
 .rc-img img { width: 100%; height: 100%; object-fit: cover; }
-.rc-main { flex: 1; min-width: 0; }
-.rc-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-.rc-title input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 14px; font-weight: 600; }
-.rc-title input:focus { outline: none; border-color: var(--primary); }
-.rc-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-.rc-field { display: flex; flex-direction: column; gap: 4px; }
-.rc-field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
-.rc-field input { border: 1.5px solid var(--border); border-radius: 7px; padding: 6px 10px; font-size: 13px; width: 120px; }
-.rc-field input:focus { outline: none; border-color: var(--primary); }
-.rc-error { padding: 16px; color: #c00; font-size: 14px; font-weight: 600; }
-.rc-actions { border-top: 1px solid var(--border); padding: 12px 16px; display: flex; gap: 10px; align-items: center; }
-.btn-pub { background: var(--primary); color: white; border: none; padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.rc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.rc-title-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 14px; font-weight: 600; color: var(--text); background: white; }
+.rc-title-input:focus { outline: none; border-color: var(--primary); }
+.rc-fields { display: flex; gap: 10px; flex-wrap: wrap; }
+.rc-field { display: flex; flex-direction: column; gap: 3px; }
+.rc-field-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.rc-field-input { border: 1.5px solid var(--border); border-radius: 7px; padding: 6px 10px; font-size: 13px; color: var(--text); background: white; }
+.rc-field-input:focus { outline: none; border-color: var(--primary); }
+.rc-field-input[readonly] { background: var(--bg); color: var(--muted); cursor: default; }
+.rc-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag-pill { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 3px 9px; font-size: 11px; color: var(--muted); }
+
+/* Card footer */
+.rc-footer { border-top: 1px solid var(--border); padding: 10px 16px; display: flex; gap: 10px; align-items: center; background: #FAFBFD; }
+.btn-pub { background: var(--primary); color: white; border: none; padding: 7px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
 .btn-pub:disabled { opacity: .5; cursor: not-allowed; }
 .btn-pub:not(:disabled):hover { background: var(--primary-dark); }
-.pub-status { font-size: 13px; font-weight: 600; color: var(--muted); }
+.btn-pub.success { background: var(--green); cursor: default; }
+.pub-status { font-size: 12px; font-weight: 600; color: var(--muted); }
 .pub-status.ok  { color: var(--green); }
-.pub-status.err { color: #c00; }
-.btn-pub-all { background: var(--green); color: white; border: none; padding: 10px 28px; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 18px; }
-.btn-pub-all:disabled { opacity: .5; cursor: not-allowed; }
-.btn-pub-all:not(:disabled):hover { background: #1f6038; }
+.pub-status.err { color: var(--red); }
 
-/* Tags display */
-.tag-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.tag-pill { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 12px; color: var(--muted); }
+/* Error card content */
+.rc-error-body { padding: 20px; display: flex; align-items: center; gap: 12px; }
+.rc-error-icon { font-size: 22px; }
+.rc-error-text { font-size: 14px; font-weight: 600; color: var(--red); }
 
 /* Toast */
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A1A; color: white; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; transition: transform .3s; z-index: 9999; pointer-events: none; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
-@media (max-width: 600px) {
-  .rc-top { flex-direction: column; }
-  .controls { flex-direction: column; }
-  nav { padding: 0 14px; height: auto; min-height: 54px; }
+@media (max-width: 640px) {
+  nav { padding: 0 14px; }
   .nav-links { flex-wrap: wrap; gap: 8px; }
-  .container { padding: 20px 14px; }
-  h1 { font-size: 20px; }
+  .container { padding: 20px 14px 60px; }
+  h1 { font-size: 21px; }
   .sub { font-size: 13px; margin-bottom: 20px; }
   .upload-zone { padding: 32px 16px; }
-  .upload-zone h3 { font-size: 15px; }
-  .thumbs { gap: 8px; }
-  .thumb-wrap { width: 72px; height: 72px; }
-  .controls { padding: 16px; }
-  .ctrl-group input, .ctrl-group select { min-width: 0; width: 100%; }
-  .btn-gen { width: 100%; padding: 12px; font-size: 14px; }
-  .rc-img { width: 100%; height: 180px; border-radius: 10px; }
-  .rc-row { flex-direction: column; }
-  .rc-field input { width: 100%; }
-  .rc-actions { flex-direction: column; gap: 8px; }
-  .btn-pub { width: 100%; padding: 10px; }
-  .btn-pub-all { width: 100%; padding: 12px; font-size: 14px; }
-  .results h2 { font-size: 17px; }
+  .controls { flex-direction: column; }
+  .ctrl-input { width: 100%; }
+  .btn-gen { width: 100%; padding: 12px; }
+  .pub-settings { flex-direction: column; align-items: stretch; }
+  .shipping-select { width: 100%; }
+  .rc-body { flex-direction: column; }
+  .rc-img { width: 100%; height: 200px; }
+  .rc-fields { flex-direction: column; }
+  .rc-field-input { width: 100%; }
+  .btn-pub-all { width: 100%; }
 }
 </style>
 {% include '_posthog.html' %}
@@ -155,7 +183,7 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
   <div class="upload-zone" id="dropZone">
     <div class="icon">📦</div>
     <h3 data-i18n="drop_title">Drop product photos here</h3>
-    <p data-i18n="drop_sub">Up to 20 photos — one listing generated per photo</p>
+    <p data-i18n="drop_sub">Up to {n} photos — one listing generated per photo</p>
     <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
   </div>
   <div class="thumbs" id="thumbs"></div>
@@ -163,12 +191,12 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
   <!-- Controls -->
   <div class="controls" id="controls" style="display:none">
     <div class="ctrl-group" style="flex:1;min-width:200px">
-      <label data-i18n="hint_label">Hint (optional, applies to all)</label>
-      <input type="text" id="hint" data-i18n-placeholder="hint_placeholder" placeholder="e.g. handmade ceramic mugs" maxlength="200">
+      <span class="ctrl-label" data-i18n="hint_label">Hint (optional, applies to all)</span>
+      <input type="text" id="hint" class="ctrl-input" data-i18n-placeholder="hint_placeholder" placeholder="e.g. handmade ceramic mugs" maxlength="200">
     </div>
     <div class="ctrl-group">
-      <label data-i18n="provider_label">AI Provider</label>
-      <select id="provider">
+      <span class="ctrl-label" data-i18n="provider_label">AI Provider</span>
+      <select id="provider" class="ctrl-input">
         <option value="gemini" data-i18n="provider_gemini">Gemini (free)</option>
         <option value="nvidia" data-i18n="provider_nvidia">NVIDIA (free)</option>
       </select>
@@ -184,13 +212,25 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 
   <!-- Results -->
   <div class="results" id="results">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:10px;flex-wrap:wrap;">
+    <div class="results-header">
       <h2 id="resultsHeading" data-i18n="results_heading">Generated Listings</h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn-outline" id="btnExportCsv">Export CSV</button>
+      <div class="results-actions">
+        <button class="btn-export" id="btnExportCsv">Export CSV</button>
         <button class="btn-pub-all" id="btnPubAll" data-i18n="publish_all">Publish Selected as Draft</button>
       </div>
     </div>
+
+    <!-- Publish settings bar -->
+    <div class="pub-settings" id="pubSettings" style="display:none">
+      <div>
+        <div class="pub-settings-title" data-i18n="shipping_label">Shipping Profile</div>
+        <select id="bulk-shipping" class="shipping-select">
+          <option value="">— loading… —</option>
+        </select>
+        <div class="shipping-hint" data-i18n="shipping_hint">Applied to all listings when publishing</div>
+      </div>
+    </div>
+
     <div class="result-grid" id="resultGrid"></div>
   </div>
 </div>
@@ -202,47 +242,56 @@ const STRINGS = {
   en: {
     page_title:'Bulk Upload — EasyListing', nav_listings:'My Listings', nav_single:'Single Listing',
     title:'Bulk Upload', sub:'Upload multiple product photos — each gets its own AI-generated listing.',
-    drop_title:'Drop product photos here', drop_sub:'Up to 20 photos — one listing generated per photo',
+    drop_title:'Drop product photos here', drop_sub:'Up to {n} photos — one listing generated per photo',
     hint_label:'Hint (optional, applies to all)', hint_placeholder:'e.g. handmade ceramic mugs',
     provider_label:'AI Provider', provider_gemini:'Gemini (free)', provider_nvidia:'NVIDIA (free)',
     generate_all:'Generate All', results_heading:'Generated Listings', publish_all:'Publish Selected as Draft',
-    only_images:'Only JPEG/PNG/WebP/GIF allowed', max_photos:'Max 20 photos at a time',
+    only_images:'Only JPEG/PNG/WebP/GIF allowed', max_photos:'Max {n} photos at a time',
     free_limit:'Free limit reached. Upgrade for more.', skipped:'Free limit reached — remaining listings skipped.',
     premium_required:'Bulk upload is available only on a paid plan.',
     quota:'Quota reached', failed:'Failed', network:'Network error', price:'Price (€)', category:'Category',
     save_draft:'Save as Draft', title_price_required:'Title and price are required',
     category_missing:'Category not found — edit manually then retry', publishing:'Publishing…',
-    published:'Published ✓', draft_saved:'✓ Draft saved', retry:'Retry', done:(ok, fail) => `Done: ${ok} published${fail ? ', ' + fail + ' failed' : ''}`
+    published:'Published ✓', draft_saved:'Draft saved', retry:'Retry',
+    done:(ok, fail) => `Done: ${ok} published${fail ? ', ' + fail + ' failed' : ''}`,
+    shipping_label:'Shipping Profile', no_shipping:'— no shipping profile —',
+    shipping_hint:'Applied to all listings when publishing', select:'Select'
   },
   de: {
     page_title:'Bulk-Upload — EasyListing', nav_listings:'Meine Listings', nav_single:'Einzelnes Listing',
     title:'Bulk-Upload', sub:'Lade mehrere Produktfotos hoch — jedes erhält ein eigenes KI-generiertes Listing.',
-    drop_title:'Produktfotos hier ablegen', drop_sub:'Bis zu 20 Fotos — ein Listing pro Foto',
+    drop_title:'Produktfotos hier ablegen', drop_sub:'Bis zu {n} Fotos — ein Listing pro Foto',
     hint_label:'Hinweis (optional, gilt für alle)', hint_placeholder:'z.B. handgemachte Keramiktassen',
     provider_label:'KI-Anbieter', provider_gemini:'Gemini (kostenlos)', provider_nvidia:'NVIDIA (kostenlos)',
     generate_all:'Alle generieren', results_heading:'Generierte Listings', publish_all:'Ausgewählte als Entwurf veröffentlichen',
-    only_images:'Nur JPEG/PNG/WebP/GIF erlaubt', max_photos:'Maximal 20 Fotos auf einmal',
+    only_images:'Nur JPEG/PNG/WebP/GIF erlaubt', max_photos:'Maximal {n} Fotos auf einmal',
     free_limit:'Kostenloses Limit erreicht. Upgrade für mehr.', skipped:'Kostenloses Limit erreicht — übrige Listings übersprungen.',
     premium_required:'Bulk-Upload ist nur mit einem kostenpflichtigen Plan verfügbar.',
     quota:'Kontingent erreicht', failed:'Fehlgeschlagen', network:'Netzwerkfehler', price:'Preis (€)', category:'Kategorie',
     save_draft:'Als Entwurf speichern', title_price_required:'Titel und Preis sind erforderlich',
     category_missing:'Kategorie nicht gefunden — bitte manuell bearbeiten und erneut versuchen', publishing:'Wird veröffentlicht…',
-    published:'Veröffentlicht ✓', draft_saved:'✓ Entwurf gespeichert', retry:'Erneut versuchen', done:(ok, fail) => `Fertig: ${ok} veröffentlicht${fail ? ', ' + fail + ' fehlgeschlagen' : ''}`
+    published:'Veröffentlicht ✓', draft_saved:'Entwurf gespeichert', retry:'Erneut versuchen',
+    done:(ok, fail) => `Fertig: ${ok} veröffentlicht${fail ? ', ' + fail + ' fehlgeschlagen' : ''}`,
+    shipping_label:'Versandprofil', no_shipping:'— kein Versandprofil —',
+    shipping_hint:'Gilt für alle Listings beim Veröffentlichen', select:'Auswählen'
   },
   tr: {
     page_title:'Toplu Yükleme — kolaylistele', nav_listings:'Listelerim', nav_single:'Tek İlan',
     title:'Toplu Yükleme', sub:'Birden fazla ürün fotoğrafı yükleyin — her fotoğraf için ayrı bir yapay zeka ilanı oluşturulur.',
-    drop_title:'Ürün fotoğraflarını buraya bırakın', drop_sub:'20 fotoğrafa kadar — her fotoğraf için bir ilan',
+    drop_title:'Ürün fotoğraflarını buraya bırakın', drop_sub:'{n} fotoğrafa kadar — her fotoğraf için bir ilan',
     hint_label:'İpucu (opsiyonel, tümüne uygulanır)', hint_placeholder:'örn. el yapımı seramik kupalar',
     provider_label:'YZ Sağlayıcısı', provider_gemini:'Gemini (ücretsiz)', provider_nvidia:'NVIDIA (ücretsiz)',
     generate_all:'Tümünü Oluştur', results_heading:'Oluşturulan İlanlar', publish_all:'Seçilenleri Taslak Olarak Yayınla',
-    only_images:'Yalnızca JPEG/PNG/WebP/GIF kabul edilir', max_photos:'Tek seferde en fazla 20 fotoğraf',
+    only_images:'Yalnızca JPEG/PNG/WebP/GIF kabul edilir', max_photos:'Tek seferde en fazla {n} fotoğraf',
     free_limit:'Ücretsiz limit doldu. Daha fazlası için yükseltin.', skipped:'Ücretsiz limit doldu — kalan ilanlar atlandı.',
     premium_required:'Toplu Yükleme sadece ücretli planlarda kullanılabilir.',
-    quota:'Kota doldu', failed:'Başarısız', network:'Ağ hatası', price:'Fiyat (€)', category:'Kategori',
+    quota:'Kota doldu', failed:'Başarısız', network:'Ağ hatası', price:'Fiyat (TL)', category:'Kategori',
     save_draft:'Taslak Olarak Kaydet', title_price_required:'Başlık ve fiyat gerekli',
     category_missing:'Kategori bulunamadı — elle düzenleyip tekrar deneyin', publishing:'Yayınlanıyor…',
-    published:'Yayınlandı ✓', draft_saved:'✓ Taslak kaydedildi', retry:'Tekrar dene', done:(ok, fail) => `Bitti: ${ok} yayınlandı${fail ? ', ' + fail + ' başarısız' : ''}`
+    published:'Yayınlandı ✓', draft_saved:'Taslak kaydedildi', retry:'Tekrar dene',
+    done:(ok, fail) => `Bitti: ${ok} yayınlandı${fail ? ', ' + fail + ' başarısız' : ''}`,
+    shipping_label:'Kargo Profili', no_shipping:'— kargo profili yok —',
+    shipping_hint:'Yayınlarken tüm ilanlara uygulanır', select:'Seç'
   }
 };
 const BRAND = {
@@ -253,6 +302,8 @@ const BRAND = {
 const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
 let currentLang = localStorage.getItem(LANG_KEY) ||
   (window.location.hostname.includes('kolaylistele') ? 'tr' : 'en');
+const MAX_BATCH = {{ bulk_batch|default(20)|int }};   // photos per bulk run (per plan)
+
 function tr(key, ...args) {
   const value = STRINGS[currentLang]?.[key] ?? STRINGS.en[key] ?? key;
   return typeof value === 'function' ? value(...args) : value;
@@ -266,7 +317,8 @@ function setLang(lang) {
   document.getElementById('navLogo').innerHTML = BRAND[lang];
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.dataset.i18n;
-    if (STRINGS[lang][key] !== undefined) el.textContent = STRINGS[lang][key];
+    if (STRINGS[lang][key] !== undefined)
+      el.textContent = String(STRINGS[lang][key]).replace('{n}', MAX_BATCH);
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.dataset.i18nPlaceholder;
@@ -284,6 +336,36 @@ function showToast(msg, ms = 2600) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ── Shipping profiles ─────────────────────────────────────────────────────────
+let shippingProfiles = [];
+
+async function loadShippingProfiles() {
+  try {
+    const r = await fetch('/api/shipping-profiles');
+    if (r.ok) {
+      shippingProfiles = await r.json();
+      renderShippingSelect();
+    }
+  } catch (_) {}
+}
+
+function renderShippingSelect() {
+  const sel = document.getElementById('bulk-shipping');
+  const panel = document.getElementById('pubSettings');
+  sel.innerHTML = '';
+  const defOpt = document.createElement('option');
+  defOpt.value = ''; defOpt.textContent = tr('no_shipping');
+  sel.appendChild(defOpt);
+  shippingProfiles.forEach(sp => {
+    const opt = document.createElement('option');
+    opt.value = String(sp.shipping_profile_id);
+    opt.textContent = sp.title;
+    sel.appendChild(opt);
+  });
+  if (sel.options.length > 1) sel.selectedIndex = 1;
+  panel.style.display = shippingProfiles.length ? 'flex' : 'none';
 }
 
 // ── File handling ──────────────────────────────────────────────────────────────
@@ -305,8 +387,8 @@ function addFiles(newFiles) {
   const allowed = new Set(['image/jpeg','image/png','image/webp','image/gif']);
   for (const f of newFiles) {
     if (!allowed.has(f.type)) { showToast(tr('only_images')); continue; }
-    if (files.length >= 20) { showToast(tr('max_photos')); break; }
-    files.push({ file: f, result: null, status: 'pending' });
+    if (files.length >= MAX_BATCH) { showToast(tr('max_photos').replace('{n}', MAX_BATCH)); break; }
+    files.push({ file: f });
     renderThumb(f, files.length - 1);
   }
   controls.style.display = files.length ? 'flex' : 'none';
@@ -377,7 +459,6 @@ async function startBulk() {
           setThumbStatus(i, '🚫');
           results.push({ error: tr('free_limit'), file: item.file, idx: i });
           showToast(tr('skipped'), 4000);
-          // fill remaining with quota errors
           for (let j = i + 1; j < files.length; j++) {
             results.push({ error: tr('quota'), file: files[j].file, idx: j });
           }
@@ -418,56 +499,57 @@ function renderResults() {
   grid.innerHTML = '';
   document.getElementById('results').classList.add('show');
   document.getElementById('resultsHeading').textContent = `${tr('results_heading')} (${results.length})`;
+  renderShippingSelect();
 
   results.forEach((r, ri) => {
     const card = document.createElement('div');
-    card.className = 'result-card' + (r.error ? ' error' : '');
+    card.className = 'result-card' + (r.error ? ' error-card' : '');
     card.id = 'rc-' + ri;
 
     if (r.error) {
-      const err = document.createElement('div');
-      err.className = 'rc-error';
-      err.textContent = '⚠ ' + r.error;
-      card.appendChild(err);
+      card.innerHTML = `
+        <div class="rc-error-body">
+          <span class="rc-error-icon">⚠️</span>
+          <span class="rc-error-text">${esc(r.error)}</span>
+        </div>`;
       grid.appendChild(card);
       return;
     }
 
     const d = r.data;
-    const previews = d.image_previews || [];
-    const imgSrc   = previews[0] || URL.createObjectURL(r.file);
+    const imgSrc = (d.image_previews || [])[0] || URL.createObjectURL(r.file);
 
     card.innerHTML = `
-      <div class="rc-top">
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--muted);">
+      <div class="rc-header">
+        <div class="rc-num">${ri + 1}</div>
+        <label class="rc-check-label">
           <input type="checkbox" class="bulk-select" data-ri="${ri}" checked>
-          Select
+          ${tr('select')}
         </label>
+      </div>
+      <div class="rc-body">
         <div class="rc-img"><img src="${imgSrc}" alt=""></div>
         <div class="rc-main">
-          <div class="rc-title">
-            <input type="text" value="${esc(d.title || '')}" id="rc-title-${ri}" maxlength="140">
-          </div>
-          <div class="rc-row">
+          <input type="text" class="rc-title-input" value="${esc(d.title || '')}" id="rc-title-${ri}" maxlength="140">
+          <div class="rc-fields">
             <div class="rc-field">
-              <label>${tr('price')}</label>
-              <input type="number" step="0.01" min="0.20" value="${d.suggested_price_eur || ''}" id="rc-price-${ri}">
+              <span class="rc-field-label">${tr('price')}</span>
+              <input type="number" class="rc-field-input" step="0.01" min="0.20" style="width:100px" value="${esc(String(d.suggested_price_eur || ''))}" id="rc-price-${ri}">
             </div>
             <div class="rc-field" style="flex:1;min-width:160px">
-              <label>${tr('category')}</label>
-              <input type="text" value="${esc(d.taxonomy_path || d.taxonomy_query || '')}" id="rc-cat-${ri}" readonly>
+              <span class="rc-field-label">${tr('category')}</span>
+              <input type="text" class="rc-field-input" value="${esc(d.taxonomy_path || d.taxonomy_query || '')}" id="rc-cat-${ri}" readonly>
             </div>
           </div>
-          <div class="tag-pills" id="rc-tags-${ri}">
+          <div class="rc-tags" id="rc-tags-${ri}">
             ${(d.tags || []).map(t => `<span class="tag-pill">${esc(t)}</span>`).join('')}
           </div>
         </div>
       </div>
-      <div class="rc-actions">
+      <div class="rc-footer">
         <button class="btn-pub" id="rc-pub-${ri}" data-ri="${ri}">${tr('save_draft')}</button>
         <span class="pub-status" id="rc-status-${ri}"></span>
-      </div>
-    `;
+      </div>`;
     grid.appendChild(card);
   });
 }
@@ -482,28 +564,31 @@ async function publishOne(ri) {
   if (!r || r.error) return;
   const d = r.data;
 
-  const title = document.getElementById('rc-title-' + ri).value.trim();
-  const price = parseFloat(document.getElementById('rc-price-' + ri).value) || 0;
-  const btn   = document.getElementById('rc-pub-' + ri);
-  const st    = document.getElementById('rc-status-' + ri);
+  const title  = document.getElementById('rc-title-' + ri).value.trim();
+  const price  = parseFloat(document.getElementById('rc-price-' + ri).value) || 0;
+  const btn    = document.getElementById('rc-pub-' + ri);
+  const st     = document.getElementById('rc-status-' + ri);
+  const card   = document.getElementById('rc-' + ri);
+  const shippingProfileId = document.getElementById('bulk-shipping')?.value || null;
 
   if (!title || !price) { showToast(tr('title_price_required')); return; }
   if (!d.taxonomy_id)   { showToast(tr('category_missing')); return; }
 
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = tr('publishing');
   st.textContent  = '';
   st.className    = 'pub-status';
 
   const payload = {
     title,
-    description:    d.description || '',
+    description:          d.description || '',
     price,
-    taxonomy_id:    d.taxonomy_id,
-    tags:           d.tags || [],
-    materials:      d.materials || [],
-    image_previews: d.image_previews || [],
+    taxonomy_id:          d.taxonomy_id,
+    tags:                 d.tags || [],
+    materials:            d.materials || [],
+    image_previews:       d.image_previews || [],
     personalization_instructions: d.personalization_instructions || '',
+    shipping_profile_id:  shippingProfileId || null,
   };
 
   try {
@@ -515,8 +600,10 @@ async function publishOne(ri) {
     const data = await resp.json();
     if (resp.ok && data.success) {
       btn.textContent = tr('published');
+      btn.classList.add('success');
       st.textContent  = tr('draft_saved');
       st.className    = 'pub-status ok';
+      card.classList.add('published');
       r.published = true;
     } else {
       throw new Error(data.error || 'Unknown error');
@@ -571,21 +658,19 @@ function exportBulkCsv() {
   a.click();
   URL.revokeObjectURL(a.href);
 }
-setLang(currentLang);
 
-// ── Event listeners (replacing inline handlers) ────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────────
+setLang(currentLang);
+loadShippingProfiles();
+
 document.querySelectorAll('.lang-btn').forEach(btn =>
   btn.addEventListener('click', () => setLang(btn.dataset.lang)));
-
 document.getElementById('dropZone')?.addEventListener('click', () =>
   document.getElementById('fileInput').click());
-
 document.getElementById('btnGen')?.addEventListener('click', () => startBulk());
-
 document.getElementById('btnPubAll')?.addEventListener('click', () => publishAll());
 document.getElementById('btnExportCsv')?.addEventListener('click', () => exportBulkCsv());
 
-// Event delegation for dynamically-created publish buttons
 document.getElementById('resultGrid')?.addEventListener('click', e => {
   const btn = e.target.closest('.btn-pub[data-ri]');
   if (btn) publishOne(Number(btn.dataset.ri));

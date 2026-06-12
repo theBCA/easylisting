@@ -328,9 +328,13 @@ def _openai_generate(image_bytes_list, hint, api_key=None, lang="en", platform="
     for b in image_bytes_list:
         b64 = base64.b64encode(b).decode()
         content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
+    # gpt-4o-mini has vision + JSON mode at ~1/30th the cost of gpt-4o; it's a
+    # paid last-resort fallback so cost matters more than peak quality here.
+    # Override with OPENAI_VISION_MODEL if a quality bump is ever needed.
+    model = os.getenv("OPENAI_VISION_MODEL", "gpt-4o-mini")
     try:
         resp = client.chat.completions.create(
-            model="gpt-4o",
+            model=model,
             messages=[{"role": "user", "content": content}],
             response_format={"type": "json_object"},
         )

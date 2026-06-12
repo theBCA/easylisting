@@ -28,3 +28,43 @@ READINESS_ID = 1489219211571
 # ── AI / image generation ────────────────────────────────────────────────────
 FAL_KEY           = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
 ALLOW_PAID_OPENAI = os.getenv("ALLOW_PAID_OPENAI", "false").lower() == "true"
+# Image-to-image model used for photo variants + Etsy photo sets.
+# Gemini 2.5 Flash Image ("nano banana") — ~$0.039/img, same google-genai SDK
+# we already use for text. No separate vendor (fal.ai) needed.
+GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+
+# ── Per-plan limits (abuse control) ──────────────────────────────────────────
+# Every number is env-overridable so limits can be tuned per Railway service
+# without a code change. `listings` and `improve` are LIFETIME for free, MONTHLY
+# for paid plans. `photo_images` is the monthly cap on generated product images
+# (each Etsy photo set = 6 images; each photo-variant batch = 3).
+PLAN_LIMITS = {
+    "free": {
+        "listings":     int(os.getenv("LIMIT_FREE_LISTINGS", "3")),
+        "improve":      int(os.getenv("LIMIT_FREE_IMPROVE", "1")),
+        "photo_images": int(os.getenv("LIMIT_FREE_PHOTO_IMAGES", "0")),
+        "bulk_batch":   int(os.getenv("LIMIT_FREE_BULK_BATCH", "0")),  # no bulk
+    },
+    "starter": {
+        # Matches the advertised "100 generations/month". Pro gets 8× the
+        # listings for 2× the price → clear upgrade incentive.
+        "listings":     int(os.getenv("LIMIT_STARTER_LISTINGS", "100")),
+        "improve":      int(os.getenv("LIMIT_STARTER_IMPROVE", "50")),
+        # 6 images = 1 Etsy photo set/mo — a taster so Starter users try the
+        # premium photo AI and upgrade to Pro (5 sets) for more.
+        "photo_images": int(os.getenv("LIMIT_STARTER_PHOTO_IMAGES", "6")),
+        "bulk_batch":   int(os.getenv("LIMIT_STARTER_BULK_BATCH", "10")),
+    },
+    "pro": {
+        # Listings are the advertised feature → keep generous (and cheap at
+        # ~$0.003 each). Improve isn't advertised → tight backstop is fine.
+        "listings":     int(os.getenv("LIMIT_PRO_LISTINGS", "800")),
+        "improve":      int(os.getenv("LIMIT_PRO_IMPROVE", "200")),
+        "photo_images": int(os.getenv("LIMIT_PRO_PHOTO_IMAGES", "30")),  # 5 photo sets
+        "bulk_batch":   int(os.getenv("LIMIT_PRO_BULK_BATCH", "20")),
+    },
+}
+
+def plan_limit(plan: str, key: str) -> int:
+    """Return a numeric limit for a plan, falling back to the free tier."""
+    return PLAN_LIMITS.get(plan or "free", PLAN_LIMITS["free"]).get(key, 0)

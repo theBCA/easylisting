@@ -241,13 +241,13 @@ def test_translate_to_turkish_real_ai(pro_client):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3. FAL.AI PHOTO GENERATION — real image generation
+# 3. GEMINI IMAGE PHOTO GENERATION — real image generation
 # ─────────────────────────────────────────────────────────────────────────────
 
 @pytest.mark.integration
-def test_fal_photo_generation_real(pro_client):
-    """fal.ai must return 3 photo variants for a pro user."""
-    _skip_if_missing("FAL_KEY")
+def test_gemini_photo_generation_real(pro_client):
+    """Gemini 2.5 Flash Image must return 3 photo variants for a pro user."""
+    _skip_if_missing("GEMINI_API_KEY")
 
     # Use a minimal valid JPEG as source image
     fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
@@ -259,15 +259,35 @@ def test_fal_photo_generation_real(pro_client):
         "colors": ["blue", "white"],
     })
 
-    assert resp.status_code == 200, f"FAL returned {resp.status_code}: {resp.data[:300]}"
+    assert resp.status_code == 200, f"Image gen returned {resp.status_code}: {resp.data[:300]}"
     body = resp.get_json()
     assert "variants" in body, "No variants in response"
     assert len(body["variants"]) == 3, f"Expected 3 variants, got {len(body['variants'])}"
     for v in body["variants"]:
         assert v.get("image"), f"Variant missing image: {v}"
         assert v["image"].startswith("data:image/"), "Variant image is not a data URL"
-    print(f"\n✓ FAL generated {len(body['variants'])} photo variants")
+    print(f"\n✓ Gemini generated {len(body['variants'])} photo variants")
     print(f"  Labels: {[v['label'] for v in body['variants']]}")
+
+
+@pytest.mark.integration
+def test_gemini_etsy_photo_set_real(pro_client):
+    """Gemini image model must return one Etsy listing shot per request."""
+    _skip_if_missing("GEMINI_API_KEY")
+
+    fake_image = "data:image/jpeg;base64," + base64.b64encode(_jpeg_bytes()).decode()
+
+    resp = pro_client.post("/api/etsy-photo-set", json={
+        "image": fake_image,
+        "shot": 2,  # studio product shot
+    })
+
+    assert resp.status_code == 200, f"Photo set returned {resp.status_code}: {resp.data[:300]}"
+    body = resp.get_json()
+    assert body.get("image", "").startswith("data:image/"), "No image data URL returned"
+    assert body.get("shot") == 2
+    assert body.get("description"), "No auto-description returned"
+    print(f"\n✓ Gemini photo-set shot 2 generated; product: {body['description'][:80]}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -25,7 +25,7 @@ from core.etsy import etsy_headers, _find_taxonomy_id, _mobile_auth, ETSY_API_KE
 from core.domains import _ip_hash
 from core.session import (
     require_connection, is_guest, is_connected, is_authorized, shop_id, guest_shop_id,
-    is_email_verified, has_premium_access, _consume_improve_allowance,
+    is_email_verified, has_premium_access, has_pro_access, _consume_improve_allowance,
 )
 from db import (
     can_generate, increment_usage, increment_improve_usage,
@@ -51,7 +51,7 @@ def index():
         return render_template("index.html",
             shop_name=None, remaining=remaining, free_limit=limit,
             unlimited=premium, is_guest=True, has_premium=premium,
-            email_verified=email_verified)
+            has_pro=has_pro_access(), email_verified=email_verified)
     sid = str(shop_id())
     _, remaining = can_generate(sid)
     from db import FREE_LIMIT
@@ -61,8 +61,9 @@ def index():
         shop_name=session.get("shop_name"),
         remaining=remaining,
         free_limit=FREE_LIMIT,
-        unlimited=remaining >= 999,
+        unlimited=premium,
         has_premium=premium,
+        has_pro=has_pro_access(),
         is_guest=False,
     )
 
@@ -243,6 +244,21 @@ def api_generate():
         for b in image_bytes
     ]
     return jsonify(data)
+
+@bp.route("/api/shipping-profiles")
+@limiter.limit("30 per minute")
+def api_shipping_profiles():
+    redir = require_connection()
+    if redir: return jsonify([]), 401
+    try:
+        r = requests.get(
+            f"https://openapi.etsy.com/v3/application/shops/{shop_id()}/shipping-profiles",
+            headers=etsy_headers(), timeout=HTTP_TIMEOUT,
+        )
+        return jsonify(r.json().get("results", []) if r.ok else [])
+    except Exception as e:
+        logger.exception("Failed to fetch shipping profiles: %s", e)
+        return jsonify([])
 
 @bp.route("/api/taxonomy")
 @limiter.limit("30 per minute")
@@ -536,7 +552,31 @@ def bulk():
     if redir: return redir
     if not has_premium_access():
         return redirect(url_for("payments.upgrade", bulk_required=1))
-    return render_template("bulk.html", shop_name=session.get("shop_name"))
+    from core.config import plan_limit
+    sid = str(shop_id()) if shop_id() else guest_shop_id()
+    shop = get_shop(sid)
+    plan = (shop.get("plan") or "free") if shop else "free"
+    return render_template(
+        "bulk.html",
+        shop_name=session.get("shop_name"),
+        bulk_batch=plan_limit(plan, "bulk_batch") or 20,
+    )
+
+@bp.route("/photo-set")
+def photo_set():
+    redir = require_connection()
+    if redir: return redir
+    if not has_premium_access():
+        return redirect(url_for("payments.upgrade", premium_required=1))
+    from db import can_generate_photo_variants
+    sid = str(shop_id()) if shop_id() else guest_shop_id()
+    _, photo_credits = can_generate_photo_variants(sid, 1)
+    return render_template(
+        "photo_set.html",
+        shop_name=session.get("shop_name"),
+        photo_credits=photo_credits,
+        is_pro=has_pro_access(),
+    )
 
 @bp.route("/api/bulk-generate", methods=["POST"])
 @limiter.limit("5 per minute; 30 per day")
@@ -609,13 +649,20 @@ def api_bulk_generate():
                             break
             data["taxonomy_id"]   = tax_id
             data["taxonomy_path"] = tax_path
+            sp_resp = requests.get(
+                f"https://openapi.etsy.com/v3/application/shops/{shop_id()}/shipping-profiles",
+                headers=etsy_headers(), timeout=HTTP_TIMEOUT,
+            )
+            data["shipping_profiles"] = sp_resp.json().get("results", []) if sp_resp.ok else []
         else:
-            data["taxonomy_id"]   = None
-            data["taxonomy_path"] = None
+            data["taxonomy_id"]       = None
+            data["taxonomy_path"]     = None
+            data["shipping_profiles"] = []
     except Exception as e:
         logger.exception("Bulk post-generation enrichment error: %s", e)
-        data["taxonomy_id"]   = None
-        data["taxonomy_path"] = None
+        data["taxonomy_id"]       = None
+        data["taxonomy_path"]     = None
+        data["shipping_profiles"] = []
 
     data["image_previews"] = [
         "data:image/jpeg;base64," + base64.b64encode(b).decode()

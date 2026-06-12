@@ -6,10 +6,16 @@ import sqlite3
 import os
 from datetime import datetime, timezone
 
+from core.config import plan_limit
+
 DB_PATH   = os.getenv("DB_PATH", "easylisting.sqlite")
 FREE_LIMIT = 3
 FREE_IMPROVE_LIMIT = 1
 PHOTO_VARIANT_MONTHLY_LIMIT = int(os.getenv("PHOTO_VARIANT_MONTHLY_LIMIT", "30"))
+
+
+def _current_period() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
 def _conn():
@@ -98,6 +104,10 @@ def init_db():
             "ALTER TABLE shops ADD COLUMN free_improve_used INTEGER DEFAULT 0",
             "ALTER TABLE shops ADD COLUMN photo_variant_used INTEGER DEFAULT 0",
             "ALTER TABLE shops ADD COLUMN photo_variant_period TEXT DEFAULT NULL",
+            "ALTER TABLE shops ADD COLUMN listing_used INTEGER DEFAULT 0",
+            "ALTER TABLE shops ADD COLUMN listing_period TEXT DEFAULT NULL",
+            "ALTER TABLE shops ADD COLUMN improve_used INTEGER DEFAULT 0",
+            "ALTER TABLE shops ADD COLUMN improve_period TEXT DEFAULT NULL",
         ):
             try:
                 con.execute(ddl)
@@ -121,12 +131,32 @@ def ensure_shop(shop_id: str, shop_name: str):
         )
 
 
+def _bump_monthly(con, shop_id: str, used_col: str, period_col: str, count: int = 1):
+    """Increment a monthly counter, resetting it when the period rolls over."""
+    period = _current_period()
+    row = con.execute(
+        f"SELECT {period_col} AS p FROM shops WHERE shop_id = ?", (str(shop_id),)
+    ).fetchone()
+    if row and row["p"] == period:
+        con.execute(
+            f"UPDATE shops SET {used_col} = {used_col} + ? WHERE shop_id = ?",
+            (int(count), str(shop_id)),
+        )
+    else:
+        con.execute(
+            f"UPDATE shops SET {period_col} = ?, {used_col} = ? WHERE shop_id = ?",
+            (period, int(count), str(shop_id)),
+        )
+
+
 def increment_usage(shop_id: str):
     with _conn() as con:
+        # Lifetime counter (free-tier paywall) + monthly counter (paid-plan caps).
         con.execute(
             "UPDATE shops SET free_used = free_used + 1 WHERE shop_id = ?",
             (str(shop_id),),
         )
+        _bump_monthly(con, shop_id, "listing_used", "listing_period")
 
 
 def increment_improve_usage(shop_id: str):
@@ -135,6 +165,12 @@ def increment_improve_usage(shop_id: str):
             "UPDATE shops SET free_improve_used = free_improve_used + 1 WHERE shop_id = ?",
             (str(shop_id),),
         )
+        _bump_monthly(con, shop_id, "improve_used", "improve_period")
+
+
+def _monthly_remaining(shop: dict, used_col: str, period_col: str, cap: int) -> int:
+    used = shop.get(used_col, 0) if shop.get(period_col) == _current_period() else 0
+    return max(0, cap - used)
 
 
 def can_generate(shop_id: str, limit: int = FREE_LIMIT) -> tuple[bool, int]:
@@ -142,7 +178,9 @@ def can_generate(shop_id: str, limit: int = FREE_LIMIT) -> tuple[bool, int]:
     if not shop:
         return True, limit
     if shop["has_premium"]:
-        return True, 999
+        cap = plan_limit(shop.get("plan"), "listings")
+        remaining = _monthly_remaining(shop, "listing_used", "listing_period", cap)
+        return remaining > 0, remaining
     remaining = max(0, limit - shop["free_used"])
     return remaining > 0, remaining
 
@@ -152,20 +190,22 @@ def can_improve(shop_id: str, limit: int = FREE_IMPROVE_LIMIT) -> tuple[bool, in
     if not shop:
         return True, limit
     if shop["has_premium"]:
-        return True, 999
+        cap = plan_limit(shop.get("plan"), "improve")
+        remaining = _monthly_remaining(shop, "improve_used", "improve_period", cap)
+        return remaining > 0, remaining
     remaining = max(0, limit - shop.get("free_improve_used", 0))
     return remaining > 0, remaining
 
 
 def can_generate_photo_variants(shop_id: str, count: int,
-                                limit: int = PHOTO_VARIANT_MONTHLY_LIMIT) -> tuple[bool, int]:
+                                limit: int = None) -> tuple[bool, int]:
     shop = get_shop(shop_id)
-    if not shop or shop.get("plan") != "pro":
+    if not shop or not shop.get("has_premium"):
         return False, 0
-
-    period = datetime.now(timezone.utc).strftime("%Y-%m")
-    used = shop.get("photo_variant_used", 0) if shop.get("photo_variant_period") == period else 0
-    remaining = max(0, limit - used)
+    cap = limit if limit is not None else plan_limit(shop.get("plan"), "photo_images")
+    if cap <= 0:
+        return False, 0
+    remaining = _monthly_remaining(shop, "photo_variant_used", "photo_variant_period", cap)
     return remaining >= count, remaining
 
 
