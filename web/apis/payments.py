@@ -300,7 +300,8 @@ def billing_change_plan():
     sub_id      = shop.get("stripe_subscription_id", "")
     current_plan = shop.get("plan", "free")
 
-    if not str(customer_id).startswith("cus_") or not str(sub_id).startswith("sub_"):
+    if (not str(customer_id).startswith("cus_") or not str(sub_id).startswith("sub_")
+            or not shop.get("has_premium")):
         return jsonify({"error": "No active subscription found. Use the upgrade flow instead."}), 404
 
     body = request.get_json(silent=True) or {}
@@ -430,11 +431,16 @@ def stripe_webhook():
         sub    = obj
         status = sub.get("status")
         active = status in ("active", "trialing")
-        plan   = (sub.get("metadata") or {}).get("plan", "pro")
+        plan   = (sub.get("metadata") or {}).get("plan")
         sid    = (sub.get("metadata") or {}).get("shop_id")
         if not sid:
             s   = get_shop_by_stripe_customer(sub.get("customer"))
             sid = s["shop_id"] if s else None
+        if not plan and sid:
+            # Metadata missing plan (e.g. portal-initiated change) — keep existing
+            existing = get_shop(sid)
+            plan = (existing or {}).get("plan") or "pro"
+        plan = plan or "pro"
         if sid:
             ensure_shop(sid, "Shop")
             set_premium(sid, sub.get("customer"), sub.get("id"), active, plan)

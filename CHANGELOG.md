@@ -27,6 +27,8 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 - **CSP**: allow `connect-src` to `https://eu-assets.i.posthog.com` (PostHog asset source maps).
 - **Stripe webhook secrets for two domains**: `/stripe/webhook` now accepts host-specific/fallback secrets (`STRIPE_WEBHOOK_SECRET_EUR`, `STRIPE_WEBHOOK_SECRET_TRY`, `STRIPE_WEBHOOK_SECRET`) so separate Stripe webhook endpoints for `easylisting.app` and `kolaylistele.com` can both verify correctly.
 - **Stripe webhook parsing** (`/stripe/webhook`): only `SignatureVerificationError` is treated as "bad signature". Other parse errors after a valid signature (e.g. Stripe SDK `event.object` check) fall back to `json.loads` so valid events are never silently dropped as 400.
+- **`customer.subscription.updated` plan preservation**: if the webhook arrives without a `plan` key in subscription metadata (e.g. Stripe portal-initiated change), the handler now keeps the shop's existing DB plan instead of defaulting to `"pro"` — prevents a Starter subscriber being incorrectly promoted to Pro.
+- **`/billing/change-plan` cancelled-subscription guard**: endpoint now checks `has_premium=1` in addition to `cus_/sub_` ID presence; returns a clear 404 instead of attempting to modify a cancelled subscription and returning "Something went wrong".
 - **E2E test** (`scripts/test_stripe_e2e.py`): `build_webhook` now injects `"id"` and `"object": "event"` top-level fields required by the Stripe SDK; script auto-loads `.env.test` so `STRIPE_WEBHOOK_SECRET` is always consistent between the test and the running app.
 
 ### Security
