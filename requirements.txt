@@ -10,5 +10,5 @@ Pillow==12.2.0
 stripe==15.1.0
 redis==5.2.1
 resend==2.10.0
-posthog==3.11.0
+posthog==7.18.2
 PyJWT[crypto]==2.10.1
