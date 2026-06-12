@@ -169,6 +169,33 @@ justify-content:center;height:100vh;margin:0;background:#F6F7FB;color:#111827}}<
 </body></html>"""
     return html, 200
 
+@bp.route("/billing/portal", methods=["POST"])
+@limiter.limit("10 per minute")
+def billing_portal():
+    """Create a Stripe customer portal session so users can manage / cancel."""
+    if not is_authorized():
+        return jsonify({"error": "Not connected"}), 401
+    if not os.getenv("STRIPE_SECRET_KEY"):
+        return jsonify({"error": "Stripe not configured"}), 503
+    sid = usage_shop_id()
+    shop = get_shop(sid) or {}
+    customer_id = shop.get("stripe_customer_id")
+    if not customer_id:
+        return jsonify({"error": "No billing account found"}), 404
+    try:
+        import stripe as stripe_lib
+        stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+        base = request.url_root.rstrip("/")
+        portal = stripe_lib.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=base + "/upgrade",
+        )
+        return jsonify({"url": portal.url})
+    except Exception as e:
+        logger.exception("Stripe portal error: %s", e)
+        return jsonify({"error": safe_error(str(e))}), 500
+
+
 @bp.route("/stripe/webhook", methods=["POST"])
 @csrf.exempt
 def stripe_webhook():
@@ -235,6 +262,15 @@ def stripe_webhook():
             logger.info("Premium deactivated for shop %s", sid)
             from core.analytics import capture as _ph_capture
             _ph_capture(sid, "plan_cancelled", {"event_type": etype})
+
+    elif etype == "invoice.payment_failed":
+        # Renewal failed — revoke premium so the user sees the paywall
+        sid, plan = _shop_and_plan_from_invoice(obj)
+        if sid:
+            set_premium(sid, obj.get("customer"), obj.get("subscription"), False)
+            logger.warning("Payment failed, premium revoked for shop %s", sid)
+            from core.analytics import capture as _ph_capture
+            _ph_capture(sid, "payment_failed", {"plan": plan})
 
     return jsonify({"received": True})
 
