@@ -421,6 +421,76 @@ def test_stripe_webhook_deactivates_premium_on_cancel(client):
     assert shop["plan"] == "free"
 
 
+def test_stripe_webhook_invoice_payment_reaffirms_premium(client):
+    """Renewal / self-heal: invoice.payment_succeeded recreates the shop and
+    re-activates premium using the shop_id stamped on the subscription."""
+    payload = json.dumps({
+        "type": "invoice.payment_succeeded",
+        "data": {"object": {
+            "customer": "cus_renew",
+            "subscription": "sub_renew",
+            "subscription_details": {"metadata": {"shop_id": "shop_renew", "plan": "pro"}},
+        }},
+    }).encode()
+    sig = _stripe_signature(payload, WEBHOOK_SECRET)
+    with patch("stripe.Webhook.construct_event") as mock_event:
+        mock_event.return_value = json.loads(payload)
+        resp = client.post(
+            "/stripe/webhook", data=payload,
+            headers={"Stripe-Signature": sig, "Content-Type": "application/json"},
+        )
+    assert resp.status_code == 200
+    shop = db_module.get_shop("shop_renew")
+    assert shop is not None  # recreated on the fly
+    assert shop["has_premium"] == 1
+    assert shop["plan"] == "pro"
+
+
+def test_stripe_webhook_subscription_updated_syncs_plan(client):
+    db_module.ensure_shop("shop_upd", "UpdShop")
+    payload = json.dumps({
+        "type": "customer.subscription.updated",
+        "data": {"object": {
+            "id": "sub_upd", "customer": "cus_upd", "status": "active",
+            "metadata": {"shop_id": "shop_upd", "plan": "starter"},
+        }},
+    }).encode()
+    sig = _stripe_signature(payload, WEBHOOK_SECRET)
+    with patch("stripe.Webhook.construct_event") as mock_event:
+        mock_event.return_value = json.loads(payload)
+        resp = client.post(
+            "/stripe/webhook", data=payload,
+            headers={"Stripe-Signature": sig, "Content-Type": "application/json"},
+        )
+    assert resp.status_code == 200
+    shop = db_module.get_shop("shop_upd")
+    assert shop["has_premium"] == 1
+    assert shop["plan"] == "starter"
+
+
+def test_stripe_webhook_subscription_updated_deactivates_on_cancel(client):
+    db_module.ensure_shop("shop_can2", "C2")
+    db_module.set_premium("shop_can2", "cus_can2", "sub_can2", True, "pro")
+    payload = json.dumps({
+        "type": "customer.subscription.updated",
+        "data": {"object": {
+            "id": "sub_can2", "customer": "cus_can2", "status": "canceled",
+            "metadata": {"shop_id": "shop_can2", "plan": "pro"},
+        }},
+    }).encode()
+    sig = _stripe_signature(payload, WEBHOOK_SECRET)
+    with patch("stripe.Webhook.construct_event") as mock_event:
+        mock_event.return_value = json.loads(payload)
+        resp = client.post(
+            "/stripe/webhook", data=payload,
+            headers={"Stripe-Signature": sig, "Content-Type": "application/json"},
+        )
+    assert resp.status_code == 200
+    shop = db_module.get_shop("shop_can2")
+    assert shop["has_premium"] == 0
+    assert shop["plan"] == "free"
+
+
 def test_stripe_checkout_requires_auth(client):
     resp = client.post(
         "/stripe/checkout",
@@ -850,6 +920,24 @@ def test_api_status_connected_user(connected_client):
     body = resp.get_json()
     assert "allowed" in body
     assert body["is_guest"] is False
+
+
+def test_api_status_exposes_plan_and_premium(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    db_module.set_premium("12345", "cus_st", "sub_st", True, "pro")
+    resp = connected_client.get("/api/status")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["plan"] == "pro"
+    assert body["has_premium"] is True
+
+
+def test_api_status_free_user_plan_defaults(connected_client):
+    db_module.ensure_shop("12345", "TestShop")
+    resp = connected_client.get("/api/status")
+    body = resp.get_json()
+    assert body["plan"] == "free"
+    assert body["has_premium"] is False
 
 
 def test_api_status_guest_user(guest_client):

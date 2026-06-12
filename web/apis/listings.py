@@ -30,7 +30,7 @@ from core.session import (
 from db import (
     can_generate, increment_usage, increment_improve_usage,
     save_template, get_template, ensure_shop, log_abuse_signal,
-    get_platform_credentials,
+    get_platform_credentials, get_shop,
 )
 
 bp = Blueprint("listings", __name__)
@@ -112,12 +112,15 @@ def api_status():
     else:
         allowed, remaining = can_generate(str(shop_id()))
     sid = str(shop_id() or guest_shop_id())
+    shop = get_shop(sid) or {}
     return jsonify({
         "allowed":            allowed,
         "remaining":          remaining,
         "is_guest":           is_guest(),
         "is_email":           is_email_verified(),
         "trendyol_connected": bool(get_platform_credentials(sid, "trendyol")),
+        "plan":               shop.get("plan") or "free",
+        "has_premium":        bool(shop.get("has_premium")),
     })
 
 @bp.route("/api/generate", methods=["POST"])

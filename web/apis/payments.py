@@ -12,7 +12,7 @@ from core.session import (
     require_connection, usage_shop_id, is_guest, is_email_verified, is_authorized,
 )
 from core.etsy import _mobile_auth
-from db import can_generate, get_shop, set_premium, get_shop_by_stripe_customer
+from db import can_generate, get_shop, set_premium, get_shop_by_stripe_customer, ensure_shop
 
 bp = Blueprint("payments", __name__)
 
@@ -93,6 +93,10 @@ def stripe_checkout():
             metadata={"shop_id": str(usage_shop_id()),
                       "shop_name": session.get("shop_name", ""),
                       "plan": base_plan},
+            # Stamp the subscription too, so renewal/update webhooks can recover
+            # the shop even if our DB was reset between purchase and renewal.
+            subscription_data={"metadata": {"shop_id": str(usage_shop_id()),
+                                            "plan": base_plan}},
         )
         return jsonify({"url": checkout.url})
     except Exception as e:
@@ -134,6 +138,7 @@ def api_stripe_checkout():
             cancel_url=base  + "/upgrade/mobile/return?status=cancel",
             client_reference_id=sid,
             metadata={"shop_id": sid, "shop_name": shop_name_val, "plan": base_plan},
+            subscription_data={"metadata": {"shop_id": sid, "plan": base_plan}},
         )
         return jsonify({"url": checkout.url})
     except Exception as e:
@@ -181,24 +186,68 @@ def stripe_webhook():
         logger.error("Stripe webhook invalid: %s", e)
         return jsonify({"error": "Invalid signature"}), 400
 
-    obj = event["data"]["object"]
-    if event["type"] == "checkout.session.completed":
+    obj   = event["data"]["object"]
+    etype = event["type"]
+
+    if etype == "checkout.session.completed":
         if obj.get("payment_status") != "paid":
             return jsonify({"received": True})  # wait for invoice.payment_succeeded
         sid  = obj.get("client_reference_id") or obj.get("metadata", {}).get("shop_id")
         plan = obj.get("metadata", {}).get("plan", "pro")
         if sid:
+            ensure_shop(sid, obj.get("metadata", {}).get("shop_name") or "Shop")
             set_premium(sid, obj.get("customer"), obj.get("subscription"), True, plan)
             logger.info("Premium activated for shop %s (plan=%s)", sid, plan)
             from core.analytics import capture as _ph_capture
             _ph_capture(sid, "plan_upgraded", {"plan": plan, "source": "stripe"})
-    elif event["type"] in ("customer.subscription.deleted",
-                           "customer.subscription.paused"):
-        s = get_shop_by_stripe_customer(obj.get("customer"))
-        if s:
-            set_premium(s["shop_id"], obj["customer"], obj["id"], False)
-            logger.info("Premium deactivated for shop %s", s["shop_id"])
+
+    elif etype == "invoice.payment_succeeded":
+        # Renewal — and self-heal if our DB was reset since purchase. The shop_id
+        # rides on the subscription metadata we stamp at checkout.
+        sid, plan = _shop_and_plan_from_invoice(obj)
+        if sid:
+            ensure_shop(sid, "Shop")
+            set_premium(sid, obj.get("customer"), obj.get("subscription"), True, plan)
+            logger.info("Premium reaffirmed for shop %s (plan=%s, renewal)", sid, plan)
+
+    elif etype == "customer.subscription.updated":
+        # Plan change / cancel-at-period-end toggle / reactivation.
+        sub    = obj
+        status = sub.get("status")
+        active = status in ("active", "trialing")
+        plan   = (sub.get("metadata") or {}).get("plan", "pro")
+        sid    = (sub.get("metadata") or {}).get("shop_id")
+        if not sid:
+            s   = get_shop_by_stripe_customer(sub.get("customer"))
+            sid = s["shop_id"] if s else None
+        if sid:
+            ensure_shop(sid, "Shop")
+            set_premium(sid, sub.get("customer"), sub.get("id"), active, plan)
+            logger.info("Subscription updated for shop %s (status=%s, active=%s)", sid, status, active)
+
+    elif etype in ("customer.subscription.deleted", "customer.subscription.paused"):
+        sid = (obj.get("metadata") or {}).get("shop_id")
+        if not sid:
+            s   = get_shop_by_stripe_customer(obj.get("customer"))
+            sid = s["shop_id"] if s else None
+        if sid:
+            set_premium(sid, obj.get("customer"), obj.get("id"), False)
+            logger.info("Premium deactivated for shop %s", sid)
             from core.analytics import capture as _ph_capture
-            _ph_capture(s["shop_id"], "plan_cancelled", {"event_type": event["type"]})
+            _ph_capture(sid, "plan_cancelled", {"event_type": etype})
 
     return jsonify({"received": True})
+
+
+def _shop_and_plan_from_invoice(invoice: dict):
+    """Best-effort (shop_id, plan) from an invoice. Prefers the subscription
+    metadata we stamp at checkout, then falls back to our customer mapping."""
+    sd   = (invoice.get("subscription_details") or {}).get("metadata") or {}
+    sid  = sd.get("shop_id")
+    plan = sd.get("plan", "pro")
+    if not sid:
+        s = get_shop_by_stripe_customer(invoice.get("customer"))
+        if s:
+            sid  = s["shop_id"]
+            plan = s.get("plan") or "pro"
+    return sid, plan
