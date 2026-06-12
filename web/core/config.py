@@ -60,7 +60,7 @@ PLAN_LIMITS = {
         # ~$0.003 each). Improve isn't advertised → tight backstop is fine.
         "listings":     int(os.getenv("LIMIT_PRO_LISTINGS", "800")),
         "improve":      int(os.getenv("LIMIT_PRO_IMPROVE", "200")),
-        "photo_images": int(os.getenv("LIMIT_PRO_PHOTO_IMAGES", "30")),  # 5 photo sets
+        "photo_images": int(os.getenv("LIMIT_PRO_PHOTO_IMAGES", "60")),  # 10 photo sets
         "bulk_batch":   int(os.getenv("LIMIT_PRO_BULK_BATCH", "20")),
     },
 }

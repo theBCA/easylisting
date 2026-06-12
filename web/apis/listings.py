@@ -245,6 +245,88 @@ def api_generate():
     ]
     return jsonify(data)
 
+@bp.route("/api/upload-photos-to-listing", methods=["POST"])
+@limiter.limit("20 per minute")
+def api_upload_photos_to_listing():
+    redir = require_connection()
+    if redir: return jsonify({"error": "Not connected"}), 401
+    if not has_premium_access():
+        return jsonify({"error": "premium_required"}), 403
+    body = request.get_json(silent=True) or {}
+    listing_id = body.get("listing_id", "")
+    images     = body.get("images", [])
+    if not listing_id or not str(listing_id).isdigit():
+        return jsonify({"error": "Invalid listing_id"}), 400
+    if not images or not isinstance(images, list):
+        return jsonify({"error": "No images provided"}), 400
+    images = images[:10]
+    sid        = str(shop_id())
+    safe_lid   = str(int(listing_id))
+    access_tok = session.get("access_token", "")
+    uploaded   = 0
+    errors     = []
+    os.makedirs("images", exist_ok=True)
+    for i, b64 in enumerate(images, 1):
+        path = None
+        try:
+            raw = b64.split(",", 1)[1] if "," in b64 else b64
+            img_bytes = base64.b64decode(raw)
+            if len(img_bytes) > 10 * 1024 * 1024:
+                errors.append(f"Image {i} too large"); continue
+            if not _is_valid_image_bytes(img_bytes):
+                errors.append(f"Image {i} invalid"); continue
+            with tempfile.NamedTemporaryFile(suffix=".jpg", dir="images", delete=False) as tmp:
+                tmp.write(img_bytes); path = tmp.name
+            with open(path, "rb") as f:
+                r = requests.post(
+                    f"https://openapi.etsy.com/v3/application/shops/{sid}/listings/{safe_lid}/images",
+                    headers={"x-api-key": ETSY_API_KEY_HEADER,
+                             "Authorization": f"Bearer {access_tok}"},
+                    files={"image": f},
+                    data={"rank": i},
+                    timeout=HTTP_TIMEOUT,
+                )
+            if r.ok:
+                uploaded += 1
+            else:
+                errors.append(f"Etsy rejected image {i}: {r.status_code}")
+            time.sleep(0.25)
+        except Exception as e:
+            logger.error("upload-photos-to-listing error listing %s img %s: %s", safe_lid, i, e)
+            errors.append(f"Image {i} failed")
+        finally:
+            if path and os.path.exists(path): os.remove(path)
+    if uploaded == 0:
+        return jsonify({"error": errors[0] if errors else "Upload failed"}), 500
+    return jsonify({"success": True, "uploaded": uploaded, "errors": errors})
+
+
+@bp.route("/api/shop-listings")
+@limiter.limit("30 per minute")
+def api_shop_listings():
+    """Fetch active + draft listings for the photo-set upload picker."""
+    redir = require_connection()
+    if redir: return jsonify({"error": "Not connected"}), 401
+    results = []
+    for state in ("draft", "active"):
+        try:
+            r = requests.get(
+                f"https://openapi.etsy.com/v3/application/shops/{shop_id()}/listings"
+                f"?state={state}&limit=50",
+                headers=etsy_headers(), timeout=HTTP_TIMEOUT,
+            )
+            if r.ok:
+                for item in r.json().get("results", []):
+                    results.append({
+                        "listing_id": item["listing_id"],
+                        "title":      item.get("title", "Untitled")[:60],
+                        "state":      state,
+                    })
+        except Exception as e:
+            logger.warning("api_shop_listings %s: %s", state, e)
+    return jsonify({"results": results})
+
+
 @bp.route("/api/shipping-profiles")
 @limiter.limit("30 per minute")
 def api_shipping_profiles():

@@ -123,6 +123,27 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 .btn-collage-dl { background: var(--amber); color: white; border: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s; }
 .btn-collage-dl:hover { background: #B45309; }
 
+/* Create-listing CTA in step actions */
+.btn-create-listing { background: var(--green-light); color: var(--green); border: 1.5px solid var(--green); padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: none; align-items: center; gap: 6px; }
+.btn-create-listing:hover { background: var(--green); color: white; }
+
+/* Upload-to-listing panel */
+.upload-panel { border-top: 1px solid var(--border); padding: 20px 24px; display: none; flex-direction: column; gap: 14px; }
+.upload-panel.open { display: flex; }
+.upload-panel h4 { font-size: 14px; font-weight: 700; }
+.upload-panel select { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; background: white; }
+.shot-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.shot-pick-item { position: relative; cursor: pointer; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: var(--bg); border: 2px solid transparent; transition: border-color .15s; }
+.shot-pick-item.selected { border-color: var(--primary); }
+.shot-pick-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shot-pick-item .empty-cell { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 11px; color: var(--muted); }
+.shot-pick-item input[type=checkbox] { position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; accent-color: var(--primary); }
+.btn-upload-etsy { background: var(--primary); color: white; border: none; padding: 10px 24px; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.btn-upload-etsy:disabled { opacity: .5; cursor: not-allowed; }
+.btn-upload-etsy:not(:disabled):hover { background: var(--primary-dark); }
+.btn-open-panel { background: var(--primary-light); color: var(--primary); border: 1.5px solid #C4B5FD; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-open-panel:hover { background: var(--primary); color: white; }
+
 /* Toast */
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A1A; color: white; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; transition: transform .3s; z-index: 9999; pointer-events: none; }
 .toast.show { transform: translateX(-50%) translateY(0); }
@@ -242,6 +263,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
           </button>
           <button class="btn-next" id="btnNext">Next →</button>
           <button class="btn-dl" id="btnDl">⬇ Download</button>
+          <a href="/" class="btn-create-listing" id="btnCreateListing">✍️ <span id="btnCreateListingTxt">Create Listing</span></a>
           <span class="step-hint" id="stepHint"></span>
         </div>
       </div>
@@ -249,8 +271,11 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
       <!-- Collage card -->
       <div class="collage-card" id="collageCard">
         <div class="collage-header">
-          <h3>🎨 Collage Preview</h3>
-          <button class="btn-collage-dl" id="btnCollageDl" style="display:none">⬇ Download Collage</button>
+          <h3 id="collageTitleTxt">🎨 Collage Preview</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button class="btn-open-panel" id="btnOpenUpload" style="display:none">📤 <span id="btnOpenUploadTxt">Upload to Etsy Listing</span></button>
+            <button class="btn-collage-dl" id="btnCollageDl" style="display:none">⬇ Download Collage</button>
+          </div>
         </div>
         <div class="collage-area">
           <div class="collage-grid" id="collageGrid">
@@ -260,6 +285,20 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
             <div class="collage-cell collage-empty" id="cc-4">4</div>
             <div class="collage-cell collage-empty" id="cc-5">5</div>
             <div class="collage-cell collage-empty" id="cc-6">6</div>
+          </div>
+        </div>
+        <!-- Upload-to-listing panel -->
+        <div class="upload-panel" id="uploadPanel">
+          <h4 id="uploadPanelTitle">📤 Upload Photos to an Etsy Listing</h4>
+          <select id="listingSelect"><option value="">Loading listings…</option></select>
+          <div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:8px" id="pickShotsLabel">Select shots to upload:</p>
+            <div class="shot-picker" id="shotPicker"></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <button class="btn-upload-etsy" id="btnUploadEtsy" disabled>📤 <span id="btnUploadEtsyTxt">Upload Selected</span></button>
+            <button class="btn-dl" id="btnClosePanel" style="display:block">✕ <span id="btnClosePanelTxt">Cancel</span></button>
+            <span style="font-size:12px;color:var(--muted)" id="uploadStatus"></span>
           </div>
         </div>
       </div>
@@ -286,7 +325,14 @@ const PAGE_STRINGS = {
         change_photo:'Change photo', click_generate:'Click Generate to create this shot',
         hint_shot:'Shot {n} of 6', hint_last:'Last shot — then collage!',
         generating:'Generating shot {n}…', gen_wait:'Creating Shot {n} · ~30s',
-        collage_first:'Generate all 6 shots first.' },
+        collage_first:'Generate all 6 shots first.',
+        create_listing:'Create Listing', upload_etsy:'Upload to Etsy Listing',
+        upload_panel_title:'Upload Photos to an Etsy Listing',
+        pick_shots:'Select shots to upload:',
+        upload_selected:'Upload Selected', cancel:'Cancel',
+        pick_listing:'— Pick a listing —', loading_listings:'Loading…',
+        no_listings:'No listings found', failed_listings:'Failed to load listings',
+        uploading:'Uploading…', resets:'Resets' },
   de: { nav_listings:'Meine Listings', nav_bulk:'Massen-Upload', nav_single:'Einzel-Listing',
         page_title:'Etsy Foto-Set Generator',
         page_sub:'Lade ein Produktfoto hoch – erhalte 6 professionelle Etsy-Fotos, eines nach dem anderen.',
@@ -299,7 +345,13 @@ const PAGE_STRINGS = {
         change_photo:'Foto ändern', click_generate:'Klicke auf Erstellen, um dieses Foto zu erzeugen',
         hint_shot:'Foto {n} von 6', hint_last:'Letztes Foto — dann Collage!',
         generating:'Erstelle Foto {n}…', gen_wait:'Foto {n} wird erstellt · ~30 Sek.',
-        collage_first:'Erstelle zuerst alle 6 Fotos.' },
+        collage_first:'Erstelle zuerst alle 6 Fotos.',
+        create_listing:'Listing erstellen', upload_etsy:'Zu Etsy-Listing hochladen',
+        upload_panel_title:'Fotos zu einem Etsy-Listing hochladen',
+        pick_shots:'Fotos auswählen:', upload_selected:'Ausgewählte hochladen', cancel:'Abbrechen',
+        pick_listing:'— Listing auswählen —', loading_listings:'Lädt…',
+        no_listings:'Keine Listings gefunden', failed_listings:'Laden fehlgeschlagen',
+        uploading:'Wird hochgeladen…', resets:'Setzt sich zurück' },
   tr: { nav_listings:'Listelerim', nav_bulk:'Toplu Yükleme', nav_single:'Tekil İlan',
         page_title:'Etsy Foto Seti Oluşturucu',
         page_sub:'Bir ürün fotoğrafı yükle — 6 profesyonel Etsy fotoğrafı al, birer birer.',
@@ -312,7 +364,13 @@ const PAGE_STRINGS = {
         change_photo:'Fotoğrafı değiştir', click_generate:'Bu çekimi oluşturmak için Oluştur\'a tıkla',
         hint_shot:'{n}. çekim / 6', hint_last:'Son çekim — ardından kolaj!',
         generating:'{n}. çekim oluşturuluyor…', gen_wait:'{n}. Çekim Oluşturuluyor · ~30 sn',
-        collage_first:'Önce tüm 6 çekimi oluştur.' },
+        collage_first:'Önce tüm 6 çekimi oluştur.',
+        create_listing:'İlan Oluştur', upload_etsy:'Etsy İlanına Yükle',
+        upload_panel_title:'Etsy İlanına Fotoğraf Yükle',
+        pick_shots:'Yüklenecek çekimleri seç:', upload_selected:'Seçilenleri Yükle', cancel:'İptal',
+        pick_listing:'— İlan seç —', loading_listings:'Yükleniyor…',
+        no_listings:'İlan bulunamadı', failed_listings:'Yüklenemedi',
+        uploading:'Yükleniyor…', resets:'Sıfırlanma' },
 };
 const S = PAGE_STRINGS[_lang] || PAGE_STRINGS.en;
 
@@ -337,6 +395,20 @@ function applyLang() {
   if (ch) ch.textContent = S.collage_title;
   const cdl = document.getElementById('btnCollageDl');
   if (cdl) cdl.textContent = S.collage_dl;
+  // Upload panel
+  const bou = document.getElementById('btnOpenUploadTxt');
+  if (bou) bou.textContent = S.upload_etsy;
+  const upt = document.getElementById('uploadPanelTitle');
+  if (upt) upt.textContent = S.upload_panel_title;
+  const psl = document.getElementById('pickShotsLabel');
+  if (psl) psl.textContent = S.pick_shots;
+  const bue = document.getElementById('btnUploadEtsyTxt');
+  if (bue) bue.textContent = S.upload_selected;
+  const bcp = document.getElementById('btnClosePanelTxt');
+  if (bcp) bcp.textContent = S.cancel;
+  // Create listing link
+  const bcl = document.getElementById('btnCreateListingTxt');
+  if (bcl) bcl.textContent = S.create_listing;
 }
 
 const SHOT_META = {
@@ -363,13 +435,22 @@ function showToast(msg, ms = 2800) {
   setTimeout(() => t.classList.remove('show'), ms);
 }
 
+function _nextMonthStr() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    .toLocaleDateString(_lang === 'tr' ? 'tr-TR' : _lang === 'de' ? 'de-DE' : 'en-GB',
+      { day: 'numeric', month: 'short' });
+}
+
 function renderCredits() {
   const pill = document.getElementById('creditsPill');
   const left = document.getElementById('creditsLeft');
   const up   = document.getElementById('creditsUpgrade');
   if (left) left.textContent = photoCredits;
   if (pill) pill.classList.toggle('empty', photoCredits <= 0);
-  // Show "upgrade for more" once a Starter user is low/out (Pro has plenty).
+  if (photoCredits <= 0 && pill) {
+    pill.title = `${S.resets} ${_nextMonthStr()}`;
+  }
   if (up) up.style.display = (!IS_PRO && photoCredits <= 0) ? '' : 'none';
 }
 
@@ -452,16 +533,18 @@ function renderStep(step) {
   const ra = document.getElementById('resultArea');
   if (generated[step]) {
     ra.innerHTML = `<img src="${generated[step]}" alt="${meta.title}">`;
-    document.getElementById('btnNext').style.display = step < 6 ? '' : 'none';
-    document.getElementById('btnDl').style.display   = '';
-    document.getElementById('btnDl').textContent     = S.dl_btn;
-    document.getElementById('btnNext').textContent   = S.next_btn;
-    document.getElementById('btnGenerate').textContent = S.regen_btn;
+    document.getElementById('btnNext').style.display          = step < 6 ? '' : 'none';
+    document.getElementById('btnDl').style.display            = '';
+    document.getElementById('btnDl').textContent              = S.dl_btn;
+    document.getElementById('btnNext').textContent            = S.next_btn;
+    document.getElementById('btnGenerate').textContent        = S.regen_btn;
+    document.getElementById('btnCreateListing').style.display = 'flex';
   } else {
     ra.innerHTML = `<div class="result-placeholder"><div class="ph-icon">📷</div><p>${S.click_generate}</p></div>`;
-    document.getElementById('btnNext').style.display = 'none';
-    document.getElementById('btnDl').style.display   = 'none';
-    document.getElementById('btnGenerate').textContent = `✨ ${S.gen_btn} ${step}`;
+    document.getElementById('btnNext').style.display          = 'none';
+    document.getElementById('btnDl').style.display            = 'none';
+    document.getElementById('btnCreateListing').style.display = 'none';
+    document.getElementById('btnGenerate').textContent        = `✨ ${S.gen_btn} ${step}`;
   }
   document.getElementById('btnGenerate').disabled = generating;
   document.getElementById('stepHint').textContent =
@@ -576,7 +659,10 @@ function updateCollageGrid() {
       allDone = false;
     }
   }
-  document.getElementById('btnCollageDl').style.display = allDone ? '' : 'none';
+  document.getElementById('btnCollageDl').style.display  = allDone ? '' : 'none';
+  const anyGenerated = Object.keys(generated).length > 0;
+  const panelOpen = document.getElementById('uploadPanel').classList.contains('open');
+  document.getElementById('btnOpenUpload').style.display = (anyGenerated && !panelOpen) ? '' : 'none';
 }
 
 function downloadCollage() {
@@ -632,6 +718,106 @@ document.querySelectorAll('.step-item[data-step]').forEach(el => {
   });
 });
 
+// ── Upload-to-listing panel ───────────────────────────────────────────────────
+let listingsLoaded = false;
+
+function openUploadPanel() {
+  document.getElementById('uploadPanel').classList.add('open');
+  document.getElementById('btnOpenUpload').style.display = 'none';
+  buildShotPicker();
+  if (!listingsLoaded) loadShopListings();
+}
+
+function closeUploadPanel() {
+  document.getElementById('uploadPanel').classList.remove('open');
+  document.getElementById('btnOpenUpload').style.display =
+    Object.keys(generated).length > 0 ? '' : 'none';
+}
+
+function buildShotPicker() {
+  const picker = document.getElementById('shotPicker');
+  picker.innerHTML = '';
+  for (let s = 1; s <= 6; s++) {
+    const item = document.createElement('div');
+    item.className = 'shot-pick-item' + (generated[s] ? ' selected' : '');
+    item.dataset.shot = s;
+    if (generated[s]) {
+      item.innerHTML = `<img src="${generated[s]}" alt="Shot ${s}"><input type="checkbox" checked data-shot="${s}">`;
+    } else {
+      item.innerHTML = `<div class="empty-cell">${s}</div>`;
+    }
+    if (generated[s]) {
+      item.addEventListener('click', () => {
+        const cb = item.querySelector('input[type=checkbox]');
+        cb.checked = !cb.checked;
+        item.classList.toggle('selected', cb.checked);
+        updateUploadBtn();
+      });
+    }
+    picker.appendChild(item);
+  }
+  updateUploadBtn();
+}
+
+function updateUploadBtn() {
+  const anyChecked = document.querySelectorAll('#shotPicker input[type=checkbox]:checked').length > 0;
+  const hasListing = document.getElementById('listingSelect').value !== '';
+  document.getElementById('btnUploadEtsy').disabled = !(anyChecked && hasListing);
+}
+
+async function loadShopListings() {
+  const sel = document.getElementById('listingSelect');
+  sel.innerHTML = `<option value="">${S.loading_listings}</option>`;
+  try {
+    const r = await fetch('/api/shop-listings');
+    const data = await r.json();
+    const results = data.results || [];
+    if (!results.length) {
+      sel.innerHTML = `<option value="">${S.no_listings}</option>`;
+      return;
+    }
+    sel.innerHTML = `<option value="">${S.pick_listing}</option>`;
+    results.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.listing_id;
+      opt.textContent = `[${l.state}] ${l.title}`;
+      sel.appendChild(opt);
+    });
+    listingsLoaded = true;
+  } catch(e) {
+    sel.innerHTML = `<option value="">${S.failed_listings}</option>`;
+  }
+}
+
+async function uploadToListing() {
+  const listingId = document.getElementById('listingSelect').value;
+  if (!listingId) return;
+  const checked = [...document.querySelectorAll('#shotPicker input[type=checkbox]:checked')];
+  const images  = checked.map(cb => generated[parseInt(cb.dataset.shot)]).filter(Boolean);
+  if (!images.length) return;
+
+  const btn = document.getElementById('btnUploadEtsy');
+  const status = document.getElementById('uploadStatus');
+  btn.disabled = true;
+  status.textContent = `⏳ ${S.uploading}`;
+
+  try {
+    const resp = await fetch('/api/upload-photos-to-listing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listing_id: listingId, images }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || 'Upload failed');
+    status.textContent = `✅ ${data.uploaded} image${data.uploaded > 1 ? 's' : ''} uploaded!`;
+    showToast(`✅ ${data.uploaded} photo${data.uploaded > 1 ? 's' : ''} added to listing`, 3500);
+  } catch(e) {
+    status.textContent = `❌ ${e.message}`;
+    showToast(e.message, 4000);
+    btn.disabled = false;
+  }
+}
+
 // ── Collage grid: per-image download via event delegation ────────────────────
 document.getElementById('collageGrid').addEventListener('click', e => {
   const btn = e.target.closest('.cell-dl');
@@ -649,6 +835,10 @@ document.getElementById('btnGenerate').addEventListener('click', generateCurrent
 document.getElementById('btnNext').addEventListener('click', nextStep);
 document.getElementById('btnDl').addEventListener('click', downloadCurrent);
 document.getElementById('btnCollageDl').addEventListener('click', downloadCollage);
+document.getElementById('btnOpenUpload').addEventListener('click', openUploadPanel);
+document.getElementById('btnClosePanel').addEventListener('click', closeUploadPanel);
+document.getElementById('btnUploadEtsy').addEventListener('click', uploadToListing);
+document.getElementById('listingSelect').addEventListener('change', updateUploadBtn);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 applyLang();
