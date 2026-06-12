@@ -1,4 +1,5 @@
 """Auth: guest sessions, mobile tokens, fingerprint, magic-link email login."""
+import os
 import secrets
 import hashlib
 
@@ -19,6 +20,7 @@ from db import (
     ensure_shop, create_mobile_token, delete_mobile_token, log_abuse_signal,
     get_shop, get_or_create_email_shop, get_email_shop, create_magic_link,
     use_magic_link, count_recent_magic_links, add_marketing_consent, save_fp_session,
+    set_premium,
 )
 
 bp = Blueprint("auth", __name__)
@@ -147,6 +149,27 @@ def api_magic_link():
     import re
     if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
         return jsonify({"error": "invalid_email"}), 400
+
+    # App Store / web review account: instant pro login with no email round-trip
+    # (reviewers can't access our inbox). Gated to one env-configured email and
+    # backed by a dedicated demo shop, recreated on demand so it survives the
+    # ephemeral SQLite on each deploy.
+    review_email = os.getenv("APPSTORE_REVIEW_EMAIL", "").strip().lower()
+    if review_email and email == review_email:
+        review_sid = "review_appstore"
+        ensure_shop(review_sid, "App Review")
+        set_premium(review_sid, "review", "review", True, "pro")
+        logger.info("App review account login (mobile=%s)", is_mobile)
+        if is_mobile:
+            mob_tok = create_mobile_token(
+                shop_id=review_sid, is_guest=True, is_email=True,
+            )
+            return jsonify({"ok": True, "already_verified": True, "mobile_token": mob_tok})
+        session["guest"]          = True
+        session["email_verified"] = True
+        session["email_shop_id"]  = review_sid
+        session.permanent         = True
+        return jsonify({"ok": True, "already_verified": True})
 
     email_hash = hashlib.sha256(email.encode()).hexdigest()
 

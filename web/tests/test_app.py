@@ -984,6 +984,66 @@ def test_auth_magic_mobile_app_still_consumes_token(client):
     assert "mobile_token" in body
 
 
+# ── 12h. App Store review account ────────────────────────────────────────────
+
+def test_appstore_review_email_instant_pro_login_web(client):
+    """The configured review email logs in instantly with pro, no email sent."""
+    with client.session_transaction() as sess:
+        sess["guest"]    = True
+        sess["guest_id"] = "guest-review-web"
+    with patch.dict(os.environ, {"APPSTORE_REVIEW_EMAIL": "review@easylisting.app"}), \
+         patch("apis.auth.send_email") as mock_mail:
+        resp = client.post(
+            "/api/magic-link",
+            json={"email": "review@easylisting.app"},
+            content_type="application/json",
+        )
+    assert resp.status_code == 200
+    assert resp.get_json()["already_verified"] is True
+    mock_mail.assert_not_called()
+    shop = db_module.get_shop("review_appstore")
+    assert shop["plan"] == "pro"
+    with client.session_transaction() as sess:
+        assert sess.get("email_verified") is True
+        assert sess.get("email_shop_id") == "review_appstore"
+
+
+def test_appstore_review_email_instant_token_mobile(client):
+    """Mobile review login returns a mobile_token directly, no email sent."""
+    with patch.dict(os.environ, {"APPSTORE_REVIEW_EMAIL": "review@easylisting.app"}), \
+         patch("apis.auth.send_email") as mock_mail:
+        resp = client.post(
+            "/api/magic-link",
+            headers={"X-Mobile-Request": "true"},
+            json={"email": "review@easylisting.app"},
+            content_type="application/json",
+        )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["already_verified"] is True
+    assert "mobile_token" in body
+    mock_mail.assert_not_called()
+
+
+def test_non_review_email_does_not_trigger_bypass(client):
+    """A non-review email must still go through the normal email-sending flow."""
+    with patch.dict(os.environ, {"APPSTORE_REVIEW_EMAIL": "review@easylisting.app"}), \
+         patch("apis.auth.send_email", return_value=(True, None)) as mock_mail, \
+         patch("apis.auth.count_recent_magic_links", return_value=0), \
+         patch("apis.auth.get_email_shop", return_value=None), \
+         patch("apis.auth.get_or_create_email_shop", return_value="email-shop-other"), \
+         patch("apis.auth.create_magic_link"):
+        db_module.ensure_shop("email-shop-other", "Guest")
+        resp = client.post(
+            "/api/magic-link",
+            headers={"X-Mobile-Request": "true"},
+            json={"email": "someone@example.com"},
+            content_type="application/json",
+        )
+    assert resp.status_code == 200
+    mock_mail.assert_called()
+
+
 # ── 12h. Bulk generate flow ──────────────────────────────────────────────────
 
 def test_bulk_generate_returns_data_for_premium(connected_client):
