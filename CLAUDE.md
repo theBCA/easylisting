@@ -70,6 +70,19 @@ start it with `gunicorn --chdir web app:app`. `requirements.txt` stays at the re
 Nixpacks to install. No Railway dashboard change is needed.
 TRY Stripe price IDs must be set on the kolaylistele.com service.
 
+## Known gotchas — do not repeat these mistakes
+
+- **Import cycles**: `core/*` never imports from `apis/*` or `app`. `apis/*` never imports from `app`. Breaking this causes silent circular import errors at startup.
+- **`safe_error()` hides real errors**: It always returns "Something went wrong" — use it only for client responses. Use `logger.exception()` for your own error logging. Never pass `safe_error()` output to logger.
+- **`set_premium(active=False)` keeps cus_/sub_ IDs**: By design — billing portal still needs the customer ID. Don't null them out on cancellation.
+- **Webhook: only `SignatureVerificationError` = bad sig**: After `construct_event`, other exceptions (e.g. SDK parsing) are not signature failures. Only catch `SignatureVerificationError` as a 400. Other exceptions after a valid sig should fall back to `json.loads`.
+- **`has_active_sub` ≠ active subscription**: It only checks cus_/sub_ ID format — a cancelled user still has `has_active_sub=True`. Always also check `has_premium=1` before calling Stripe modify.
+- **Railway 120s timeout**: Anything slow (AI calls, image uploads, fal.ai) must be parallel or async. Sequential 3× 90s = timeout. Use `ThreadPoolExecutor`.
+- **Two Railway services = two separate SQLite DBs**: `/admin/dashboard` on each service shows only that service's users. EUR users are on easylisting.app, TRY users on kolaylistele.com.
+- **`customer.subscription.updated` plan metadata**: If Stripe fires this without our `plan` metadata key (system event or portal change), default to the shop's existing DB plan — never hardcode "pro" as default.
+- **Gemini thinking mode**: `thinking_budget=0` and `AutomaticFunctionCallingConfig(disable=True)` must be set on all Gemini calls. Thinking mode adds latency and cost with no benefit for JSON generation.
+- **Test patches must follow the symbol**: When moving a function, update its patch path in tests. Patch where it's used, not where it's defined: `patch("apis.listings._run_provider")` not `patch("core.ai._run_provider")`.
+
 ## Changelog rule (MANDATORY for all agents)
 After **every** implementation — feature, fix, security change, or refactor — update
 `CHANGELOG.md` at the repo root before considering the task done.

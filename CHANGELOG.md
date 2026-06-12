@@ -9,6 +9,10 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 ## [Unreleased]
 
 ### Added
+- **Claude Code workflow config**: `.mcp.json` adds GitHub, Stripe (restricted key), and SQLite MCPs alongside existing context7. `.claude/settings.json` pre-approves safe Bash patterns (pytest, git, grep, ls) and blocks destructive commands (rm -rf, force-push, sudo). `.claude/settings.local.json` (gitignored) holds per-developer MCP secrets.
+- **Path-scoped rules** (`.claude/rules/`): `stripe-payments.md`, `api-routes.md`, `database.md` — load only when Claude reads matching files, keeping main context lean.
+- **Custom skills**: `/billing-audit` (Stripe event coverage + DB consistency check with live snapshots), `/pre-deploy` (tests + changelog + import cycle + config checks before pushing).
+- **CLAUDE.md gotchas section**: 10 project-specific mistakes with explanations — import cycles, `safe_error()` misuse, `set_premium` cancellation behaviour, webhook signature logic, Railway timeout constraints, two-DB architecture.
 - **Plan switching** (`POST /billing/change-plan`): existing subscribers can switch between Starter and Pro without creating a new subscription. Upgrades (Starter→Pro) are prorated and charged immediately; downgrades (Pro→Starter) apply a credit on the next invoice. Upgrade page shows "Switch to Pro →" / "Switch to Starter" buttons for active subscribers.
 
 ### Changed

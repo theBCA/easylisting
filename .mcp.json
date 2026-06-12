@@ -4,6 +4,26 @@
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "github": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "stripe": {
+      "type": "http",
+      "url": "https://mcp.stripe.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${STRIPE_RESTRICTED_KEY}"
+      }
+    },
+    "sqlite": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-sqlite", "${SQLITE_DB_PATH}"]
     }
   }
 }

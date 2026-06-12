@@ -27,4 +27,11 @@ Review code in this project for security issues.
 
 Run: `/security-review [file or area to focus on]`
 
-$SHELL: cd /Users/berk.arslan/Desktop/etsy && grep -rn "os\.environ\|SECRET\|password\|token" app.py | head -40
+**Current auth patterns:**
+!`grep -n "require_connection\|is_authorized\|_mobile_auth" web/apis/*.py | head -20`
+
+**Hardcoded secrets scan:**
+!`grep -rn "sk_live\|sk_test\|whsec_\|password\s*=\s*['\"]" web/ --include="*.py" | grep -v "test_\|\.pyc" || echo "Clean"`
+
+**Routes without rate limiting:**
+!`grep -B5 "def " web/apis/*.py | grep -B3 "def " | grep "@bp.route" | grep -v "limiter" | head -10 || echo "All routes checked manually"`
