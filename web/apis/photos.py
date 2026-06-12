@@ -5,11 +5,33 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from flask import Blueprint, request, jsonify
 
+import threading
+
 from extensions import limiter
 from core.config import logger, PHOTO_VARIANT_COUNT, GEMINI_IMAGE_MODEL
 from core.validators import safe_error
+from core.email import send_email
 from core.session import is_authorized, is_guest, has_premium_access, shop_id, guest_shop_id
 from db import can_generate_photo_variants, increment_photo_variant_usage
+
+_ALERT_TO = os.getenv("ADMIN_EMAIL", "berkcemarslan@gmail.com")
+
+def _alert_limit_hit(sid: str, endpoint: str) -> None:
+    """Fire-and-forget email to owner when a shop exhausts their monthly photo quota."""
+    def _send():
+        try:
+            send_email(
+                to=_ALERT_TO,
+                subject=f"[EasyListing] Photo limit hit — shop {sid}",
+                body_text=(
+                    f"Shop {sid} just hit their monthly photo image limit\n"
+                    f"Endpoint: {endpoint}\n\n"
+                    "They may be a candidate for a plan upgrade or a credit top-up."
+                ),
+            )
+        except Exception as e:
+            logger.warning("alert_limit_hit email failed: %s", e)
+    threading.Thread(target=_send, daemon=True).start()
 
 bp = Blueprint("photos", __name__)
 
@@ -88,6 +110,7 @@ def api_generate_photos():
         return jsonify({"error": "Invalid shop"}), 400
     allowed, remaining = can_generate_photo_variants(sid, PHOTO_VARIANT_COUNT)
     if not allowed:
+        _alert_limit_hit(sid, "/api/generate-photos")
         return jsonify({"error": "photo_limit_reached", "remaining": remaining}), 403
 
     body = request.get_json(silent=True) or {}
@@ -202,6 +225,7 @@ def api_etsy_photo_set():
     # Each photo-set request generates exactly one shot → costs one image credit.
     allowed, remaining = can_generate_photo_variants(sid, 1)
     if not allowed:
+        _alert_limit_hit(sid, "/api/etsy-photo-set")
         return jsonify({"error": "photo_limit_reached", "remaining": remaining}), 403
 
     body = request.get_json(silent=True) or {}
