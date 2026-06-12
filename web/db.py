@@ -82,6 +82,16 @@ def init_db():
         con.execute("CREATE INDEX IF NOT EXISTS idx_payment_events_shop ON payment_events(shop_id)")
         init_magic_tables(con)
         con.execute("""
+            CREATE TABLE IF NOT EXISTS feedback (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                shop_id    TEXT,
+                message    TEXT NOT NULL,
+                reply_to   TEXT,
+                page       TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        con.execute("""
             CREATE TABLE IF NOT EXISTS mobile_tokens (
                 token         TEXT PRIMARY KEY,
                 shop_id       TEXT NOT NULL,
@@ -723,3 +733,11 @@ def get_by_mobile_token(token: str) -> dict | None:
 def delete_mobile_token(token: str):
     with _conn() as con:
         con.execute("DELETE FROM mobile_tokens WHERE token = ?", (token,))
+
+
+def save_feedback(shop_id: str, message: str, reply_to: str = None, page: str = None):
+    with _conn() as con:
+        con.execute(
+            "INSERT INTO feedback (shop_id, message, reply_to, page) VALUES (?, ?, ?, ?)",
+            (shop_id, message[:2000], (reply_to or "")[:200], (page or "")[:200]),
+        )

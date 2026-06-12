@@ -1,0 +1,93 @@
+<!-- Floating feedback button + modal — include just before </body> on every page -->
+<style>
+.fb-btn { position: fixed; bottom: 24px; right: 24px; width: 46px; height: 46px; border-radius: 50%; background: #5B47E0; color: white; border: none; font-size: 20px; cursor: pointer; box-shadow: 0 4px 14px rgba(91,71,224,.35); z-index: 9000; display: flex; align-items: center; justify-content: center; transition: transform .15s, box-shadow .15s; }
+.fb-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(91,71,224,.45); }
+.fb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 9001; align-items: flex-end; justify-content: center; padding-bottom: 84px; }
+.fb-overlay.open { display: flex; }
+.fb-modal { background: white; border-radius: 16px; padding: 24px; width: 340px; max-width: calc(100vw - 32px); box-shadow: 0 8px 32px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 12px; }
+.fb-modal h3 { font-size: 15px; font-weight: 800; margin: 0; font-family: inherit; }
+.fb-modal p  { font-size: 13px; color: #6B7280; margin: 0; font-family: inherit; }
+.fb-modal textarea { width: 100%; border: 1.5px solid #E5E7F0; border-radius: 9px; padding: 10px 12px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 90px; outline: none; }
+.fb-modal textarea:focus { border-color: #5B47E0; }
+.fb-modal input[type=email] { width: 100%; border: 1.5px solid #E5E7F0; border-radius: 9px; padding: 8px 12px; font-size: 13px; font-family: inherit; outline: none; }
+.fb-modal input:focus { border-color: #5B47E0; }
+.fb-modal-actions { display: flex; gap: 8px; }
+.fb-send { flex: 1; background: #5B47E0; color: white; border: none; border-radius: 9px; padding: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.fb-send:disabled { opacity: .5; cursor: not-allowed; }
+.fb-cancel { background: none; border: 1.5px solid #E5E7F0; border-radius: 9px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; color: #6B7280; font-family: inherit; }
+.fb-sent { text-align: center; padding: 12px 0 4px; font-size: 14px; font-weight: 600; color: #059669; display: none; }
+</style>
+
+<button class="fb-btn" id="fbBtn" title="Feedback / Support">💬</button>
+<div class="fb-overlay" id="fbOverlay">
+  <div class="fb-modal" role="dialog" aria-modal="true" aria-label="Feedback">
+    <h3 id="fbTitle">💬 Feedback or Support</h3>
+    <p id="fbSub">Tell us what's on your mind — we read every message.</p>
+    <textarea id="fbMessage" placeholder="What can we improve? Or let us know if something isn't working…" maxlength="2000"></textarea>
+    <input type="email" id="fbEmail" placeholder="Your email (optional — for a reply)">
+    <div class="fb-modal-actions">
+      <button class="fb-send" id="fbSend">Send</button>
+      <button class="fb-cancel" id="fbCancel">Cancel</button>
+    </div>
+    <div class="fb-sent" id="fbSent">✅ Sent! Thank you.</div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
+  const lang = localStorage.getItem(LANG_KEY) || 'en';
+  const T = {
+    en: { title:'💬 Feedback or Support', sub:'Tell us what\'s on your mind — we read every message.',
+          ph:'What can we improve? Or let us know if something isn\'t working…',
+          email:'Your email (optional — for a reply)', send:'Send', cancel:'Cancel', sent:'✅ Sent! Thank you.' },
+    de: { title:'💬 Feedback oder Support', sub:'Teile uns deinen Gedanken mit — wir lesen jede Nachricht.',
+          ph:'Was können wir verbessern? Oder melde uns ein Problem…',
+          email:'Deine E-Mail (optional — für eine Antwort)', send:'Senden', cancel:'Abbrechen', sent:'✅ Gesendet! Danke.' },
+    tr: { title:'💬 Geri Bildirim veya Destek', sub:'Aklındakileri yaz — her mesajı okuyoruz.',
+          ph:'Neyi geliştirebiliriz? Veya bir sorun varsa bize bildir…',
+          email:'E-posta adresin (isteğe bağlı — yanıt için)', send:'Gönder', cancel:'İptal', sent:'✅ Gönderildi! Teşekkürler.' },
+  };
+  const s = T[lang] || T.en;
+  document.getElementById('fbTitle').textContent   = s.title;
+  document.getElementById('fbSub').textContent     = s.sub;
+  document.getElementById('fbMessage').placeholder = s.ph;
+  document.getElementById('fbEmail').placeholder   = s.email;
+  document.getElementById('fbSend').textContent    = s.send;
+  document.getElementById('fbCancel').textContent  = s.cancel;
+
+  const btn     = document.getElementById('fbBtn');
+  const overlay = document.getElementById('fbOverlay');
+  const sendBtn = document.getElementById('fbSend');
+  const cancelBtn = document.getElementById('fbCancel');
+
+  function openModal()  { overlay.classList.add('open');    btn.style.display = 'none'; }
+  function closeModal() { overlay.classList.remove('open'); btn.style.display = ''; }
+
+  btn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+  sendBtn.addEventListener('click', async () => {
+    const msg = document.getElementById('fbMessage').value.trim();
+    if (!msg) return;
+    sendBtn.disabled = true;
+    try {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message:  msg,
+          reply_to: document.getElementById('fbEmail').value.trim(),
+          page:     window.location.pathname,
+        }),
+      });
+      document.getElementById('fbSent').style.display = '';
+      document.getElementById('fbSent').textContent   = s.sent;
+      setTimeout(closeModal, 2000);
+    } catch(e) {
+      sendBtn.disabled = false;
+    }
+  });
+})();
+</script>
