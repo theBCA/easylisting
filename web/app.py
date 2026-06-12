@@ -42,6 +42,10 @@ csrf.init_app(app)
 
 init_db()
 
+from core.backup import start_daily_backup
+import db as _db_module
+start_daily_backup(_db_module.DB_PATH)
+
 # ── Request hooks ───────────────────────────────────────────────────────────
 
 _BLOCKED_PATH_PREFIXES = (
