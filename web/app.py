@@ -101,8 +101,16 @@ def set_security_headers(resp):
         f"connect-src 'self' https://api.stripe.com https://cloudflareinsights.com; "
         f"frame-src https://js.stripe.com https://hooks.stripe.com; "
         f"font-src 'self' https://fonts.gstatic.com; "
+        f"form-action 'self'; "
+        f"base-uri 'self'; "
+        f"object-src 'none'; "
         f"frame-ancestors 'none';"
     )
+    # Prevent browsers / proxies from caching pages that may contain session data
+    if "text/html" in (resp.content_type or ""):
+        resp.headers["Cache-Control"] = "no-store, private"
+    resp.headers["Cross-Origin-Embedder-Policy"] = "unsafe-none"
+    resp.headers["Cross-Origin-Opener-Policy"]   = "same-origin-allow-popups"
     guest_id = getattr(g, "set_guest_id_cookie", "")
     if guest_id:
         token = URLSafeSerializer(app.config["SECRET_KEY"], salt="guest-id").dumps(guest_id)

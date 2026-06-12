@@ -10,9 +10,13 @@ from db import get_abuse_summary, get_marketing_stats
 bp = Blueprint("admin", __name__)
 
 
+def _auth_token():
+    return request.headers.get("Authorization", "").removeprefix("Bearer ")
+
+
 @bp.route("/admin/abuse")
 def admin_abuse():
-    token = request.args.get("token", "")
+    token = _auth_token()
     expected = os.getenv("ADMIN_TOKEN", "")
     if not expected or not secrets.compare_digest(token, expected):
         return "", 404
@@ -33,7 +37,7 @@ def admin_abuse():
 
 @bp.route("/admin/ping-ai")
 def admin_ping_ai():
-    token = request.args.get("token", "")
+    token = _auth_token()
     expected = os.getenv("ADMIN_TOKEN", "")
     if not expected or not secrets.compare_digest(token, expected):
         return "", 404
@@ -97,7 +101,7 @@ def admin_ping_ai():
 
 @bp.route("/admin/stats")
 def admin_stats():
-    token = request.args.get("token", "")
+    token = _auth_token()
     expected = os.getenv("ADMIN_TOKEN", "")
     if not expected or not secrets.compare_digest(token, expected):
         return "", 404
@@ -174,7 +178,7 @@ def admin_stats():
 
 @bp.route("/admin/shops-json")
 def admin_shops_json():
-    token = request.args.get("token", "")
+    token = _auth_token()
     expected = os.getenv("ADMIN_TOKEN", "")
     if not expected or not secrets.compare_digest(token, expected):
         return "", 404
@@ -190,7 +194,7 @@ def admin_shops_json():
 @bp.route("/admin/set-plan", methods=["POST"])
 @csrf.exempt
 def admin_set_plan():
-    token = request.args.get("token", "")
+    token = _auth_token()
     expected = os.getenv("ADMIN_TOKEN", "")
     if not expected or not secrets.compare_digest(token, expected):
         return "", 404

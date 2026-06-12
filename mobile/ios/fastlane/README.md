@@ -47,6 +47,22 @@ Build + upload to TestFlight
 
 Build + upload to App Store (metadata + binary, no auto-submit)
 
+### ios upload_screenshots
+
+```sh
+[bundle exec] fastlane ios upload_screenshots
+```
+
+Upload App Store screenshots only (no binary, no metadata)
+
+### ios upload_metadata
+
+```sh
+[bundle exec] fastlane ios upload_metadata
+```
+
+Upload App Store metadata only (no binary, no screenshots)
+
 ### ios store_assets
 
 ```sh

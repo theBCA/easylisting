@@ -125,14 +125,28 @@ def test_security_headers_present(client):
     assert resp.headers.get("X-Content-Type-Options") == "nosniff"
     assert resp.headers.get("X-Frame-Options") == "DENY"
     assert "strict-origin" in resp.headers.get("Referrer-Policy", "")
+    csp = resp.headers.get("Content-Security-Policy", "")
     assert "Content-Security-Policy" in resp.headers
-    assert "frame-ancestors" in resp.headers["Content-Security-Policy"]
+    assert "frame-ancestors 'none'" in csp
+    assert "form-action 'self'" in csp
+    assert "base-uri 'self'" in csp
+    assert "object-src 'none'" in csp
+    assert resp.headers.get("Cross-Origin-Embedder-Policy") == "unsafe-none"
+    assert resp.headers.get("Cross-Origin-Opener-Policy") == "same-origin-allow-popups"
 
 
 def test_csp_has_nonce(client):
     resp = client.get("/")
     csp = resp.headers.get("Content-Security-Policy", "")
     assert "nonce-" in csp
+
+
+def test_html_responses_have_no_store_cache_control(client):
+    for path in ["/", "/privacy", "/terms", "/connect"]:
+        resp = client.get(path)
+        if "text/html" in (resp.content_type or ""):
+            cc = resp.headers.get("Cache-Control", "")
+            assert "no-store" in cc, f"{path} missing no-store in Cache-Control: {cc!r}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1218,26 +1232,26 @@ def test_api_status_email_verified_guest(client):
 
 def test_admin_abuse_wrong_token_returns_404(client):
     with patch.dict(os.environ, {"ADMIN_TOKEN": "secret-admin-token"}):
-        resp = client.get("/admin/abuse?token=wrongtoken")
+        resp = client.get("/admin/abuse", headers={"Authorization": "Bearer wrongtoken"})
     assert resp.status_code == 404
 
 
 def test_admin_abuse_correct_token_returns_200(client):
     with patch.dict(os.environ, {"ADMIN_TOKEN": "secret-admin-token"}):
-        resp = client.get("/admin/abuse?token=secret-admin-token")
+        resp = client.get("/admin/abuse", headers={"Authorization": "Bearer secret-admin-token"})
     assert resp.status_code == 200
     assert b"Abuse signals" in resp.data
 
 
 def test_admin_stats_wrong_token_returns_404(client):
     with patch.dict(os.environ, {"ADMIN_TOKEN": "secret-token"}):
-        resp = client.get("/admin/stats?token=bad")
+        resp = client.get("/admin/stats", headers={"Authorization": "Bearer bad"})
     assert resp.status_code == 404
 
 
 def test_admin_stats_correct_token_returns_200(client):
     with patch.dict(os.environ, {"ADMIN_TOKEN": "secret-token"}):
-        resp = client.get("/admin/stats?token=secret-token")
+        resp = client.get("/admin/stats", headers={"Authorization": "Bearer secret-token"})
     assert resp.status_code == 200
 
 
@@ -1248,7 +1262,7 @@ def test_admin_ping_ai_correct_token(client):
         "NVIDIA_API_KEY": "",
         "OPENAI_API_KEY": "",
     }):
-        resp = client.get("/admin/ping-ai?token=ping-token")
+        resp = client.get("/admin/ping-ai", headers={"Authorization": "Bearer ping-token"})
     assert resp.status_code == 200
     body = resp.get_json()
     assert "gemini" in body
@@ -1259,8 +1273,8 @@ def test_admin_ping_ai_correct_token(client):
 def test_admin_no_token_env_always_404(client):
     """If ADMIN_TOKEN env var is unset, admin endpoints must be inaccessible."""
     with patch.dict(os.environ, {"ADMIN_TOKEN": ""}):
-        assert client.get("/admin/stats?token=anything").status_code == 404
-        assert client.get("/admin/abuse?token=anything").status_code == 404
+        assert client.get("/admin/stats").status_code == 404
+        assert client.get("/admin/abuse").status_code == 404
 
 
 # ─────────────────────────────────────────────────────────────────────────────
