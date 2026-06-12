@@ -22,8 +22,8 @@
     },
     "sqlite": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "mcp-sqlite", "${SQLITE_DB_PATH}"]
+      "command": "sh",
+      "args": ["-c", "npx -y mcp-sqlite \"$SQLITE_DB_PATH\""]
     }
   }
 }
