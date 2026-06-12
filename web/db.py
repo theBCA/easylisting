@@ -55,6 +55,25 @@ def init_db():
         con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_ip   ON abuse_signals(ip_hash)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_fp   ON abuse_signals(fp_hash)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_abuse_time ON abuse_signals(created_at)")
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS payment_events (
+                id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+                event                  TEXT NOT NULL,
+                shop_id                TEXT,
+                shop_name              TEXT,
+                plan                   TEXT,
+                surface                TEXT,
+                domain                 TEXT,
+                stripe_session_id      TEXT,
+                stripe_customer_id     TEXT,
+                stripe_subscription_id TEXT,
+                detail                 TEXT,
+                created_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        con.execute("CREATE INDEX IF NOT EXISTS idx_payment_events_time ON payment_events(created_at)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_payment_events_event ON payment_events(event)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_payment_events_shop ON payment_events(shop_id)")
         init_magic_tables(con)
         con.execute("""
             CREATE TABLE IF NOT EXISTS mobile_tokens (
@@ -476,6 +495,81 @@ def set_premium(shop_id: str, stripe_customer_id: str,
              stripe_subscription_id,
              str(shop_id)),
         )
+
+
+def log_payment_event(event: str, shop_id: str = None, shop_name: str = None,
+                      plan: str = None, surface: str = None, domain: str = None,
+                      stripe_session_id: str = None, stripe_customer_id: str = None,
+                      stripe_subscription_id: str = None, detail: dict | str | None = None):
+    if isinstance(detail, dict):
+        detail = json.dumps(detail, sort_keys=True)
+    with _conn() as con:
+        con.execute(
+            """INSERT INTO payment_events
+               (event, shop_id, shop_name, plan, surface, domain, stripe_session_id,
+                stripe_customer_id, stripe_subscription_id, detail)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                event,
+                str(shop_id) if shop_id is not None else None,
+                shop_name,
+                plan,
+                surface,
+                domain,
+                stripe_session_id,
+                stripe_customer_id,
+                stripe_subscription_id,
+                detail,
+            ),
+        )
+
+
+def get_payment_summary(days: int = 30) -> dict:
+    with _conn() as con:
+        params = (f"-{days}",)
+        by_event = con.execute("""
+            SELECT event, COUNT(*) AS n
+            FROM payment_events
+            WHERE created_at >= datetime('now', ? || ' days')
+            GROUP BY event
+            ORDER BY n DESC
+        """, params).fetchall()
+        by_plan = con.execute("""
+            SELECT COALESCE(plan, 'unknown') AS plan, COUNT(*) AS n
+            FROM payment_events
+            WHERE created_at >= datetime('now', ? || ' days')
+              AND event IN ('checkout_created', 'checkout_completed')
+            GROUP BY COALESCE(plan, 'unknown')
+            ORDER BY n DESC
+        """, params).fetchall()
+        by_domain = con.execute("""
+            SELECT COALESCE(domain, 'unknown') AS domain, COUNT(*) AS n
+            FROM payment_events
+            WHERE created_at >= datetime('now', ? || ' days')
+              AND event IN ('checkout_created', 'checkout_completed')
+            GROUP BY COALESCE(domain, 'unknown')
+            ORDER BY n DESC
+        """, params).fetchall()
+        recent = con.execute("""
+            SELECT event, shop_id, shop_name, plan, surface, domain, created_at
+            FROM payment_events
+            ORDER BY id DESC
+            LIMIT 30
+        """).fetchall()
+
+    events = {r["event"]: r["n"] for r in by_event}
+    attempts = events.get("checkout_created", 0)
+    completed = events.get("checkout_completed", 0)
+    return {
+        "days": days,
+        "by_event": events,
+        "by_plan": [dict(r) for r in by_plan],
+        "by_domain": [dict(r) for r in by_domain],
+        "recent": [dict(r) for r in recent],
+        "attempts": attempts,
+        "completed": completed,
+        "conversion_pct": round((completed / attempts) * 100, 1) if attempts else 0,
+    }
 
 
 def get_shop_by_stripe_customer(customer_id: str) -> dict | None:

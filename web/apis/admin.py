@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify, render_template
 
 from extensions import csrf
 from core.admin_auth import is_admin
-from db import get_abuse_summary, get_marketing_stats
+from db import get_abuse_summary, get_marketing_stats, get_payment_summary
 
 bp = Blueprint("admin", __name__)
 
@@ -133,6 +133,14 @@ def admin_stats():
         for row in s["consents_by_day"]:
             lines.append(f"  {row['day']}  {row['n']:>4}")
 
+    payments = get_payment_summary(30)
+    lines.append("</pre><h3>Billing funnel — last 30 days</h3><pre>")
+    lines.append(f"  Checkout sessions created {payments['attempts']:>8}")
+    lines.append(f"  Checkout completed        {payments['completed']:>8}")
+    lines.append(f"  Conversion                {payments['conversion_pct']:>7}%")
+    for event, n in payments["by_event"].items():
+        lines.append(f"  {event:<27} {n:>6}")
+
     # Raw table row counts — helps diagnose empty-table issues
     lines.append("</pre><h3>DB table counts (raw)</h3><pre>")
     try:
@@ -182,6 +190,14 @@ def admin_shops_json():
     rows = con.execute("SELECT shop_id, shop_name, plan, has_premium, free_used FROM shops ORDER BY rowid DESC").fetchall()
     con.close()
     return jsonify([dict(r) for r in rows])
+
+
+@bp.route("/admin/billing-json")
+def admin_billing_json():
+    if not is_admin():
+        return "", 404
+    days = int(request.args.get("days", 30))
+    return jsonify(get_payment_summary(days))
 
 
 @bp.route("/admin/set-plan", methods=["POST"])
@@ -262,4 +278,5 @@ def admin_dashboard():
         "pro":      sum(1 for s in shops if s.get("plan") == "pro"),
         "starter":  sum(1 for s in shops if s.get("plan") == "starter"),
     }
-    return render_template("admin_dashboard.html", shops=shops, counts=counts)
+    payments = get_payment_summary(30)
+    return render_template("admin_dashboard.html", shops=shops, counts=counts, payments=payments)

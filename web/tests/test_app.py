@@ -135,6 +135,29 @@ def test_security_headers_present(client):
     assert resp.headers.get("Cross-Origin-Opener-Policy") == "same-origin-allow-popups"
 
 
+def test_request_id_header_generated_and_forwarded(client):
+    generated = client.get("/health")
+    assert generated.headers.get("X-Request-ID")
+
+    supplied = client.get("/health", headers={"X-Request-ID": "req-test-123456"})
+    assert supplied.headers.get("X-Request-ID") == "req-test-123456"
+
+
+def test_logging_redacts_sensitive_values():
+    from core.logging import redact
+
+    redacted = redact({
+        "Authorization": "Bearer abc.def.ghi",
+        "stripe_secret": "sk_live_sensitive",
+        "nested": {"api_key": "pk_live_sensitive"},
+        "safe": "visible",
+    })
+    assert redacted["Authorization"] == "[REDACTED]"
+    assert redacted["stripe_secret"] == "[REDACTED]"
+    assert redacted["nested"]["api_key"] == "[REDACTED]"
+    assert redacted["safe"] == "visible"
+
+
 def test_csp_has_nonce(client):
     resp = client.get("/")
     csp = resp.headers.get("Content-Security-Policy", "")
@@ -391,6 +414,43 @@ def test_stripe_webhook_activates_premium(client):
     shop = db_module.get_shop("shop_stripe")
     assert shop["has_premium"] == 1
     assert shop["plan"] == "pro"
+    payments = db_module.get_payment_summary()
+    assert payments["completed"] == 1
+    assert payments["by_event"]["checkout_completed"] == 1
+
+
+def test_stripe_webhook_accepts_secondary_secret(client):
+    db_module.ensure_shop("shop_stripe_eur", "StripeShopEUR")
+    payload = json.dumps({
+        "id": "evt_secondary_secret",
+        "object": "event",
+        "type": "checkout.session.completed",
+        "data": {"object": {
+            "id": "cs_secondary_secret",
+            "object": "checkout.session",
+            "client_reference_id": "shop_stripe_eur",
+            "customer": "cus_eur",
+            "subscription": "sub_eur",
+            "payment_status": "paid",
+            "metadata": {"shop_id": "shop_stripe_eur", "plan": "starter"},
+        }},
+    }).encode()
+    sig = _stripe_signature(payload, "whsec_eur_fake")
+
+    with patch.dict(os.environ, {
+        "STRIPE_WEBHOOK_SECRET": "whsec_wrong",
+        "STRIPE_WEBHOOK_SECRET_EUR": "whsec_eur_fake",
+    }):
+        resp = client.post(
+            "/stripe/webhook",
+            data=payload,
+            headers={"Stripe-Signature": sig, "Content-Type": "application/json"},
+        )
+
+    assert resp.status_code == 200
+    shop = db_module.get_shop("shop_stripe_eur")
+    assert shop["has_premium"] == 1
+    assert shop["plan"] == "starter"
 
 
 def test_stripe_webhook_deactivates_premium_on_cancel(client):
@@ -1194,6 +1254,10 @@ def test_stripe_checkout_generates_url_for_pro(connected_client):
     assert "stripe.com" in body["url"]
     call_kwargs = mock_create.call_args[1]
     assert call_kwargs["line_items"][0]["price"] == os.environ["STRIPE_PRO_PRICE_ID"]
+    payments = db_module.get_payment_summary()
+    assert payments["attempts"] == 1
+    assert payments["by_event"]["checkout_started"] == 1
+    assert payments["by_event"]["checkout_created"] == 1
 
 
 def test_stripe_checkout_generates_url_for_starter(connected_client):
@@ -1281,6 +1345,35 @@ def test_stripe_checkout_annual_plan(connected_client):
     assert resp.status_code == 200
     call_kwargs = mock_create.call_args[1]
     assert call_kwargs["line_items"][0]["price"] == "price_pro_annual_fake"
+
+
+def test_admin_billing_json_reports_payment_summary(client):
+    db_module.log_payment_event(
+        "checkout_created",
+        shop_id="shop_admin_billing",
+        shop_name="BillingShop",
+        plan="pro",
+        surface="web",
+        domain="easylisting.app",
+    )
+    db_module.log_payment_event(
+        "checkout_completed",
+        shop_id="shop_admin_billing",
+        shop_name="BillingShop",
+        plan="pro",
+        domain="easylisting.app",
+    )
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "admin-test-token"}):
+        resp = client.get(
+            "/admin/billing-json",
+            headers={"Authorization": "Bearer admin-test-token"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["attempts"] == 1
+    assert body["completed"] == 1
+    assert body["conversion_pct"] == 100.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────

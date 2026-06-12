@@ -605,6 +605,8 @@ A Railway Volume is mounted at `/data/`. Set `DB_PATH=/data/easylisting.sqlite` 
 | `FLASK_SECRET` | Yes | 32+ byte hex string for session signing |
 | `ENV` | Yes (prod) | Set to `production` to enable HTTPS redirect, HSTS, secure cookies |
 | `DB_PATH` | Recommended | Path to SQLite file; default `easylisting.sqlite` |
+| `LOG_LEVEL` | No | Python logging threshold; default `INFO` |
+| `LOG_FORMAT` | No | Set `json` for structured logs; production defaults to JSON |
 | `ETSY_API_KEY` | Yes | Etsy app keystring |
 | `ETSY_SHARED_SECRET` | Yes | Etsy app shared secret |
 | `REDIRECT_URI` | Yes | Full OAuth callback URL |

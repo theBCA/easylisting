@@ -18,6 +18,12 @@
   .stat .n { font-size:26px; font-weight:800; }
   .stat .l { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
   .toolbar { margin-bottom:14px; }
+  .section-title { font-size:15px; font-weight:800; margin:22px 0 10px; }
+  .mini-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:18px; }
+  .panel { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
+  .panel h2 { font-size:13px; margin-bottom:10px; }
+  .kv { display:flex; justify-content:space-between; gap:14px; padding:5px 0; font-size:13px; }
+  .kv span:first-child { color:var(--muted); }
   #search { width:320px; max-width:100%; padding:10px 14px; border:1px solid var(--border);
             border-radius:10px; font-size:14px; }
   table { width:100%; border-collapse:collapse; background:var(--card);
@@ -58,6 +64,66 @@
     <div class="stat"><div class="n">{{ counts.pro }}</div><div class="l">Pro</div></div>
     <div class="stat"><div class="n">{{ counts.starter }}</div><div class="l">Starter</div></div>
   </div>
+
+  <div class="section-title">Billing Funnel · Last {{ payments.days }} Days</div>
+  <div class="cards">
+    <div class="stat"><div class="n">{{ payments.attempts }}</div><div class="l">Checkout Attempts</div></div>
+    <div class="stat"><div class="n">{{ payments.completed }}</div><div class="l">Paid</div></div>
+    <div class="stat"><div class="n">{{ payments.conversion_pct }}%</div><div class="l">Conversion</div></div>
+    <div class="stat"><div class="n">{{ payments.by_event.get('checkout_failed', 0) }}</div><div class="l">Checkout Failed</div></div>
+    <div class="stat"><div class="n">{{ payments.by_event.get('subscription_cancelled', 0) }}</div><div class="l">Cancelled</div></div>
+    <div class="stat"><div class="n">{{ payments.by_event.get('invoice_payment_failed', 0) }}</div><div class="l">Payment Failed</div></div>
+  </div>
+
+  <div class="mini-grid">
+    <div class="panel">
+      <h2>By Plan</h2>
+      {% for row in payments.by_plan %}
+        <div class="kv"><span>{{ row.plan }}</span><strong>{{ row.n }}</strong></div>
+      {% else %}
+        <div class="mono">No billing events yet.</div>
+      {% endfor %}
+    </div>
+    <div class="panel">
+      <h2>By Domain</h2>
+      {% for row in payments.by_domain %}
+        <div class="kv"><span>{{ row.domain }}</span><strong>{{ row.n }}</strong></div>
+      {% else %}
+        <div class="mono">No billing events yet.</div>
+      {% endfor %}
+    </div>
+    <div class="panel">
+      <h2>Event Counts</h2>
+      {% for event, n in payments.by_event.items() %}
+        <div class="kv"><span>{{ event }}</span><strong>{{ n }}</strong></div>
+      {% else %}
+        <div class="mono">No billing events yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="section-title">Recent Billing Events</div>
+  <table style="margin-bottom:24px;">
+    <thead>
+      <tr>
+        <th>Time</th><th>Event</th><th>Shop</th><th>Plan</th><th>Surface</th><th>Domain</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in payments.recent %}
+      <tr>
+        <td class="mono">{{ e.created_at }}</td>
+        <td>{{ e.event }}</td>
+        <td>{{ e.shop_name or e.shop_id or '—' }}</td>
+        <td>{{ e.plan or '—' }}</td>
+        <td>{{ e.surface or '—' }}</td>
+        <td>{{ e.domain or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="mono">No billing events yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
   <div class="toolbar">
     <input id="search" type="text" placeholder="Search by shop name or ID…" autocomplete="off">

@@ -6,6 +6,8 @@ _ph.host = "https://eu.i.posthog.com"
 
 
 def capture(distinct_id: str, event: str, properties: dict | None = None) -> None:
+    if os.getenv("ENV") == "test":
+        return
     key = os.getenv("POSTHOG_TOKEN", "")
     if not key:
         return

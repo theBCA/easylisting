@@ -12,7 +12,10 @@ from core.session import (
     require_connection, usage_shop_id, is_guest, is_email_verified, is_authorized,
 )
 from core.etsy import _mobile_auth
-from db import can_generate, get_shop, set_premium, get_shop_by_stripe_customer, ensure_shop
+from db import (
+    can_generate, get_shop, set_premium, get_shop_by_stripe_customer, ensure_shop,
+    log_payment_event,
+)
 
 bp = Blueprint("payments", __name__)
 
@@ -78,28 +81,70 @@ def stripe_checkout():
     price_id  = os.getenv(price_env) or os.getenv("STRIPE_PRICE_ID")
     base_plan = plan.replace("_annual", "")
     if not price_id:
+        log_payment_event(
+            "checkout_failed",
+            shop_id=usage_shop_id(),
+            shop_name=session.get("shop_name", ""),
+            plan=base_plan,
+            surface="web",
+            domain=request.host,
+            detail={"reason": "missing_price", "price_env": price_env},
+        )
         return jsonify({"error": "Stripe price not configured for this plan"}), 503
     try:
         import stripe as stripe_lib
         stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
         base = request.url_root.rstrip("/")
+        sid = str(usage_shop_id())
+        shop_name_val = session.get("shop_name", "")
+        log_payment_event(
+            "checkout_started",
+            shop_id=sid,
+            shop_name=shop_name_val,
+            plan=base_plan,
+            surface="web",
+            domain=request.host,
+            detail={"requested_plan": plan, "price_env": price_env},
+        )
         checkout = stripe_lib.checkout.Session.create(
             payment_method_types=["card"],
             mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
             success_url=base + f"/upgrade?success=1&plan={plan}",
             cancel_url=base  + "/upgrade?cancelled=1",
-            client_reference_id=str(usage_shop_id()),
-            metadata={"shop_id": str(usage_shop_id()),
-                      "shop_name": session.get("shop_name", ""),
+            client_reference_id=sid,
+            metadata={"shop_id": sid,
+                      "shop_name": shop_name_val,
                       "plan": base_plan},
             # Stamp the subscription too, so renewal/update webhooks can recover
             # the shop even if our DB was reset between purchase and renewal.
-            subscription_data={"metadata": {"shop_id": str(usage_shop_id()),
+            subscription_data={"metadata": {"shop_id": sid,
                                             "plan": base_plan}},
+        )
+        stripe_session_id = getattr(checkout, "id", None)
+        if not isinstance(stripe_session_id, str):
+            stripe_session_id = None
+        log_payment_event(
+            "checkout_created",
+            shop_id=sid,
+            shop_name=shop_name_val,
+            plan=base_plan,
+            surface="web",
+            domain=request.host,
+            stripe_session_id=stripe_session_id,
+            detail={"requested_plan": plan, "price_env": price_env},
         )
         return jsonify({"url": checkout.url})
     except Exception as e:
+        log_payment_event(
+            "checkout_failed",
+            shop_id=usage_shop_id(),
+            shop_name=session.get("shop_name", ""),
+            plan=base_plan,
+            surface="web",
+            domain=request.host,
+            detail={"reason": safe_error(str(e)), "price_env": price_env},
+        )
         logger.exception("Stripe checkout error: %s", e)
         return jsonify({"error": safe_error(str(e))}), 500
 
@@ -121,6 +166,14 @@ def api_stripe_checkout():
     price_env = price_map.get(plan, "STRIPE_PRO_PRICE_ID")
     price_id  = os.getenv(price_env) or os.getenv("STRIPE_PRICE_ID")
     if not price_id:
+        log_payment_event(
+            "checkout_failed",
+            shop_id=usage_shop_id(),
+            plan=plan.replace("_annual", ""),
+            surface="mobile",
+            domain=request.host,
+            detail={"reason": "missing_price", "price_env": price_env},
+        )
         return jsonify({"error": "Stripe price not configured for this plan"}), 503
     base_plan = plan.replace("_annual", "")
     sid = str(usage_shop_id())
@@ -130,6 +183,15 @@ def api_stripe_checkout():
     try:
         import stripe as stripe_lib
         stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+        log_payment_event(
+            "checkout_started",
+            shop_id=sid,
+            shop_name=shop_name_val,
+            plan=base_plan,
+            surface="mobile",
+            domain=request.host,
+            detail={"requested_plan": plan, "price_env": price_env},
+        )
         checkout = stripe_lib.checkout.Session.create(
             payment_method_types=["card"],
             mode="subscription",
@@ -140,8 +202,30 @@ def api_stripe_checkout():
             metadata={"shop_id": sid, "shop_name": shop_name_val, "plan": base_plan},
             subscription_data={"metadata": {"shop_id": sid, "plan": base_plan}},
         )
+        stripe_session_id = getattr(checkout, "id", None)
+        if not isinstance(stripe_session_id, str):
+            stripe_session_id = None
+        log_payment_event(
+            "checkout_created",
+            shop_id=sid,
+            shop_name=shop_name_val,
+            plan=base_plan,
+            surface="mobile",
+            domain=request.host,
+            stripe_session_id=stripe_session_id,
+            detail={"requested_plan": plan, "price_env": price_env},
+        )
         return jsonify({"url": checkout.url})
     except Exception as e:
+        log_payment_event(
+            "checkout_failed",
+            shop_id=sid,
+            shop_name=shop_name_val,
+            plan=base_plan,
+            surface="mobile",
+            domain=request.host,
+            detail={"reason": safe_error(str(e)), "price_env": price_env},
+        )
         logger.exception("Stripe checkout error (mobile): %s", e)
         return jsonify({"error": safe_error(str(e))}), 500
 
@@ -205,12 +289,17 @@ def stripe_webhook():
     stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
     payload = request.get_data()
     sig     = request.headers.get("Stripe-Signature", "")
-    try:
-        event = stripe_lib.Webhook.construct_event(
-            payload, sig, os.getenv("STRIPE_WEBHOOK_SECRET", "")
-        )
-    except Exception as e:
-        logger.error("Stripe webhook invalid: %s", e)
+    event = None
+    last_error = None
+    for secret in _webhook_secret_candidates():
+        try:
+            event = stripe_lib.Webhook.construct_event(payload, sig, secret)
+            event = _stripe_to_plain(event)
+            break
+        except Exception as e:
+            last_error = e
+    if event is None:
+        logger.error("Stripe webhook invalid: %s", last_error)
         return jsonify({"error": "Invalid signature"}), 400
 
     obj   = event["data"]["object"]
@@ -224,6 +313,16 @@ def stripe_webhook():
         if sid:
             ensure_shop(sid, obj.get("metadata", {}).get("shop_name") or "Shop")
             set_premium(sid, obj.get("customer"), obj.get("subscription"), True, plan)
+            log_payment_event(
+                "checkout_completed",
+                shop_id=sid,
+                shop_name=obj.get("metadata", {}).get("shop_name"),
+                plan=plan,
+                stripe_session_id=obj.get("id"),
+                stripe_customer_id=obj.get("customer"),
+                stripe_subscription_id=obj.get("subscription"),
+                detail={"payment_status": obj.get("payment_status")},
+            )
             logger.info("Premium activated for shop %s (plan=%s)", sid, plan)
             from core.analytics import capture as _ph_capture
             _ph_capture(sid, "plan_upgraded", {"plan": plan, "source": "stripe"})
@@ -235,6 +334,13 @@ def stripe_webhook():
         if sid:
             ensure_shop(sid, "Shop")
             set_premium(sid, obj.get("customer"), obj.get("subscription"), True, plan)
+            log_payment_event(
+                "invoice_payment_succeeded",
+                shop_id=sid,
+                plan=plan,
+                stripe_customer_id=obj.get("customer"),
+                stripe_subscription_id=obj.get("subscription"),
+            )
             logger.info("Premium reaffirmed for shop %s (plan=%s, renewal)", sid, plan)
 
     elif etype == "customer.subscription.updated":
@@ -250,6 +356,14 @@ def stripe_webhook():
         if sid:
             ensure_shop(sid, "Shop")
             set_premium(sid, sub.get("customer"), sub.get("id"), active, plan)
+            log_payment_event(
+                "subscription_updated",
+                shop_id=sid,
+                plan=plan,
+                stripe_customer_id=sub.get("customer"),
+                stripe_subscription_id=sub.get("id"),
+                detail={"status": status, "active": active},
+            )
             logger.info("Subscription updated for shop %s (status=%s, active=%s)", sid, status, active)
 
     elif etype in ("customer.subscription.deleted", "customer.subscription.paused"):
@@ -259,6 +373,13 @@ def stripe_webhook():
             sid = s["shop_id"] if s else None
         if sid:
             set_premium(sid, obj.get("customer"), obj.get("id"), False)
+            log_payment_event(
+                "subscription_cancelled",
+                shop_id=sid,
+                stripe_customer_id=obj.get("customer"),
+                stripe_subscription_id=obj.get("id"),
+                detail={"event_type": etype},
+            )
             logger.info("Premium deactivated for shop %s", sid)
             from core.analytics import capture as _ph_capture
             _ph_capture(sid, "plan_cancelled", {"event_type": etype})
@@ -268,6 +389,13 @@ def stripe_webhook():
         sid, plan = _shop_and_plan_from_invoice(obj)
         if sid:
             set_premium(sid, obj.get("customer"), obj.get("subscription"), False)
+            log_payment_event(
+                "invoice_payment_failed",
+                shop_id=sid,
+                plan=plan,
+                stripe_customer_id=obj.get("customer"),
+                stripe_subscription_id=obj.get("subscription"),
+            )
             logger.warning("Payment failed, premium revoked for shop %s", sid)
             from core.analytics import capture as _ph_capture
             _ph_capture(sid, "payment_failed", {"plan": plan})
@@ -287,3 +415,35 @@ def _shop_and_plan_from_invoice(invoice: dict):
             sid  = s["shop_id"]
             plan = s.get("plan") or "pro"
     return sid, plan
+
+
+def _stripe_to_plain(value):
+    if isinstance(value, dict):
+        return {k: _stripe_to_plain(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_stripe_to_plain(v) for v in value]
+    data = getattr(value, "_data", None)
+    if isinstance(data, dict):
+        return {k: _stripe_to_plain(v) for k, v in data.items()}
+    return value
+
+
+def _webhook_secret_candidates() -> list[str]:
+    host = request.host or ""
+    preferred = []
+    if "easylisting" in host:
+        preferred.append("STRIPE_WEBHOOK_SECRET_EUR")
+    if "kolaylistele" in host:
+        preferred.append("STRIPE_WEBHOOK_SECRET_TRY")
+    preferred.extend([
+        "STRIPE_WEBHOOK_SECRET",
+        "STRIPE_WEBHOOK_SECRET_EUR",
+        "STRIPE_WEBHOOK_SECRET_TRY",
+    ])
+
+    secrets = []
+    for key in preferred:
+        val = os.getenv(key, "")
+        if val and val not in secrets:
+            secrets.append(val)
+    return secrets or [""]

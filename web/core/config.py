@@ -4,7 +4,6 @@ Plain, app-agnostic values read from the environment. Etsy OAuth config lives in
 core/etsy.py; input-validation limits live in core/validators.py.
 """
 import os
-import logging
 
 from dotenv import load_dotenv
 
@@ -12,8 +11,7 @@ from dotenv import load_dotenv
 # Railway injects real env vars (load_dotenv is a no-op); locally this reads .env.
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("easylisting")
+from core.logging import logger
 
 # ── Network ──────────────────────────────────────────────────────────────────
 HTTP_TIMEOUT = (5, 30)  # (connect timeout, read timeout) in seconds

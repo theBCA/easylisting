@@ -9,9 +9,14 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 ## [Unreleased]
 
 ### Added
+- **Structured request logging**: `core/logging.py` now configures production JSON logs, `LOG_LEVEL` / `LOG_FORMAT`, request IDs, access logs, exception context, and redaction helpers. Responses include `X-Request-ID`.
+- **Billing funnel metrics**: Stripe checkout/session/webhook events are now stored in `payment_events`; `/admin/dashboard`, `/admin/stats`, and `/admin/billing-json` show checkout attempts, paid conversions, failures, cancellations, plan split, domain split, and recent billing events.
 - **Daily SQLite backup**: `core/backup.py` daemon thread runs hourly, creates a hot `sqlite3.backup()` copy in `<volume>/backups/` once per 23-hour window. Keeps the 7 most-recent dated files. Starts automatically at app startup via `start_daily_backup()`.
 - **Admin dashboard** (`/admin/dashboard`): searchable table of all accounts (type badge, plan, usage, created), inline plan selector with Save button wired to `/admin/set-plan`.
 - **Cloudflare Access JWT verification**: `core/admin_auth.py` validates `Cf-Access-Jwt-Assertion` via PyJWKClient against the team JWKS; falls back to `Authorization: Bearer` for API use. Controlled by `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `ADMIN_EMAILS` env vars.
+
+### Fixed
+- **Stripe webhook secrets for two domains**: `/stripe/webhook` now accepts host-specific/fallback secrets (`STRIPE_WEBHOOK_SECRET_EUR`, `STRIPE_WEBHOOK_SECRET_TRY`, `STRIPE_WEBHOOK_SECRET`) so separate Stripe webhook endpoints for `easylisting.app` and `kolaylistele.com` can both verify correctly.
 
 ### Security
 - `CF_ACCESS_TEAM_DOMAIN=aged-term-c87a.cloudflareaccess.com` set on both Railway services — browser JWT path now fully active.

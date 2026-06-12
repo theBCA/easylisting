@@ -8,12 +8,19 @@ import os
 import secrets
 
 from flask import Flask, request, redirect, g
+from flask.signals import got_request_exception
 from flask_wtf.csrf import generate_csrf
 from itsdangerous import URLSafeSerializer
 from dotenv import load_dotenv
 
 from extensions import limiter, csrf
 from core.config import GUEST_ID_COOKIE, GUEST_ID_MAX_AGE
+from core.logging import (
+    add_request_id_header,
+    bind_request_context,
+    log_request_exception,
+    log_request_finished,
+)
 from db import init_db
 
 load_dotenv()
@@ -61,6 +68,11 @@ _BLOCKED_PATH_SUFFIXES = (
     ".git-credentials", "/.git-credentials",
     "/wlwmanifest.xml", "/xmlrpc.php",
 )
+
+
+@app.before_request
+def setup_request_logging():
+    bind_request_context()
 
 
 @app.before_request
@@ -146,7 +158,12 @@ def set_security_headers(resp):
             secure=_is_production,
             samesite="Lax",
         )
+    add_request_id_header(resp)
+    log_request_finished(resp)
     return resp
+
+
+got_request_exception.connect(log_request_exception, app)
 
 
 # ── Blueprints ────────────────────────────────────────────────────────────────
