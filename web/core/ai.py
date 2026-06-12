@@ -283,10 +283,16 @@ def _gemini_generate(image_bytes_list, hint, api_key=None, lang="en", platform="
         gtypes.Part.from_bytes(data=b, mime_type="image/jpeg")
         for b in image_bytes_list
     ]
+    # 2.0-flash has no thinking mode — fast (3-8s), same vision quality, free tier.
+    # 2.5-flash defaults to thinking mode which adds 300s+ latency (exceeds Railway 120s timeout).
+    # 2.5-flash-lite is the quota fallback: no thinking, still free, slightly lower quality.
+    _cfg = gtypes.GenerateContentConfig(
+        http_options=gtypes.HttpOptions(timeout=90_000),  # 90s hard cap (unit: ms)
+    )
     last_exc = None
-    for model in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+    for model in ("gemini-2.0-flash", "gemini-2.5-flash-lite"):
         try:
-            resp = client.models.generate_content(model=model, contents=parts)
+            resp = client.models.generate_content(model=model, contents=parts, config=_cfg)
             try:
                 return _parse_ai_json(resp.text)
             except (json.JSONDecodeError, ValueError) as je:
