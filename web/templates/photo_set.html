@@ -283,7 +283,10 @@ const PAGE_STRINGS = {
         collage_title:'🎨 Collage Preview', collage_dl:'⬇ Download Collage',
         pro_limit:'Monthly photo limit reached — resets next cycle.',
         starter_limit:'Out of photo credits — upgrade to Pro for 5 sets/month.',
-        change_photo:'Change photo', click_generate:'Click Generate to create this shot' },
+        change_photo:'Change photo', click_generate:'Click Generate to create this shot',
+        hint_shot:'Shot {n} of 6', hint_last:'Last shot — then collage!',
+        generating:'Generating shot {n}…', gen_wait:'Creating Shot {n} · ~30s',
+        collage_first:'Generate all 6 shots first.' },
   de: { nav_listings:'Meine Listings', nav_bulk:'Massen-Upload', nav_single:'Einzel-Listing',
         page_title:'Etsy Foto-Set Generator',
         page_sub:'Lade ein Produktfoto hoch – erhalte 6 professionelle Etsy-Fotos, eines nach dem anderen.',
@@ -293,7 +296,10 @@ const PAGE_STRINGS = {
         collage_title:'🎨 Collage-Vorschau', collage_dl:'⬇ Collage herunterladen',
         pro_limit:'Monatliches Fotolimit erreicht — wird nächsten Monat zurückgesetzt.',
         starter_limit:'Keine Foto-Credits mehr — upgrade zu Pro für 5 Sets/Monat.',
-        change_photo:'Foto ändern', click_generate:'Klicke auf Erstellen, um dieses Foto zu erzeugen' },
+        change_photo:'Foto ändern', click_generate:'Klicke auf Erstellen, um dieses Foto zu erzeugen',
+        hint_shot:'Foto {n} von 6', hint_last:'Letztes Foto — dann Collage!',
+        generating:'Erstelle Foto {n}…', gen_wait:'Foto {n} wird erstellt · ~30 Sek.',
+        collage_first:'Erstelle zuerst alle 6 Fotos.' },
   tr: { nav_listings:'Listelerim', nav_bulk:'Toplu Yükleme', nav_single:'Tekil İlan',
         page_title:'Etsy Foto Seti Oluşturucu',
         page_sub:'Bir ürün fotoğrafı yükle — 6 profesyonel Etsy fotoğrafı al, birer birer.',
@@ -303,7 +309,10 @@ const PAGE_STRINGS = {
         collage_title:'🎨 Kolaj Önizlemesi', collage_dl:'⬇ Kolaj İndir',
         pro_limit:'Aylık fotoğraf limitine ulaşıldı — sonraki dönemde sıfırlanır.',
         starter_limit:'Foto krediniz bitti — 5 set/ay için Pro\'ya yükseltin.',
-        change_photo:'Fotoğrafı değiştir', click_generate:'Bu çekimi oluşturmak için Oluştur\'a tıkla' },
+        change_photo:'Fotoğrafı değiştir', click_generate:'Bu çekimi oluşturmak için Oluştur\'a tıkla',
+        hint_shot:'{n}. çekim / 6', hint_last:'Son çekim — ardından kolaj!',
+        generating:'{n}. çekim oluşturuluyor…', gen_wait:'{n}. Çekim Oluşturuluyor · ~30 sn',
+        collage_first:'Önce tüm 6 çekimi oluştur.' },
 };
 const S = PAGE_STRINGS[_lang] || PAGE_STRINGS.en;
 
@@ -455,7 +464,9 @@ function renderStep(step) {
     document.getElementById('btnGenerate').textContent = `✨ ${S.gen_btn} ${step}`;
   }
   document.getElementById('btnGenerate').disabled = generating;
-  document.getElementById('stepHint').textContent = step > 1 && step < 6 ? `Shot ${step} of 6` : (step === 6 ? 'Last shot — then collage!' : '');
+  document.getElementById('stepHint').textContent =
+    step > 1 && step < 6 ? S.hint_shot.replace('{n}', step) :
+    step === 6           ? S.hint_last : '';
 }
 
 function markStep(step, state, imgSrc) {
@@ -491,11 +502,11 @@ async function generateCurrent() {
   ra.innerHTML = `
     <div class="result-placeholder">
       <div class="ph-icon">📷</div>
-      <p>Generating shot ${step}…</p>
+      <p>${S.generating.replace('{n}', step)}</p>
     </div>
     <div class="generating-overlay">
       <div class="spin"></div>
-      <p>Creating Shot ${step} · ~30s</p>
+      <p>${S.gen_wait.replace('{n}', step)}</p>
     </div>`;
 
   try {
@@ -570,7 +581,7 @@ function updateCollageGrid() {
 
 function downloadCollage() {
   const cells = [1,2,3,4,5,6].map(s => generated[s]).filter(Boolean);
-  if (cells.length < 6) { showToast('Generate all 6 shots first.'); return; }
+  if (cells.length < 6) { showToast(S.collage_first); return; }
 
   const SIZE = 600;
   const GAP  = 4;
