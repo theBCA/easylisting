@@ -1470,9 +1470,51 @@ def test_admin_ping_ai_correct_token(client):
 
 def test_admin_no_token_env_always_404(client):
     """If ADMIN_TOKEN env var is unset, admin endpoints must be inaccessible."""
-    with patch.dict(os.environ, {"ADMIN_TOKEN": ""}):
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "", "CF_ACCESS_TEAM_DOMAIN": ""}):
         assert client.get("/admin/stats").status_code == 404
         assert client.get("/admin/abuse").status_code == 404
+
+
+def test_admin_dashboard_requires_auth(client):
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "dash-tok", "CF_ACCESS_TEAM_DOMAIN": ""}):
+        assert client.get("/admin/dashboard").status_code == 404
+
+
+def test_admin_dashboard_lists_shops_with_bearer(client):
+    db_module.ensure_shop("66106727", "ZSArtBoutique")
+    db_module.set_premium("66106727", "admin", "admin", True, "pro")
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "dash-tok"}):
+        resp = client.get("/admin/dashboard", headers={"Authorization": "Bearer dash-tok"})
+    assert resp.status_code == 200
+    assert b"ZSArtBoutique" in resp.data
+    assert b"Users &amp; Plans" in resp.data
+
+
+def test_admin_auth_cf_access_allows_owner_email(client):
+    """A signature-verified CF Access JWT for an allowlisted email authorizes admin."""
+    import core.admin_auth as aa
+    fake_key = type("K", (), {"key": "x"})()
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "", "CF_ACCESS_TEAM_DOMAIN": "team.cloudflareaccess.com",
+                                 "CF_ACCESS_AUD": "aud123"}), \
+         patch.object(aa, "_get_jwks_client") as mock_client, \
+         patch("jwt.decode", return_value={"email": "berkcem123@gmail.com"}), \
+         patch("jwt.PyJWKClient"):
+        mock_client.return_value.get_signing_key_from_jwt.return_value = fake_key
+        resp = client.get("/admin/stats", headers={"Cf-Access-Jwt-Assertion": "fake.jwt.token"})
+    assert resp.status_code == 200
+
+
+def test_admin_auth_cf_access_rejects_unknown_email(client):
+    import core.admin_auth as aa
+    fake_key = type("K", (), {"key": "x"})()
+    with patch.dict(os.environ, {"ADMIN_TOKEN": "", "CF_ACCESS_TEAM_DOMAIN": "team.cloudflareaccess.com",
+                                 "CF_ACCESS_AUD": "aud123"}), \
+         patch.object(aa, "_get_jwks_client") as mock_client, \
+         patch("jwt.decode", return_value={"email": "attacker@evil.com"}), \
+         patch("jwt.PyJWKClient"):
+        mock_client.return_value.get_signing_key_from_jwt.return_value = fake_key
+        resp = client.get("/admin/stats", headers={"Cf-Access-Jwt-Assertion": "fake.jwt.token"})
+    assert resp.status_code == 404
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -1,24 +1,23 @@
-"""Admin endpoints (token-gated): abuse stats, AI ping, growth stats, plan management."""
-import os
-import secrets
+"""Admin endpoints: abuse stats, AI ping, growth stats, plan management, dashboard.
 
-from flask import Blueprint, request, jsonify
+Auth is handled by core.admin_auth.is_admin() — a valid Cloudflare Access JWT
+(browser) or an Authorization: Bearer ADMIN_TOKEN (API). Unauthorized requests
+get a bare 404 so the endpoints stay hidden.
+"""
+import os
+
+from flask import Blueprint, request, jsonify, render_template
 
 from extensions import csrf
+from core.admin_auth import is_admin
 from db import get_abuse_summary, get_marketing_stats
 
 bp = Blueprint("admin", __name__)
 
 
-def _auth_token():
-    return request.headers.get("Authorization", "").removeprefix("Bearer ")
-
-
 @bp.route("/admin/abuse")
 def admin_abuse():
-    token = _auth_token()
-    expected = os.getenv("ADMIN_TOKEN", "")
-    if not expected or not secrets.compare_digest(token, expected):
+    if not is_admin():
         return "", 404
     days = int(request.args.get("days", 7))
     data = get_abuse_summary(days)
@@ -37,9 +36,7 @@ def admin_abuse():
 
 @bp.route("/admin/ping-ai")
 def admin_ping_ai():
-    token = _auth_token()
-    expected = os.getenv("ADMIN_TOKEN", "")
-    if not expected or not secrets.compare_digest(token, expected):
+    if not is_admin():
         return "", 404
 
     import time
@@ -101,9 +98,7 @@ def admin_ping_ai():
 
 @bp.route("/admin/stats")
 def admin_stats():
-    token = _auth_token()
-    expected = os.getenv("ADMIN_TOKEN", "")
-    if not expected or not secrets.compare_digest(token, expected):
+    if not is_admin():
         return "", 404
     import db as _db
     import hashlib as _hl
@@ -178,9 +173,7 @@ def admin_stats():
 
 @bp.route("/admin/shops-json")
 def admin_shops_json():
-    token = _auth_token()
-    expected = os.getenv("ADMIN_TOKEN", "")
-    if not expected or not secrets.compare_digest(token, expected):
+    if not is_admin():
         return "", 404
     import db as _db
     import sqlite3 as _sq4
@@ -194,9 +187,7 @@ def admin_shops_json():
 @bp.route("/admin/set-plan", methods=["POST"])
 @csrf.exempt
 def admin_set_plan():
-    token = _auth_token()
-    expected = os.getenv("ADMIN_TOKEN", "")
-    if not expected or not secrets.compare_digest(token, expected):
+    if not is_admin():
         return "", 404
     body = request.get_json(silent=True) or {}
     shop_id  = str(body.get("shop_id", "")).strip()
@@ -229,3 +220,46 @@ def admin_set_plan():
         shop = _db.get_shop(shop_id) or {}
     _db.set_premium(shop_id, shop.get("stripe_customer_id") or "admin", "admin", plan != "free", plan)
     return jsonify({"ok": True, "shop_id": shop_id, "shop_name": shop.get("shop_name") or shop_name, "plan": plan})
+
+
+def _classify_shop(shop_id: str) -> str:
+    sid = str(shop_id)
+    if sid.isdigit():
+        return "etsy"
+    if sid.startswith("guest_email_") or sid.startswith("review_"):
+        return "email"
+    if sid.startswith(("mobile_guest_", "guest_")):
+        return "guest"
+    return "other"
+
+
+@bp.route("/admin/dashboard")
+def admin_dashboard():
+    if not is_admin():
+        return "", 404
+    import db as _db
+    import sqlite3 as _sq
+    con = _sq.connect(_db.DB_PATH)
+    con.row_factory = _sq.Row
+    rows = con.execute(
+        "SELECT shop_id, shop_name, plan, has_premium, free_used, created_at, "
+        "stripe_customer_id FROM shops ORDER BY rowid DESC"
+    ).fetchall()
+    con.close()
+
+    shops = []
+    for r in rows:
+        d = dict(r)
+        d["kind"] = _classify_shop(d["shop_id"])
+        shops.append(d)
+
+    counts = {
+        "total":    len(shops),
+        "etsy":     sum(1 for s in shops if s["kind"] == "etsy"),
+        "email":    sum(1 for s in shops if s["kind"] == "email"),
+        "guest":    sum(1 for s in shops if s["kind"] == "guest"),
+        "premium":  sum(1 for s in shops if s.get("has_premium")),
+        "pro":      sum(1 for s in shops if s.get("plan") == "pro"),
+        "starter":  sum(1 for s in shops if s.get("plan") == "starter"),
+    }
+    return render_template("admin_dashboard.html", shops=shops, counts=counts)

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Users &amp; Plans</title>
+<style>
+  :root { --primary:#5B47E0; --bg:#F6F7FB; --card:#fff; --border:#E5E7F0;
+          --text:#111827; --muted:#6B7280; --green:#059669; --amber:#B45309; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+         background:var(--bg); color:var(--text); padding:28px; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:24px; }
+  .cards { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
+  .stat { background:var(--card); border:1px solid var(--border); border-radius:12px;
+          padding:14px 18px; min-width:120px; }
+  .stat .n { font-size:26px; font-weight:800; }
+  .stat .l { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+  .toolbar { margin-bottom:14px; }
+  #search { width:320px; max-width:100%; padding:10px 14px; border:1px solid var(--border);
+            border-radius:10px; font-size:14px; }
+  table { width:100%; border-collapse:collapse; background:var(--card);
+          border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  th,td { text-align:left; padding:11px 14px; font-size:13px; border-bottom:1px solid var(--border); }
+  th { background:#FAFAFE; color:var(--muted); font-weight:700; text-transform:uppercase;
+       font-size:11px; letter-spacing:.4px; }
+  tr:last-child td { border-bottom:none; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+  .b-etsy { background:#FEF3C7; color:var(--amber); }
+  .b-email { background:#EDE9FE; color:var(--primary); }
+  .b-guest { background:#F3F4F6; color:var(--muted); }
+  .b-other { background:#F3F4F6; color:var(--muted); }
+  .plan-pro { color:var(--green); font-weight:800; }
+  .plan-starter { color:var(--primary); font-weight:700; }
+  .plan-free { color:var(--muted); }
+  select,.btn { padding:6px 10px; border:1px solid var(--border); border-radius:8px;
+                font-size:13px; font-family:inherit; }
+  .btn { background:var(--primary); color:#fff; border:none; font-weight:700; cursor:pointer; }
+  .btn:hover { opacity:.9; }
+  .mono { font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--muted); }
+  #toast { position:fixed; bottom:24px; right:24px; background:#111827; color:#fff;
+           padding:12px 18px; border-radius:10px; font-size:13px; opacity:0;
+           transition:opacity .2s; pointer-events:none; }
+  #toast.show { opacity:1; }
+</style>
+</head>
+<body>
+  <h1>Users &amp; Plans</h1>
+  <div class="sub">{{ counts.total }} accounts · manage plans inline · changes are immediate</div>
+
+  <div class="cards">
+    <div class="stat"><div class="n">{{ counts.total }}</div><div class="l">Total</div></div>
+    <div class="stat"><div class="n">{{ counts.etsy }}</div><div class="l">Etsy</div></div>
+    <div class="stat"><div class="n">{{ counts.email }}</div><div class="l">Email</div></div>
+    <div class="stat"><div class="n">{{ counts.guest }}</div><div class="l">Guest</div></div>
+    <div class="stat"><div class="n">{{ counts.premium }}</div><div class="l">Premium</div></div>
+    <div class="stat"><div class="n">{{ counts.pro }}</div><div class="l">Pro</div></div>
+    <div class="stat"><div class="n">{{ counts.starter }}</div><div class="l">Starter</div></div>
+  </div>
+
+  <div class="toolbar">
+    <input id="search" type="text" placeholder="Search by shop name or ID…" autocomplete="off">
+  </div>
+
+  <table id="shops">
+    <thead>
+      <tr>
+        <th>Shop</th><th>Type</th><th>Shop ID</th><th>Plan</th>
+        <th>Used</th><th>Created</th><th>Set plan</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in shops %}
+      <tr data-search="{{ (s.shop_name or '')|lower }} {{ s.shop_id|lower }}">
+        <td>{{ s.shop_name or '—' }}</td>
+        <td><span class="badge b-{{ s.kind }}">{{ s.kind }}</span></td>
+        <td class="mono">{{ s.shop_id }}</td>
+        <td class="plan-{{ s.plan or 'free' }}" data-plan-cell>{{ (s.plan or 'free')|upper }}{% if s.has_premium %} ✓{% endif %}</td>
+        <td>{{ s.free_used }}</td>
+        <td class="mono">{{ (s.created_at or '')[:10] }}</td>
+        <td>
+          <select data-plan-select>
+            <option value="free"    {% if (s.plan or 'free')=='free' %}selected{% endif %}>free</option>
+            <option value="starter" {% if s.plan=='starter' %}selected{% endif %}>starter</option>
+            <option value="pro"     {% if s.plan=='pro' %}selected{% endif %}>pro</option>
+          </select>
+          <button class="btn" data-set-plan data-shop-id="{{ s.shop_id }}" data-shop-name="{{ s.shop_name or '' }}">Save</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div id="toast"></div>
+
+  <script nonce="{{ csp_nonce }}">
+    const toast = (msg, ok=true) => {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.style.background = ok ? '#065F46' : '#991B1B';
+      t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);
+    };
+
+    document.getElementById('search').addEventListener('input', (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      document.querySelectorAll('#shops tbody tr').forEach(tr => {
+        tr.style.display = !q || tr.dataset.search.includes(q) ? '' : 'none';
+      });
+    });
+
+    document.querySelectorAll('[data-set-plan]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const row    = btn.closest('tr');
+        const plan   = row.querySelector('[data-plan-select]').value;
+        const shopId = btn.dataset.shopId;
+        btn.disabled = true; const orig = btn.textContent; btn.textContent = '…';
+        try {
+          const r = await fetch('/admin/set-plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shop_id: shopId, shop_name: btn.dataset.shopName, plan })
+          });
+          const d = await r.json();
+          if (r.ok && d.ok) {
+            const cell = row.querySelector('[data-plan-cell]');
+            cell.textContent = plan.toUpperCase() + (plan !== 'free' ? ' ✓' : '');
+            cell.className = 'plan-' + plan;
+            toast(`${btn.dataset.shopName || shopId} → ${plan}`);
+          } else {
+            toast(d.error || 'Failed', false);
+          }
+        } catch (err) {
+          toast('Network error', false);
+        } finally {
+          btn.disabled = false; btn.textContent = orig;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
