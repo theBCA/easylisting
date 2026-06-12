@@ -258,4 +258,6 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 
 ## [Unreleased]
 
-_No unreleased changes yet._
+### Fixed
+- Gemini API calls in `_gemini_generate` and `_run_text_json` now set `thinking_budget=0`, `AutomaticFunctionCallingConfig(disable=True)`, and `http_options=HttpOptions(timeout=90_000)` (90 000 ms = 90 s). Prevents thinking mode from silently adding cost with no quality benefit for JSON generation, and ensures all calls time out before Railway's 120 s worker limit.
+- Recreated `.venv` with Python 3.11 (was pointing to a non-existent `etsy/` path after project rename). Both `web/core/config.py` and `web/app.py` now search for `.env` up the directory tree, so `flask run` from `web/` picks up the repo-root `.env` automatically.
