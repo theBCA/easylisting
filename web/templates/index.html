@@ -828,7 +828,6 @@ const STRINGS = {
     hero_sub:"Drop your product photo, add a short hint, and get a fully optimized title, description, tags, and more — ready to publish in seconds.",
     drop_title:"Drop your product photos here", drop_sub:"JPG, PNG, WebP — up to 5 photos per listing", drop_browse:"Browse files",
     label_hint:"Product hint", hint_placeholder:"e.g. baby cardigan, hand knit, blue",
-    label_provider:"AI Provider",
     template_hint:"Your saved defaults are ready", template_load:"Apply template", template_applied:"Template applied ✓",
     btn_generate:"Generate Listing with AI →",
     loading_title:"Analyzing your product…", loading_sub:"AI is writing your title, description, tags, and more.",
@@ -895,7 +894,6 @@ const STRINGS = {
     hero_sub:"Produktfoto hochladen, kurzen Hinweis hinzufügen und ein vollständig optimiertes Listing erhalten — in Sekunden fertig.",
     drop_title:"Produktfotos hier ablegen", drop_sub:"JPG, PNG, WebP — bis zu 5 Fotos", drop_browse:"Dateien auswählen",
     label_hint:"Produkthinweis", hint_placeholder:"z.B. Baby-Cardigan, handgestrickt, blau",
-    label_provider:"KI-Anbieter",
     template_hint:"Ihre gespeicherten Voreinstellungen sind bereit", template_load:"Vorlage anwenden", template_applied:"Vorlage angewendet ✓",
     btn_generate:"Listing mit KI erstellen →",
     loading_title:"Dein Produkt wird analysiert…", loading_sub:"KI schreibt Titel, Beschreibung, Tags und mehr.",
@@ -960,7 +958,6 @@ const STRINGS = {
     hero_sub:"Ürün fotoğrafınızı bırakın, kısa bir ipucu ekleyin; saniyeler içinde tam optimize başlık, açıklama, etiket ve daha fazlasını alın.",
     drop_title:"Ürün fotoğraflarını buraya bırakın", drop_sub:"JPG, PNG, WebP — en fazla 5 fotoğraf", drop_browse:"Dosya seç",
     label_hint:"Ürün ipucu", hint_placeholder:"örn. bebek hırkası, el örgüsü, mavi",
-    label_provider:"YZ Sağlayıcısı",
     template_hint:"Varsayılan şablonunuz hazır", template_load:"Şablonu uygula", template_applied:"Şablon uygulandı ✓",
     btn_generate:"YZ ile Liste Oluştur →",
     loading_title:"Ürününüz analiz ediliyor…", loading_sub:"YZ başlık, açıklama, etiket ve daha fazlasını yazıyor.",
@@ -1198,7 +1195,7 @@ function startEmailVerifiedPolling() {
 
 // ── State ──────────────────────────────────────────────────────────────────
 const IS_GUEST = {{ 'true' if is_guest else 'false' }};
-let selectedFiles = [], selectedProvider = 'nvidia', aiData = {}, selectedPlatform = 'etsy';
+let selectedFiles = [], selectedProvider = 'gemini', aiData = {}, selectedPlatform = 'etsy';
 
 // ── Platform config ────────────────────────────────────────────────────────
 const PLATFORM_META = {

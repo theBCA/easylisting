@@ -194,13 +194,7 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
       <span class="ctrl-label" data-i18n="hint_label">Hint (optional, applies to all)</span>
       <input type="text" id="hint" class="ctrl-input" data-i18n-placeholder="hint_placeholder" placeholder="e.g. handmade ceramic mugs" maxlength="200">
     </div>
-    <div class="ctrl-group">
-      <span class="ctrl-label" data-i18n="provider_label">AI Provider</span>
-      <select id="provider" class="ctrl-input">
-        <option value="gemini" data-i18n="provider_gemini">Gemini (free)</option>
-        <option value="nvidia" data-i18n="provider_nvidia">NVIDIA (free)</option>
-      </select>
-    </div>
+    <input type="hidden" id="provider" value="gemini">
     <button class="btn-gen" id="btnGen" data-i18n="generate_all">Generate All</button>
   </div>
 
@@ -244,7 +238,6 @@ const STRINGS = {
     title:'Bulk Upload', sub:'Upload multiple product photos — each gets its own AI-generated listing.',
     drop_title:'Drop product photos here', drop_sub:'Up to {n} photos — one listing generated per photo',
     hint_label:'Hint (optional, applies to all)', hint_placeholder:'e.g. handmade ceramic mugs',
-    provider_label:'AI Provider', provider_gemini:'Gemini (free)', provider_nvidia:'NVIDIA (free)',
     generate_all:'Generate All', results_heading:'Generated Listings', publish_all:'Publish Selected as Draft',
     only_images:'Only JPEG/PNG/WebP/GIF allowed', max_photos:'Max {n} photos at a time',
     free_limit:'Free limit reached. Upgrade for more.', skipped:'Free limit reached — remaining listings skipped.',
@@ -262,7 +255,6 @@ const STRINGS = {
     title:'Bulk-Upload', sub:'Lade mehrere Produktfotos hoch — jedes erhält ein eigenes KI-generiertes Listing.',
     drop_title:'Produktfotos hier ablegen', drop_sub:'Bis zu {n} Fotos — ein Listing pro Foto',
     hint_label:'Hinweis (optional, gilt für alle)', hint_placeholder:'z.B. handgemachte Keramiktassen',
-    provider_label:'KI-Anbieter', provider_gemini:'Gemini (kostenlos)', provider_nvidia:'NVIDIA (kostenlos)',
     generate_all:'Alle generieren', results_heading:'Generierte Listings', publish_all:'Ausgewählte als Entwurf veröffentlichen',
     only_images:'Nur JPEG/PNG/WebP/GIF erlaubt', max_photos:'Maximal {n} Fotos auf einmal',
     free_limit:'Kostenloses Limit erreicht. Upgrade für mehr.', skipped:'Kostenloses Limit erreicht — übrige Listings übersprungen.',
@@ -280,7 +272,6 @@ const STRINGS = {
     title:'Toplu Yükleme', sub:'Birden fazla ürün fotoğrafı yükleyin — her fotoğraf için ayrı bir yapay zeka ilanı oluşturulur.',
     drop_title:'Ürün fotoğraflarını buraya bırakın', drop_sub:'{n} fotoğrafa kadar — her fotoğraf için bir ilan',
     hint_label:'İpucu (opsiyonel, tümüne uygulanır)', hint_placeholder:'örn. el yapımı seramik kupalar',
-    provider_label:'YZ Sağlayıcısı', provider_gemini:'Gemini (ücretsiz)', provider_nvidia:'NVIDIA (ücretsiz)',
     generate_all:'Tümünü Oluştur', results_heading:'Oluşturulan İlanlar', publish_all:'Seçilenleri Taslak Olarak Yayınla',
     only_images:'Yalnızca JPEG/PNG/WebP/GIF kabul edilir', max_photos:'Tek seferde en fazla {n} fotoğraf',
     free_limit:'Ücretsiz limit doldu. Daha fazlası için yükseltin.', skipped:'Ücretsiz limit doldu — kalan ilanlar atlandı.',
