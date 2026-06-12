@@ -8,6 +8,9 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 
 ## [Unreleased]
 
+### Changed
+- **Lead pipeline (`scripts/lead_pipeline.py`)**: replaced dead `rupom888~etsy-scraper` actor with `crawlerbros~etsy-scraper` which returns `shopName`/`shopUrl` directly; updated `listings_to_shops` and `run_apify_etsy_scrape` to use the new actor's `startUrls`+`maxItems` input format. `APIFY_ETSY_ACTOR` env var overrides the default.
+
 ### Added
 - **Structured request logging**: `core/logging.py` now configures production JSON logs, `LOG_LEVEL` / `LOG_FORMAT`, request IDs, access logs, exception context, and redaction helpers. Responses include `X-Request-ID`.
 - **Billing funnel metrics**: Stripe checkout/session/webhook events are now stored in `payment_events`; `/admin/dashboard`, `/admin/stats`, and `/admin/billing-json` show checkout attempts, paid conversions, failures, cancellations, plan split, domain split, and recent billing events.

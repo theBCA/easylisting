@@ -264,8 +264,8 @@ def billing_portal():
     sid = usage_shop_id()
     shop = get_shop(sid) or {}
     customer_id = shop.get("stripe_customer_id")
-    if not customer_id:
-        return jsonify({"error": "No billing account found"}), 404
+    if not customer_id or not str(customer_id).startswith("cus_"):
+        return jsonify({"error": "No Stripe billing account linked to this shop. If you paid via Stripe, your subscription will self-heal on next renewal — or contact support."}), 404
     try:
         import stripe as stripe_lib
         stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")

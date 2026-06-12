@@ -234,7 +234,11 @@ def admin_set_plan():
         # Create the shop record if it doesn't exist (handles fresh DB after deploy)
         _db.ensure_shop(shop_id, shop_name or "Shop")
         shop = _db.get_shop(shop_id) or {}
-    _db.set_premium(shop_id, shop.get("stripe_customer_id") or "admin", "admin", plan != "free", plan)
+    existing_customer = shop.get("stripe_customer_id") or ""
+    # Preserve real Stripe customer IDs; pass None when none exists so we
+    # don't pollute the field with a fake value that breaks billing portal.
+    customer_arg = existing_customer if existing_customer.startswith("cus_") else None
+    _db.set_premium(shop_id, customer_arg, "admin", plan != "free", plan)
     return jsonify({"ok": True, "shop_id": shop_id, "shop_name": shop.get("shop_name") or shop_name, "plan": plan})
 
 
