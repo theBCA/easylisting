@@ -7,12 +7,14 @@ posthog.init('{{ config.POSTHOG_TOKEN }}', {
     capture_pageview: true,
     capture_pageleave: true,
     autocapture: true,
-});
+    loaded: function(ph) {
 {% if ph_identity %}
-posthog.identify('{{ ph_identity.id }}', {
-    name: {{ ph_identity.name | tojson }},
-    is_guest: {{ ph_identity.is_guest | tojson }}
-});
+        ph.identify('{{ ph_identity.id }}', {
+            name: {{ ph_identity.name | tojson }},
+            is_guest: {{ ph_identity.is_guest | tojson }}
+        });
 {% endif %}
+    }
+});
 </script>
 {% endif %}

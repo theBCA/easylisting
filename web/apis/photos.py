@@ -1,5 +1,6 @@
 """Pro photo-variant generation via fal.ai."""
 import base64
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from flask import Blueprint, request, jsonify
@@ -78,11 +79,20 @@ def api_generate_photos():
         return jsonify({"error": "A generated or uploaded product image is required."}), 400
 
     prompts = _photo_variant_prompts(body)
+    labels = ("White background", "Lifestyle", "Seasonal gift")
     try:
-        variants = [
-            {"label": label, "image": _fal_generate_variant(image_url, prompt)}
-            for label, prompt in zip(("White background", "Lifestyle", "Seasonal gift"), prompts)
-        ]
+        # Run in parallel — 3 sequential fal calls often exceed gunicorn's 120s timeout.
+        variants: list[dict] = []
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            futures = {
+                pool.submit(_fal_generate_variant, image_url, prompt): label
+                for label, prompt in zip(labels, prompts)
+            }
+            for fut in as_completed(futures):
+                label = futures[fut]
+                variants.append({"label": label, "image": fut.result()})
+        order = {label: i for i, label in enumerate(labels)}
+        variants.sort(key=lambda v: order[v["label"]])
     except Exception as e:
         logger.exception("Photo variant error: %s", e)
         return jsonify({"error": safe_error(str(e))}), 500

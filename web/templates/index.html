@@ -1905,10 +1905,17 @@ async function generatePhotoVariants() {
       method:'POST', headers:csrfHeaders(),
       body: JSON.stringify(payload),
     });
-    const d = await res.json();
+    const d = await res.json().catch(() => ({}));
     if (d.error === 'pro_required') { openModal('paywallModal'); return; }
     if (d.error === 'photo_limit_reached') { openModal('paywallModal'); return; }
-    if (d.error) { showToast(d.error, 'error'); return; }
+    if (!res.ok || d.error) {
+      showToast(d.error || `Photo generation failed (${res.status})`, 'error');
+      return;
+    }
+    if (!(d.variants || []).length) {
+      showToast('No photo variants returned — try again', 'error');
+      return;
+    }
     (d.variants || []).forEach(v => {
       const wrap = document.createElement('div');
       wrap.className = 'photo-variant';

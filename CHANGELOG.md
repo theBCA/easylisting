@@ -16,6 +16,9 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 - **Cloudflare Access JWT verification**: `core/admin_auth.py` validates `Cf-Access-Jwt-Assertion` via PyJWKClient against the team JWKS; falls back to `Authorization: Bearer` for API use. Controlled by `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `ADMIN_EMAILS` env vars.
 
 ### Fixed
+- **Pro photo variants**: generate 3 fal.ai variants in parallel so the request finishes within gunicorn's 120s timeout; clearer client error when API fails or returns empty.
+- **PostHog `identify` crash** (`t.push is not a function`): defer `identify` to PostHog `loaded` callback instead of calling synchronously after `init`.
+- **CSP**: allow `connect-src` to `https://eu-assets.i.posthog.com` (PostHog asset source maps).
 - **Stripe webhook secrets for two domains**: `/stripe/webhook` now accepts host-specific/fallback secrets (`STRIPE_WEBHOOK_SECRET_EUR`, `STRIPE_WEBHOOK_SECRET_TRY`, `STRIPE_WEBHOOK_SECRET`) so separate Stripe webhook endpoints for `easylisting.app` and `kolaylistele.com` can both verify correctly.
 
 ### Security
