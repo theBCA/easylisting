@@ -1,4 +1,5 @@
 """Stripe billing: upgrade page, checkout sessions, webhook."""
+import json
 import os
 import urllib.parse
 
@@ -358,6 +359,7 @@ def billing_change_plan():
 
 @bp.route("/stripe/webhook", methods=["POST"])
 @csrf.exempt
+@limiter.exempt
 def stripe_webhook():
     if not os.getenv("STRIPE_SECRET_KEY"):
         return jsonify({"error": "not configured"}), 503
@@ -372,8 +374,12 @@ def stripe_webhook():
             event = stripe_lib.Webhook.construct_event(payload, sig, secret)
             event = _stripe_to_plain(event)
             break
-        except Exception as e:
+        except stripe_lib.error.SignatureVerificationError as e:
             last_error = e
+        except Exception as e:
+            # Signature passed but event parsing failed — treat as valid
+            event = json.loads(payload)
+            break
     if event is None:
         logger.error("Stripe webhook invalid: %s", last_error)
         return jsonify({"error": "Invalid signature"}), 400

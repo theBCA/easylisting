@@ -12,7 +12,7 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 - **Plan switching** (`POST /billing/change-plan`): existing subscribers can switch between Starter and Pro without creating a new subscription. Upgrades (Starter→Pro) are prorated and charged immediately; downgrades (Pro→Starter) apply a credit on the next invoice. Upgrade page shows "Switch to Pro →" / "Switch to Starter" buttons for active subscribers.
 
 ### Changed
-- **Lead pipeline (`scripts/lead_pipeline.py`)**: replaced dead `rupom888~etsy-scraper` actor with `crawlerbros~etsy-scraper` which returns `shopName`/`shopUrl` directly; updated `listings_to_shops` and `run_apify_etsy_scrape` to use the new actor's `startUrls`+`maxItems` input format. `APIFY_ETSY_ACTOR` env var overrides the default.
+- **Lead pipeline (`scripts/lead_pipeline.py`)**: replaced dead `rupom888~etsy-scraper` actor with `crawlerbros~etsy-scraper` which returns `shopName`/`shopUrl` directly; updated `listings_to_shops` and `run_apify_etsy_scrape` to use the new actor's `startUrls`+`maxItems` input format. `APIFY_ETSY_ACTOR` env var overrides the default. `listings_to_shops` now captures `review_count` and `star_seller` per shop. New `enrich-instagram` command guesses Instagram handles from shop names, scrapes bios via `coderx~instagram-profile-scraper-bio-posts`, and extracts `external_url` + bio emails. New `--min-reviews` flag on `apify-scrape` filters to professional sellers (C strategy). New `--min-listing-count` flag on `enrich-instagram`.
 
 ### Added
 - **Structured request logging**: `core/logging.py` now configures production JSON logs, `LOG_LEVEL` / `LOG_FORMAT`, request IDs, access logs, exception context, and redaction helpers. Responses include `X-Request-ID`.
@@ -26,6 +26,8 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 - **PostHog `identify` crash** (`t.push is not a function`): defer `identify` to PostHog `loaded` callback instead of calling synchronously after `init`.
 - **CSP**: allow `connect-src` to `https://eu-assets.i.posthog.com` (PostHog asset source maps).
 - **Stripe webhook secrets for two domains**: `/stripe/webhook` now accepts host-specific/fallback secrets (`STRIPE_WEBHOOK_SECRET_EUR`, `STRIPE_WEBHOOK_SECRET_TRY`, `STRIPE_WEBHOOK_SECRET`) so separate Stripe webhook endpoints for `easylisting.app` and `kolaylistele.com` can both verify correctly.
+- **Stripe webhook parsing** (`/stripe/webhook`): only `SignatureVerificationError` is treated as "bad signature". Other parse errors after a valid signature (e.g. Stripe SDK `event.object` check) fall back to `json.loads` so valid events are never silently dropped as 400.
+- **E2E test** (`scripts/test_stripe_e2e.py`): `build_webhook` now injects `"id"` and `"object": "event"` top-level fields required by the Stripe SDK; script auto-loads `.env.test` so `STRIPE_WEBHOOK_SECRET` is always consistent between the test and the running app.
 
 ### Security
 - `CF_ACCESS_TEAM_DOMAIN=aged-term-c87a.cloudflareaccess.com` set on both Railway services — browser JWT path now fully active.
