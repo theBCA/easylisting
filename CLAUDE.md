@@ -69,3 +69,15 @@ Both deploy from this repo root. The backend lives in `web/`, so `Procfile` and 
 start it with `gunicorn --chdir web app:app`. `requirements.txt` stays at the repo root for
 Nixpacks to install. No Railway dashboard change is needed.
 TRY Stripe price IDs must be set on the kolaylistele.com service.
+
+## Changelog rule (MANDATORY for all agents)
+After **every** implementation — feature, fix, security change, or refactor — update
+`CHANGELOG.md` at the repo root before considering the task done.
+
+Rules:
+- If there is an `[Unreleased]` section, add your entry there.
+- If there is no `[Unreleased]` section yet, create one at the top (above the latest version).
+- When a version is released/tagged, rename `[Unreleased]` to `[x.y] — YYYY-MM-DD — one-line summary`.
+- Group entries under: **Added**, **Changed**, **Fixed**, **Security**, or **Removed**.
+- Be specific: name the endpoint, table, env var, file, or component affected.
+- One bullet per logical change. Don't batch unrelated changes into one bullet.

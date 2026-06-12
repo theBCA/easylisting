@@ -1,20 +1,20 @@
 # kolaylistele / EasyListing — System Design
 
 > **Confidential — Internal Engineering Reference**
-> Version 2.0 · June 2025
+> Version 3.0 · June 2026
 
 ---
 
 ## 1. Overview
 
-**kolaylistele** (Turkish: "list easily") is a SaaS tool that uses AI vision models to analyse product photos and generate fully-optimised marketplace listings in seconds. Sellers upload one or more images, optionally add a short hint, and receive title, description, tags, materials, price suggestion, and an Instagram caption — ready to publish directly to their Etsy shop.
+**kolaylistele** (Turkish: "list easily") is a SaaS tool that uses AI vision models to analyse product photos and generate fully-optimised marketplace listings in seconds. Sellers upload one or more images, optionally add a short hint, and receive title, description, tags, materials, price suggestion, and an Instagram caption — ready to publish directly to their Etsy shop or other supported platforms.
 
 ### Products / Domains
 
 | Domain | Market | Currency | Language |
 |--------|--------|----------|----------|
 | `kolaylistele.com` | Turkey | ₺ TRY | Turkish |
-| `easylisting.*` (Railway subdomain + custom) | International | € EUR | English / German |
+| `easylisting.app` | International | € EUR | English / German |
 
 Both domains run the same Flask application; the active domain is detected at runtime via `request.host` to switch Stripe price IDs and email copy.
 
@@ -28,10 +28,12 @@ The AI pipeline generates platform-specific listings for: **Etsy**, **Shopify**,
 
 | Layer | Responsibility | Key Components |
 |-------|---------------|----------------|
-| **Presentation** | User-facing browser UI, CDN, TLS | Browser (vanilla JS + Stripe.js), Cloudflare WAF/CDN, two custom domains |
-| **Security & Routing** | Request validation, abuse blocking, auth tokens | Flask-Limiter, probe path blocker, Flask-WTF CSRF, browser fingerprint, CSP nonces, magic-byte image validation |
-| **Application** | Business logic, AI orchestration, payment flows | Python 3.12 + Flask 3.1, Gunicorn 2 workers, four logical modules: Auth, Core API, Payments, AI Pipeline |
-| **Data & Services** | Persistence, third-party APIs | SQLite on Railway Volume, Etsy REST API v3, Stripe, Google Gemini, NVIDIA NIM, OpenAI, fal.ai, Natro SMTP |
+| **Presentation** | User-facing browser UI + iOS native app | Browser (vanilla JS + Stripe.js), iOS Swift app |
+| **CDN / WAF** | Edge cache, DDoS mitigation, TLS | Cloudflare |
+| **Security & Routing** | Request validation, abuse blocking, auth tokens | Flask-Limiter, probe-path blocker, Flask-WTF CSRF, browser fingerprint, CSP nonces, magic-byte image validation |
+| **Application** | Business logic, AI orchestration, payment flows | Python 3.12 + Flask 3.1, Gunicorn 2 workers, blueprint-per-feature architecture |
+| **Data & Services** | Persistence, third-party APIs | SQLite on Railway Volume, Etsy REST API v3, Stripe, Google Gemini, NVIDIA NIM, OpenAI, fal.ai, Resend |
+| **Analytics** | Product telemetry | PostHog EU cloud |
 
 ---
 
@@ -56,7 +58,8 @@ The AI pipeline generates platform-specific listings for: **Etsy**, **Shopify**,
 | AI tertiary | OpenAI GPT-4o | — | Paid opt-in fallback |
 | Image generation | FLUX.1 Kontext (fal.ai) | — | Pro photo variants |
 | Payments | Stripe | SDK 15.1.0 | Subscriptions, webhooks |
-| Email | Natro SMTP | — | Magic link delivery via `info@kolaylistele.com` |
+| Email | Resend | — | Transactional email (magic links) via REST API |
+| Analytics | PostHog | — | EU cloud — pageviews, autocapture, server-side events |
 | HTTP client | requests | 2.34.2 | All external API calls |
 | Image processing | Pillow | 12.2.0 | Dependency for image handling |
 | Env config | python-dotenv | 1.2.2 | `.env` loading |
@@ -83,7 +86,7 @@ Central per-seller record. Covers both real Etsy shops (numeric `shop_id`) and g
 | `free_improve_used` | INTEGER | Free listing-improve actions consumed |
 | `photo_variant_used` | INTEGER | Photo variants generated this billing period |
 | `photo_variant_period` | TEXT | `YYYY-MM` month string for monthly reset |
-| `own_api_key` | TEXT | Reserved for BYO-key feature |
+| `own_api_key` | TEXT | Reserved for BYO-key feature (unused) |
 | `created_at` | TIMESTAMP | Row creation time |
 
 ### 4.2 `templates`
@@ -93,7 +96,7 @@ One row per shop storing the shop's reusable style settings as a JSON blob.
 | Column | Type | Description |
 |--------|------|-------------|
 | `shop_id` | TEXT PK | FK → shops.shop_id |
-| `data` | TEXT | JSON object: `brand_tone`, `material_phrases`, `production_time`, `shipping_note`, `brand_cta`, `tags`, `materials`, `price`, `shipping_profile_id`, `personalization_instructions` |
+| `data` | TEXT | JSON: `brand_tone`, `material_phrases`, `production_time`, `shipping_note`, `brand_cta`, `tags`, `materials`, `price`, `shipping_profile_id`, `personalization_instructions` |
 | `updated_at` | TIMESTAMP | Last save time |
 
 Style data is appended as a "Saved shop style" block in AI prompts via `_merge_hint_with_style()`.
@@ -122,23 +125,80 @@ Permanent mapping from hashed email to the shop ID created for that email addres
 | `shop_id` | TEXT | `guest_email_{hash[:20]}` — stable across browser sessions |
 | `created_at` | TIMESTAMP | First verification time |
 
-### 4.5 `abuse_signals`
+### 4.5 `mobile_tokens`
+
+Auth tokens for the iOS app. One row per active device/session.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `token` | TEXT PK | `secrets.token_urlsafe(32)` — sent as `X-Mobile-Token` header |
+| `shop_id` | TEXT | Associated shop ID |
+| `access_token` | TEXT | Etsy OAuth access token (null for guests) |
+| `refresh_token` | TEXT | Etsy OAuth refresh token (null for guests) |
+| `expires_at` | INTEGER | Unix timestamp — Etsy token expiry |
+| `shop_name` | TEXT | Etsy shop name or "Guest" |
+| `is_guest` | INTEGER | 1 = unauthenticated guest, 0 = Etsy-connected |
+| `is_email` | INTEGER | 1 = email-verified guest |
+| `guest_id` | TEXT | Random guest ID reference for quota tracking |
+| `created_at` | TIMESTAMP | Token creation time |
+
+Auto-refresh: when `expires_at - now < 120s`, the token endpoint refreshes the Etsy access token transparently.
+
+### 4.6 `fp_sessions`
+
+Maps browser fingerprint IDs to email-verified shop IDs. Used to restore session state after browser cache clears.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `fp_id` | TEXT PK | Browser fingerprint ID (`guest_fp_{fp24}`) |
+| `email_shop_id` | TEXT | The verified email shop to restore on next visit |
+| `created_at` | TIMESTAMP | — |
+
+### 4.7 `marketing_consents`
+
+Records email addresses that opted in to marketing (collected at magic-link time).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK AUTOINCREMENT | — |
+| `email` | TEXT | Plaintext email (for sending) |
+| `email_hash` | TEXT UNIQUE | SHA-256 for dedup |
+| `locale` | TEXT | `en` or `tr` |
+| `source` | TEXT | `magic_link` |
+| `consented_at` | TIMESTAMP | Opt-in time |
+| `unsubscribe_token` | TEXT UNIQUE | Token in unsubscribe links |
+| `unsubscribed_at` | TIMESTAMP | Set when user clicks unsubscribe |
+
+Index on `email_hash` and `unsubscribe_token`.
+
+### 4.8 `platform_credentials`
+
+Stores third-party marketplace credentials (currently Trendyol).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `shop_id` | TEXT | FK → shops.shop_id |
+| `platform` | TEXT | `trendyol` (extensible) |
+| `credentials` | TEXT | JSON: `{supplier_id, api_key, api_secret}` |
+| `connected_at` | TIMESTAMP | — |
+
+Primary key: `(shop_id, platform)`.
+
+### 4.9 `abuse_signals`
 
 Append-only event log used by the `/admin/abuse` monitoring endpoint.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | INTEGER PK AUTOINCREMENT | Row ID |
-| `event` | TEXT | Event type: `new_guest`, `limit_hit`, `fp_conflict` |
+| `event` | TEXT | `new_guest`, `limit_hit`, `fp_conflict` |
 | `ip_hash` | TEXT | SHA-256[:16] of client IP (hashed for privacy) |
 | `guest_id` | TEXT | Resolved guest shop ID at time of event |
 | `fp_hash` | TEXT | Browser fingerprint hash slice (24 chars) |
 | `detail` | TEXT | Free-text extra context |
 | `created_at` | TIMESTAMP | Event time |
 
-Indexes on `ip_hash`, `fp_hash`, and `created_at` support the aggregation queries in `get_abuse_summary()`.
-
-### 4.6 (Implicit) Session Store
+### 4.10 Session Store
 
 Flask server-side sessions stored in signed cookies (HMAC-SHA-1 via `itsdangerous`). Key session keys:
 
@@ -153,9 +213,9 @@ Flask server-side sessions stored in signed cookies (HMAC-SHA-1 via `itsdangerou
 | `email_verified` | bool | `/auth/magic` |
 | `email_shop_id` | str | `/auth/magic` |
 
-### 4.7 `easylisting_guest_id` Cookie
+### 4.11 `easylisting_guest_id` Cookie
 
-A separate long-lived (180-day) HTTP-only, signed cookie storing the random guest ID. Signed with `URLSafeSerializer(SECRET_KEY, salt="guest-id")`. This persists across browser sessions independently of the server-side session, providing a third layer of identity continuity for guests.
+A separate long-lived (180-day) HTTP-only, signed cookie storing the random guest ID. Signed with `URLSafeSerializer(SECRET_KEY, salt="guest-id")`. Persists across browser sessions independently of the server-side session.
 
 ---
 
@@ -187,10 +247,12 @@ Browser                Flask               Etsy
 
 Scopes requested: `listings_r listings_w shops_r`. Session is cleared before and after the exchange to prevent session fixation. PKCE uses S256 challenge method with a 64-byte random verifier.
 
+**Mobile variant:** `GET /auth/start?mobile=1` → after callback, creates a `mobile_token`, redirects to `easylisting://auth?mobile_token=...&shop_name=...`.
+
 ### 5.2 Guest Magic Link
 
 ```
-Browser                Flask               Natro SMTP
+Browser                Flask               Resend
    |                     |                   |
    |-- POST /api/magic-link {email} -------->|
    |                     | validate email format
@@ -211,22 +273,44 @@ Browser                Flask               Natro SMTP
    |<-- 302 → / ---------|
 ```
 
-Email addresses are never stored in plaintext — only their SHA-256 hash. The `email_shop_id` is the most authoritative guest identity and takes precedence over fingerprint and cookie IDs in `guest_shop_id()`.
+Email addresses are never stored in plaintext — only their SHA-256 hash. The `email_shop_id` is the most authoritative guest identity.
 
-### 5.3 Browser Fingerprint Fallback
+**Mobile variant:** `POST /api/magic-link` with `X-Mobile-Request` header returns `{already_verified, mobile_token}` if email is already verified. `GET /auth/magic?token=...&m=1` renders a handoff page that deeplinks the token to the app.
+
+**App Store review shortcut:** If `APPSTORE_REVIEW_EMAIL` is set and matches the submitted email, magic-link consumption immediately grants a Pro session without email sending.
+
+### 5.3 Mobile Guest Session
+
+```
+iOS App              Flask
+   |                   |
+   |-- POST /auth/mobile/guest -->|
+   |                   | create mobile_token(is_guest=1)
+   |<-- {token: "..."} |
+   |                   |
+   | (all subsequent calls include X-Mobile-Token: {token})
+   |                   |
+   |-- POST /auth/mobile/logout -->|
+   |                   | delete mobile_token from DB
+   |<-- {ok: true} ----|
+```
+
+Rate limit: 5/hour, 10/day per IP to prevent abuse.
+
+### 5.4 Browser Fingerprint Fallback
 
 On `/guest` entry, a random `guest_id` is created and stored in both the server-side session and the `easylisting_guest_id` cookie (180-day). The frontend sends a derived browser fingerprint to `POST /api/fingerprint`:
 
 1. Client computes a fingerprint hash (canvas, fonts, UA, etc.) and sends `{fp: "<hex>"}`.
 2. Server creates `fp_guest_id = f"guest_fp_{fp[:24]}"` and stores it in the session.
-3. If the current random ID has usage > 0 but the FP ID is new (free_used = 0), usage is migrated to the FP ID — prevents free limit reset via incognito mode.
-4. If the FP ID already has usage but arrives with a fresh random ID (`fp_conflict` pattern), the event is logged to `abuse_signals`.
+3. If the current random ID has usage > 0 but the FP ID is new, usage is migrated to the FP ID.
+4. If the FP ID already has usage but arrives with a fresh random ID (`fp_conflict`), the event is logged to `abuse_signals`.
 
 Priority order in `guest_shop_id()`:
-1. `email_shop_id` (most authoritative — verified email)
-2. `fp_guest_id` (survives incognito tab resets)
-3. `guest_id` in session cookie (random, ephemeral)
-4. `easylisting_guest_id` cookie (random, 180-day persistent)
+1. `email_shop_id` — verified email (most authoritative)
+2. `fp_guest_id` — survives incognito tab resets
+3. `guest_id` in session cookie
+4. `easylisting_guest_id` cookie (180-day)
 
 ---
 
@@ -234,44 +318,44 @@ Priority order in `guest_shop_id()`:
 
 ### 6.1 Provider Chain
 
-Three AI providers are configured in a priority order. The application tries each in sequence if the previous returns a `quota_exceeded` runtime error (HTTP 429 / RESOURCE_EXHAUSTED):
+Three AI providers are configured in a priority order. The application tries each in sequence if the previous returns a `quota_exceeded` error (HTTP 429 / RESOURCE_EXHAUSTED):
 
 ```
 ① Google Gemini 2.5 Flash  (primary — free)
         ↓ quota_exceeded
-② NVIDIA NIM — Llama-3.2-90B-Vision  (secondary — free)
+   Google Gemini 2.5 Flash Lite  (inner fallback)
+        ↓ quota_exceeded
+② NVIDIA NIM — Llama-3.2-90B-Vision  (secondary — free, single image)
         ↓ quota_exceeded
 ③ OpenAI GPT-4o  (tertiary — paid, opt-in via ALLOW_PAID_OPENAI=true)
 ```
 
-Within Gemini, there is an inner fallback from `gemini-2.5-flash` to `gemini-2.5-flash-lite` on quota errors before escalating to NVIDIA.
-
-The provider to try first can be specified by the frontend (`provider` form field). The chain starts at the requested provider and wraps around, skipping providers with no API key configured.
+The provider to try first can be specified by the frontend (`provider` form field).
 
 ### 6.2 Prompt Structure
 
 Each call to `_build_prompt(hint, lang, platform)` assembles:
 
 1. **Base platform prompt** — one of 8 hardcoded expert copywriter prompts from `PLATFORM_PROMPTS`, each tailored to the target marketplace's rules (title length limits, keyword strategies, field schemas, language).
-2. **Language injection** — if `lang != "en"` and the platform is not a Turkish marketplace (Trendyol/Hepsiburada/n11 have Turkish baked in), a translation directive is appended.
-3. **Seller hint** — the user-supplied free-text hint (max 200 chars) appended as `"Seller hint: ..."`.
-4. **Shop style** — if the seller has saved brand settings (via `/api/template`), these are merged as a `"Saved shop style:"` block with fields: brand tone, material phrases, production time, shipping note, call to action.
+2. **Language injection** — if `lang != "en"` and the platform is not a Turkish marketplace.
+3. **Seller hint** — the user-supplied free-text hint (max 200 chars).
+4. **Shop style** — if the seller has saved brand settings via `/api/template`, these are merged as a "Saved shop style:" block.
 
-All prompts instruct the model to return **only valid JSON** with a strict schema. Responses are parsed by `_parse_ai_json()` which tries direct `json.loads`, then regex-extracts the first `{...}` block, then strips markdown fences.
+All prompts instruct the model to return **only valid JSON** with a strict schema. Responses are parsed by `_parse_ai_json()` which tries direct `json.loads`, regex-extracts the first `{...}` block, then strips markdown fences.
 
 ### 6.3 Image Handling
 
-- Up to 5 images per request; each validated for MIME type (`image/jpeg`, `image/png`, `image/webp`, `image/gif`) and magic bytes (JPEG `\xFF\xD8\xFF`, PNG signature, RIFF/WEBP, GIF87a/89a).
+- Up to 5 images per request; each validated for MIME type and magic bytes (JPEG `\xFF\xD8\xFF`, PNG signature, RIFF/WEBP, GIF87a/89a).
 - Max upload size: 30 MB (`MAX_CONTENT_LENGTH`).
-- For Gemini: images are passed as `Part.from_bytes(data=bytes, mime_type="image/jpeg")`.
-- For NVIDIA/OpenAI: the first image is base64-encoded and sent as a `data:image/jpeg;base64,...` URL in the chat messages array.
-- After generation, images are re-attached to the response as base64 data URLs in `image_previews`.
+- For Gemini: images passed as `Part.from_bytes(data=bytes, mime_type="image/jpeg")`.
+- For NVIDIA/OpenAI: first image base64-encoded as `data:image/jpeg;base64,...` URL.
+- After generation, images re-attached to the response as base64 data URLs in `image_previews`.
 
 ### 6.4 Post-Generation Enrichment (Etsy)
 
 After a successful Etsy listing generation:
-1. `_find_taxonomy_id(taxonomy_query)` calls the Etsy taxonomy API and scores category paths by word overlap. The best `taxonomy_id` and full path are injected into the response.
-2. The shop's shipping profiles are fetched and returned in `shipping_profiles` for the frontend to offer a dropdown.
+1. `_find_taxonomy_id(taxonomy_query)` calls the Etsy taxonomy API and scores category paths by word overlap. Best `taxonomy_id` and full path are injected into the response.
+2. The shop's shipping profiles are fetched and returned in `shipping_profiles`.
 
 ### 6.5 Photo Variant Generation (Pro — FLUX.1 Kontext)
 
@@ -281,7 +365,13 @@ Pro subscribers can generate 3 professional photo variants per product image:
 2. **Lifestyle** — warm natural window light, minimalist interior.
 3. **Seasonal gift** — soft golden-hour, gift-ready scene.
 
-Each variant is produced by `POST https://fal.run/fal-ai/flux-pro/kontext` with the original image URL + a crafted style prompt. Monthly limit: 30 variants (`PHOTO_VARIANT_MONTHLY_LIMIT`), reset per calendar month. Usage is tracked in `shops.photo_variant_used` + `photo_variant_period`.
+Each variant is produced by `POST https://fal.run/fal-ai/flux-pro/kontext`. Monthly limit: 30 variants (`PHOTO_VARIANT_MONTHLY_LIMIT`), reset per calendar month. Usage tracked in `shops.photo_variant_used` + `photo_variant_period`.
+
+### 6.6 Improve & Translate
+
+- **Improve** (`POST /api/improve-listing`): 4 actions — `title_seo`, `description_warm`, `tags`, `shorten_etsy`. Free users: 1/month; premium: unlimited.
+- **Translate** (`POST /api/translate`): Translates title, description, tags to DE/TR/EN. Consumes 1 improve credit (unless premium).
+- **Variants** (`POST /api/listing-variants`, premium): Generates 3 variants — SEO-focused, Emotional/handmade, Gift-focused.
 
 ---
 
@@ -303,6 +393,7 @@ Plans are stored as Stripe Price IDs in environment variables. The correct price
 Frontend                Flask                 Stripe
    |                     |                     |
    |-- POST /stripe/checkout {plan} -------->  |
+   |  (or /api/stripe/checkout for mobile)     |
    |                     | validate plan name
    |                     | resolve price_id from env
    |                     | stripe.checkout.Session.create(
@@ -316,36 +407,71 @@ Frontend                Flask                 Stripe
    |<-- redirect to /upgrade?success=1 ------  |
 ```
 
+**Mobile variant:** `POST /api/stripe/checkout` → app opens URL in Safari → Stripe redirects to `/upgrade/mobile/return?status=success|cancel` → renders handoff page → meta-refresh to `easylisting://upgrade/success?plan=...` or `easylisting://upgrade/cancel`.
+
 ### 7.3 Webhook Events
 
-`POST /stripe/webhook` validates the Stripe-Signature header using `stripe.Webhook.construct_event()` with `STRIPE_WEBHOOK_SECRET`.
+`POST /stripe/webhook` validates the Stripe-Signature header using `stripe.Webhook.construct_event()` with `STRIPE_WEBHOOK_SECRET`. CSRF exempt.
 
 | Event | Action |
 |-------|--------|
-| `checkout.session.completed` | `set_premium(shop_id, customer_id, subscription_id, active=True, plan=plan)` |
-| `customer.subscription.deleted` | `set_premium(shop_id, customer_id, subscription_id, active=False)` — revokes premium |
+| `checkout.session.completed` | `set_premium(shop_id, customer_id, subscription_id, active=True, plan=plan)` + PostHog `plan_upgraded` event |
+| `customer.subscription.deleted` | `set_premium(..., active=False)` — revokes premium |
 | `customer.subscription.paused` | Same as deleted — access suspended |
-
-The CSRF exemption is applied to this endpoint since Stripe cannot include a CSRF token.
 
 ---
 
-## 8. Security Layers
+## 8. Trendyol Integration
+
+Trendyol is a Turkish marketplace. Unlike Etsy (OAuth), Trendyol uses a credentials-based integration.
+
+### 8.1 Connection
+
+1. User enters Supplier ID + API Key + API Secret in settings.
+2. `POST /api/trendyol/connect` validates by fetching the supplier's address list from Trendyol API.
+3. Credentials stored in `platform_credentials` table as encrypted JSON.
+4. `POST /api/trendyol/disconnect` removes the row.
+
+### 8.2 Metadata Fetching
+
+| Endpoint | Purpose | Cache |
+|----------|---------|-------|
+| `GET /api/trendyol/categories` | Full category tree | 24h per supplier |
+| `GET /api/trendyol/categories/<id>/attributes` | Attribute schema for a category | None |
+| `GET /api/trendyol/brands?q=<name>` | Brand search | None |
+| `GET /api/trendyol/addresses` | Supplier shipping/return addresses | None |
+
+### 8.3 Publishing
+
+1. User generates listing (AI or manual) with platform=trendyol.
+2. `POST /api/trendyol/publish`:
+   - Validates: barcode (required), pricing (sale ≤ list price), required fields.
+   - Saves images locally → generates public URLs at `/uploads/{uuid}.jpg`.
+   - Creates Trendyol product payload (barcode, title max 65 chars, HTML description, brand_id, category_id, attributes, images, pricing, VAT, shipping/returning addresses).
+   - POSTs to `/integration/product/sellers/{supplier_id}/v2/products`.
+3. Returns confirmation or Turkish error message.
+
+### 8.4 Static Image Serving
+
+`GET /uploads/<filename>` serves images from `static/uploads/` for Trendyol's image ingestion. These are public, unguarded routes.
+
+---
+
+## 9. Security Layers
 
 ### Layer 1 — Cloudflare WAF + CDN
 
-All traffic enters via Cloudflare. Provides: DDoS mitigation, bot score filtering, global CDN cache, and SSL/TLS termination. The Flask app receives requests with `X-Forwarded-Proto` and `X-Forwarded-For` headers.
+All traffic enters via Cloudflare. Provides: DDoS mitigation, bot score filtering, global CDN cache, and SSL/TLS termination.
 
 ### Layer 2 — Probe Path Blocking
 
-`@app.before_request` hook `block_probe_paths()` returns 404 for requests matching a curated list of scanner/probe patterns:
-
+`@app.before_request` hook `block_probe_paths()` returns 404 for common scanner patterns:
 - Prefixes: `/.git`, `/.env`, `/root/`, `/etc/`, `/proc/`, `/wp-`, `/_next/`, `/_react/`, `/backend/`, `/api/config`, `/docker-compose`, `/attacker/`, `/aws-codecommit/`
 - Suffixes: `.git-credentials`, `/wlwmanifest.xml`, `/xmlrpc.php`
 
 ### Layer 3 — CSRF Protection
 
-Flask-WTF `CSRFProtect` validates a CSRF token on all state-changing requests. Tokens have no time limit (`WTF_CSRF_TIME_LIMIT = None`). Endpoints explicitly exempt: `/api/fingerprint`, `/api/magic-link`, `/stripe/webhook` (each has its own auth mechanism).
+Flask-WTF `CSRFProtect` validates tokens on all state-changing requests. `WTF_CSRF_TIME_LIMIT = None`. Explicitly exempt: `/api/fingerprint`, `/api/magic-link`, `/stripe/webhook`, all mobile endpoints (`/auth/mobile/*`, `/api/trendyol/*`).
 
 ### Layer 4 — Rate Limiting
 
@@ -357,9 +483,11 @@ Flask-Limiter throttles at multiple granularities:
 | `POST /api/generate` | 10/min, 50/day |
 | `POST /api/bulk-generate` | 5/min, 30/day |
 | `POST /api/magic-link` | 5/min, 10/hour |
+| `POST /auth/mobile/guest` | 5/hour, 10/day |
 | `GET /auth/start`, `/auth/callback` | 10/min |
 | `GET /auth/magic` | 20/min |
 | `POST /stripe/checkout` | 10/min |
+| `POST /api/generate-photos` | 5/min |
 
 Storage: in-memory by default; set `REDIS_URL` to use Redis for multi-worker consistency.
 
@@ -367,9 +495,9 @@ Storage: in-memory by default; set `REDIS_URL` to use Redis for multi-worker con
 
 Uploaded images are validated at two levels:
 1. `Content-Type` header must be one of: `image/jpeg`, `image/png`, `image/webp`, `image/gif`.
-2. Raw bytes are checked against known file signatures (JPEG `\xFF\xD8\xFF`, PNG `\x89PNG\r\n\x1a\n`, RIFF/WEBP, GIF87a/89a) by `_is_valid_image_bytes()`.
+2. Raw bytes checked against known file signatures by `_is_valid_image_bytes()`.
 
-Both checks are applied at upload (`/api/generate`) and at publish (`/api/publish` when processing `image_previews`).
+Both checks applied at upload and at publish.
 
 ### Layer 6 — Security Headers
 
@@ -383,56 +511,36 @@ Set by `@app.after_request set_security_headers()`:
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
 | `Permissions-Policy` | `geolocation=(), microphone=(), camera=()` |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` (production only) |
+| `Cross-Origin-Opener-Policy` | `same-origin` |
+| `Cross-Origin-Embedder-Policy` | `require-corp` |
 
 Session cookies: `HttpOnly=True`, `SameSite=Lax`, `Secure=True` (production), 48-hour lifetime.
 
 ---
 
-## 9. Guest Abuse Prevention
+## 10. Analytics — PostHog
 
-The guest system allows up to 3 free AI generations without an Etsy account. The abuse prevention stack layers multiple signals:
+PostHog EU cloud (`eu.i.posthog.com`) is embedded via `_posthog.html` partial included in the base template.
 
-### Identity Hierarchy (highest authority first)
-
-1. **Email-verified ID** (`guest_email_{hash20}`) — set by `/auth/magic` after clicking a magic link. Persists to `verified_emails` table. Cannot be reset by clearing cookies.
-2. **Browser fingerprint ID** (`guest_fp_{fp24}`) — derived from a client-side browser fingerprint hash. Survives incognito tabs within the same browser/device. Set by `POST /api/fingerprint`.
-3. **Session cookie ID** (`guest_{sha256[:16]}`) — random ID in the Flask session. Persists for the session duration.
-4. **Long-lived cookie** (`easylisting_guest_id`) — signed 180-day HTTP-only cookie with a random ID. Survives session expiry.
-
-### Abuse Detection Logic
-
-When a `POST /api/fingerprint` arrives:
-
-- **Usage migration**: if the FP shop is new (free_used=0) but the random shop has usage, migrate the count to prevent bypass via incognito.
-- **`fp_conflict` detection**: if the FP shop already has usage but arrives with a fresh random ID (pattern: incognito tab opened after clearing cookies), the event is logged with `log_abuse_signal("fp_conflict", ...)`.
-
-When a limit-hit event occurs (`/api/generate` returns 403), `log_abuse_signal("limit_hit", ...)` is called with IP hash, guest ID, and FP hash.
-
-### Admin Monitoring
-
-`GET /admin/abuse?token=<ADMIN_TOKEN>&days=7` (token compared with `secrets.compare_digest`) returns an HTML dashboard showing:
-
-- Event counts grouped by type.
-- Top 20 IP hashes by unique guest IDs created.
-- Top 20 fingerprint hashes by unique guest IDs.
+- **Client-side**: pageview capture, autocapture, pageleave. Identity set to `shop_id` + `{name, is_guest}` when available.
+- **Server-side events**: `plan_upgraded` (on Stripe webhook `checkout.session.completed`), `plan_cancelled` (on subscription deleted/paused).
+- Enabled only when `POSTHOG_TOKEN` env var is set; renders nothing otherwise.
+- CSP nonce applied to the inline init script.
 
 ---
 
-## 10. Email
+## 11. Email
 
-### SMTP Configuration
+Transactional email is sent via the **Resend** API (`resend` Python SDK).
 
 | Setting | Value |
 |---------|-------|
-| Provider | Natro hosted email (`mail.kurumsaleposta.com`) |
-| From address | `info@kolaylistele.com` |
-| Port | 465 (SSL) — STARTTLS (587) has a certificate mismatch on Natro |
-| Env vars | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM` |
+| Provider | Resend |
+| From address | `info@kolaylistele.com` (configurable via `MAIL_FROM`) |
+| Env vars | `RESEND_API_KEY`, `MAIL_FROM` |
 
-The `send_email(to, subject, body_text, body_html)` helper in `app.py`:
-- Sends multipart/alternative with plain text + HTML.
-- Uses `smtplib.SMTP_SSL` on port 465, `SMTP + STARTTLS` on other ports.
-- Returns `True` on success, `False` on failure (never raises — failure is logged only).
+The `send_email(to, subject, body_text, body_html)` helper in `core/email.py`:
+- Returns `(True, None)` on success, `(False, reason_str)` on failure (never raises).
 
 ### Magic Link Email Template
 
@@ -444,7 +552,28 @@ Template features: `display:none` preheader text, branded logo bar, card with CT
 
 ---
 
-## 11. Deployment
+## 12. Guest Abuse Prevention
+
+The guest system allows up to 3 free AI generations without an Etsy account. The abuse prevention stack layers multiple signals:
+
+### Identity Hierarchy (highest authority first)
+
+1. **Email-verified ID** (`guest_email_{hash20}`) — set by `/auth/magic`. Persists to `verified_emails` table. Cannot be reset by clearing cookies.
+2. **Browser fingerprint ID** (`guest_fp_{fp24}`) — derived from client-side fingerprint hash. Survives incognito tabs within the same browser/device.
+3. **Session cookie ID** (`guest_{sha256[:16]}`) — random ID in the Flask session.
+4. **Long-lived cookie** (`easylisting_guest_id`) — signed 180-day HTTP-only cookie.
+
+### Abuse Detection Logic
+
+When a `POST /api/fingerprint` arrives:
+- **Usage migration**: if the FP shop is new but the random shop has usage, migrate the count.
+- **`fp_conflict` detection**: if the FP shop already has usage but arrives with a fresh random ID, log to `abuse_signals`.
+
+When a limit-hit event occurs, `log_abuse_signal("limit_hit", ...)` is called.
+
+---
+
+## 13. Deployment
 
 ### Railway Configuration (`railway.json`)
 
@@ -461,7 +590,9 @@ Template features: `display:none` preheader text, branded logo bar, card with CT
 
 `Procfile`: `web: gunicorn app:app --workers 2 --timeout 120 --bind 0.0.0.0:$PORT`
 
-The `--timeout 120` is necessary because Gemini vision calls can take up to ~30 seconds and FLUX photo generation can take up to ~90 seconds.
+The `--timeout 120` is necessary because Gemini vision calls can take ~30s and FLUX photo generation ~90s.
+
+Two separate Railway services (one per domain) with their own env vars + ephemeral SQLite. Both deploy from this repo root. The backend lives in `web/`, so `Procfile` and `railway.json` start it with `gunicorn --chdir web app:app`.
 
 ### SQLite Persistence
 
@@ -471,73 +602,110 @@ A Railway Volume is mounted at `/data/`. Set `DB_PATH=/data/easylisting.sqlite` 
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `FLASK_SECRET` | Yes (prod) | 32+ byte hex string for session signing |
+| `FLASK_SECRET` | Yes | 32+ byte hex string for session signing |
 | `ENV` | Yes (prod) | Set to `production` to enable HTTPS redirect, HSTS, secure cookies |
 | `DB_PATH` | Recommended | Path to SQLite file; default `easylisting.sqlite` |
 | `ETSY_API_KEY` | Yes | Etsy app keystring |
 | `ETSY_SHARED_SECRET` | Yes | Etsy app shared secret |
-| `REDIRECT_URI` | Yes | Full OAuth callback URL, e.g. `https://app.railway.app/auth/callback` |
-| `GEMINI_API_KEY` | Yes (primary AI) | Google AI Studio key |
-| `NVIDIA_API_KEY` | Recommended | NVIDIA NIM key (free) |
-| `OPENAI_API_KEY` | Optional | OpenAI key — only used if `ALLOW_PAID_OPENAI=true` |
+| `REDIRECT_URI` | Yes | Full OAuth callback URL |
+| `GEMINI_API_KEY` | Yes | Google AI Studio key (primary AI) |
+| `NVIDIA_API_KEY` | Recommended | NVIDIA NIM key (free fallback) |
+| `OPENAI_API_KEY` | Optional | OpenAI key — used only if `ALLOW_PAID_OPENAI=true` |
 | `ALLOW_PAID_OPENAI` | No | `true`/`1` to enable GPT-4o as tertiary fallback |
 | `FAL_KEY` | Pro feature | fal.ai key for FLUX photo variants |
 | `PHOTO_VARIANT_MONTHLY_LIMIT` | No | Default `30` — monthly photo generation cap per Pro shop |
-| `STRIPE_SECRET_KEY` | Yes (payments) | Stripe secret key |
-| `STRIPE_PUBLISHABLE_KEY` | Yes (payments) | Stripe publishable key (sent to frontend) |
-| `STRIPE_STARTER_PRICE_ID` | Yes | Stripe price ID for Starter monthly (€4.99) |
-| `STRIPE_PRO_PRICE_ID` | Yes | Stripe price ID for Pro monthly (€9.99) |
+| `STRIPE_SECRET_KEY` | Yes | Stripe secret key |
+| `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key (sent to frontend) |
+| `STRIPE_STARTER_PRICE_ID` | Yes | Starter monthly (€4.99) |
+| `STRIPE_PRO_PRICE_ID` | Yes | Pro monthly (€9.99) |
 | `STRIPE_STARTER_ANNUAL_PRICE_ID` | Optional | Starter annual (€49.99) |
 | `STRIPE_PRO_ANNUAL_PRICE_ID` | Optional | Pro annual (€99.00) |
 | `STRIPE_STARTER_PRICE_ID_TRY` | Yes (TR) | Starter monthly (₺249) |
 | `STRIPE_PRO_PRICE_ID_TRY` | Yes (TR) | Pro monthly (₺499) |
 | `STRIPE_STARTER_ANNUAL_PRICE_ID_TRY` | Optional | Starter annual (₺2,490) |
 | `STRIPE_PRO_ANNUAL_PRICE_ID_TRY` | Optional | Pro annual (₺4,990) |
-| `STRIPE_WEBHOOK_SECRET` | Yes (payments) | Stripe webhook signing secret |
-| `MAIL_HOST` | Yes (email) | `mail.kurumsaleposta.com` |
-| `MAIL_PORT` | Yes (email) | `465` |
-| `MAIL_USER` | Yes (email) | `info@kolaylistele.com` |
-| `MAIL_PASS` | Yes (email) | Email account password |
-| `MAIL_FROM` | Yes (email) | `info@kolaylistele.com` |
-| `ADMIN_TOKEN` | Yes (admin) | Random secret for `/admin/abuse` access |
-| `REDIS_URL` | Optional | Redis URI for distributed rate limiting |
+| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe webhook signing secret |
+| `RESEND_API_KEY` | Yes (email) | Resend API key for transactional email |
+| `MAIL_FROM` | Yes (email) | Sender address, e.g. `info@kolaylistele.com` |
+| `POSTHOG_TOKEN` | Optional | PostHog EU project API key (enables analytics) |
+| `APPSTORE_REVIEW_EMAIL` | Optional | Email that bypasses magic-link send and gets instant Pro access (App Store review) |
+| `ADMIN_TOKEN` | Yes (admin) | Random secret for `/admin/*` endpoints |
+| `REDIS_URL` | Optional | Redis URI for distributed rate limiting across workers |
 
 ---
 
-## 12. API Reference
+## 14. API Reference
 
-| Endpoint | Method | Auth Required | Description | Rate Limit |
-|----------|--------|---------------|-------------|------------|
-| `/` | GET | Any (Etsy or Guest) | Main app UI | — |
+### Web + Shared Endpoints
+
+| Endpoint | Method | Auth | Description | Rate Limit |
+|----------|--------|------|-------------|------------|
+| `/` | GET | Any | Main app UI | — |
 | `/connect` | GET | None | Etsy connect / guest entry page | — |
 | `/guest` | GET | None | Start a guest session | 20/min |
 | `/disconnect` | GET | Any | Clear session | — |
 | `/listings` | GET | Etsy | Browse shop draft/active listings | — |
 | `/bulk` | GET | Etsy + Premium | Bulk generate UI | — |
-| `/upgrade` | GET | Etsy | Upgrade/pricing page | — |
+| `/upgrade` | GET | Any | Upgrade/pricing page | — |
 | `/privacy` | GET | None | Privacy policy | — |
 | `/terms` | GET | None | Terms of service | — |
 | `/health` | GET | None | Railway health check → `{status: "ok"}` | — |
 | `/auth/start` | GET | None | Begin Etsy OAuth PKCE flow | 10/min |
-| `/auth/callback` | GET | None | Etsy OAuth callback, exchanges code for token | 10/min |
-| `/auth/magic` | GET | None | Consume magic link token, establish guest session | 20/min |
-| `/api/fingerprint` | POST | Guest | Submit browser fingerprint hash for persistent guest ID | 30/min |
-| `/api/magic-link` | POST | Guest | Send magic link email to provided address | 5/min, 10/hr |
-| `/api/status` | GET | Any | Returns `{allowed, remaining, is_guest}` for the current shop | 60/min |
-| `/api/generate` | POST | Any | Generate listing from uploaded images + hint. Form fields: `images[]`, `hint`, `provider`, `lang`, `platform` | 10/min, 50/day |
-| `/api/publish` | POST | Etsy | Publish listing + images to Etsy as draft | 20/min |
-| `/api/template` | GET | Etsy | Get shop's saved style template | 60/min |
-| `/api/template` | POST | Etsy | Save shop's style template | 60/min |
-| `/api/taxonomy` | GET | Etsy | Search Etsy taxonomy nodes. Query param: `q` | 30/min |
-| `/api/improve-listing` | POST | Any | Improve an existing listing field. Body: `{action, title, description, tags, lang}`. Actions: `title_seo`, `description_warm`, `tags`, `shorten_etsy` | 20/min |
-| `/api/listing-variants` | POST | Any + Premium | Generate 3 listing variants (SEO, Emotional, Gift-focused) | 10/min |
-| `/api/translate` | POST | Etsy | Translate listing to `de`/`tr`/`en`. Body: `{lang, title, description, tags}` | 30/min |
-| `/api/bulk-generate` | POST | Etsy + Premium | Same as /api/generate but for bulk flow | 5/min, 30/day |
-| `/api/generate-photos` | POST | Etsy + Pro | Generate 3 FLUX photo variants. Body: `{image (data URL), title, materials, colors, ...}` | 5/min |
-| `/stripe/checkout` | POST | Etsy | Create Stripe Checkout Session. Body: `{plan}` | 10/min |
-| `/stripe/webhook` | POST | None (Stripe-Signature) | Receive Stripe webhook events | — |
-| `/admin/abuse` | GET | Query token | Abuse monitoring dashboard. Query: `?token=ADMIN_TOKEN&days=7` | — |
+| `/auth/callback` | GET | None | Etsy OAuth callback | 10/min |
+| `/auth/magic` | GET | None | Consume magic link token | 20/min |
+| `/api/csrf-token` | GET | None | Returns `{csrf_token}` for mobile | 60/min |
+| `/api/fingerprint` | POST | Guest | Submit browser fingerprint | 30/min |
+| `/api/magic-link` | POST | Guest | Send magic link email | 5/min, 10/hr |
+| `/api/email-verified` | GET | Any | Returns current email verification status | — |
+| `/api/status` | GET | Any | Returns `{allowed, remaining, is_guest, plan, …}` | 60/min |
+| `/api/generate` | POST | Any | Generate listing from images | 10/min, 50/day |
+| `/api/publish` | POST | Etsy | Create Etsy draft listing | 20/min |
+| `/api/template` | GET/POST | Etsy | Get/save shop style template | 60/min |
+| `/api/taxonomy` | GET | Etsy | Search Etsy taxonomy. Query: `?q=` | 30/min |
+| `/api/improve-listing` | POST | Any | AI-improve a listing field | 20/min |
+| `/api/listing-variants` | POST | Any + Premium | Generate 3 listing variants | 10/min |
+| `/api/translate` | POST | Any | Translate listing to DE/TR/EN | 30/min |
+| `/api/bulk-generate` | POST | Etsy + Premium | Bulk AI generation | 5/min, 30/day |
+| `/api/generate-photos` | POST | Etsy + Pro | Generate 3 FLUX photo variants | 5/min |
+| `/api/listings` | GET | Any | JSON listing list (mobile) | 30/min |
+| `/stripe/checkout` | POST | Any | Create Stripe Checkout Session (web) | 10/min |
+| `/api/stripe/checkout` | POST | Any | Create Stripe Checkout Session (mobile) | 10/min |
+| `/stripe/webhook` | POST | Stripe-Signature | Receive Stripe webhook events | — |
+| `/upgrade/mobile/return` | GET | None | Deeplink handler after Stripe mobile checkout | — |
+| `/unsubscribe` | GET | None | Process email unsubscribe token | — |
+
+### Mobile-Only Endpoints
+
+| Endpoint | Method | Auth | Description | Rate Limit |
+|----------|--------|------|-------------|------------|
+| `/auth/mobile/guest` | POST | None | Create guest mobile token | 5/hr, 10/day |
+| `/auth/mobile/logout` | POST | Mobile token | Invalidate mobile token | 30/min |
+
+### Trendyol Endpoints
+
+| Endpoint | Method | Auth | Description | Rate Limit |
+|----------|--------|------|-------------|------------|
+| `/api/trendyol/connect` | POST | Any | Store + validate Trendyol credentials | 10/min |
+| `/api/trendyol/disconnect` | POST | Any | Delete Trendyol credentials | 10/min |
+| `/api/trendyol/categories` | GET | Any | Full category tree (cached 24h) | 30/min |
+| `/api/trendyol/categories/<id>/attributes` | GET | Any | Category attribute schema | 60/min |
+| `/api/trendyol/brands` | GET | Any | Brand search by name | 60/min |
+| `/api/trendyol/addresses` | GET | Any | Supplier shipping/return addresses | 30/min |
+| `/api/trendyol/publish` | POST | Any | Create Trendyol product | 10/min |
+| `/uploads/<filename>` | GET | None | Serve product images for Trendyol CDN ingestion | — |
+
+### Admin Endpoints
+
+All protected by `Authorization: Bearer {ADMIN_TOKEN}` (returns 404 on mismatch).
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/admin/abuse` | GET | HTML abuse signal summary. Query: `?days=7` |
+| `/admin/ping-ai` | GET | Test Gemini, NVIDIA, OpenAI latency + health |
+| `/admin/stats` | GET | HTML growth dashboard (email funnel, marketing list, shops) |
+| `/admin/shops-json` | GET | All shops as JSON array |
+| `/admin/set-plan` | POST | Change shop plan by `shop_id` or `shop_name` |
 
 ---
 
-*Last updated: June 2025 · Architecture v2.0*
+*Last updated: June 2026 · Architecture v3.0*

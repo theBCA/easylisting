@@ -677,7 +677,8 @@ def test_generate_returns_listing_for_connected_shop(connected_client):
     db_module.ensure_shop("12345", "TestShop")
 
     with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)) as mock_ai, \
-         patch("requests.get") as mock_get:
+         patch("requests.get") as mock_get, \
+         patch.dict(os.environ, {"GEMINI_API_KEY": "fake"}):
         mock_get.return_value = MagicMock(ok=True, json=lambda: {"results": []})
 
         import io
@@ -1138,7 +1139,8 @@ def test_bulk_generate_returns_data_for_premium(connected_client):
     db_module.ensure_shop("12345", "TestShop")
     db_module.set_premium("12345", "cus_bulk", "sub_bulk", True, "pro")
 
-    with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)):
+    with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
+         patch.dict(os.environ, {"GEMINI_API_KEY": "fake"}):
         import io
         data = {
             "images": (io.BytesIO(_jpeg_bytes()), "hat.jpg"),
@@ -1375,7 +1377,8 @@ def test_email_verified_guest_can_generate(client):
     db_module.ensure_shop("email-shop-verified-1", "Guest")
 
     with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
-         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
+         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})), \
+         patch.dict(os.environ, {"GEMINI_API_KEY": "fake"}):
         import io
         resp = client.post(
             "/api/generate",
@@ -1681,7 +1684,8 @@ def test_full_flow_email_user_buys_pro_then_generates(client):
 
     # Step 4: Generate listing (should now be unlimited)
     with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
-         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
+         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})), \
+         patch.dict(os.environ, {"GEMINI_API_KEY": "fake"}):
         import io
         gen_resp = client.post(
             "/api/generate",
@@ -1706,7 +1710,8 @@ def test_full_flow_etsy_user_publish_cycle(client):
 
     # Generate
     with patch("apis.listings._run_provider", return_value=dict(_FAKE_AI_LISTING)), \
-         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})):
+         patch("requests.get", return_value=MagicMock(ok=True, json=lambda: {"results": []})), \
+         patch.dict(os.environ, {"GEMINI_API_KEY": "fake"}):
         import io
         gen = connected_client.post(
             "/api/generate",
