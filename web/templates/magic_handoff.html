@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="{{ 'tr' if is_tr else 'en' }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ 'EasyListing uygulamasına dönülüyor…' if is_tr else 'Opening EasyListing…' }}</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+{% include '_posthog.html' %}
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #F6F7FB; color: #111827; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .card {
+    background: #fff; border-radius: 16px; padding: 40px 32px;
+    box-shadow: 0 2px 20px rgba(91,71,224,.08); max-width: 420px; width: 100%;
+    text-align: center;
+  }
+  .logo { font-size: 24px; font-weight: 900; margin-bottom: 24px; letter-spacing: -.5px; }
+  .logo .a { color: #5B47E0; } .logo .b { color: #111827; }
+  h1 { font-size: 19px; font-weight: 700; margin-bottom: 10px; }
+  p { font-size: 14px; color: #6B7280; line-height: 1.6; margin-bottom: 24px; }
+  .btn {
+    display: inline-block; background: linear-gradient(135deg,#6B5AED,#5B47E0);
+    color: #fff; text-decoration: none; font-size: 15px; font-weight: 700;
+    padding: 14px 32px; border-radius: 10px;
+  }
+  .hint { font-size: 12px; color: #9CA3AF; margin-top: 20px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      {% if is_tr %}<span class="a">kolay</span><span class="b">listele</span>
+      {% else %}<span class="a">Easy</span><span class="b">Listing</span>{% endif %}
+    </div>
+    <h1>{{ 'Uygulamaya dönülüyor…' if is_tr else 'Opening the app…' }}</h1>
+    <p>
+      {% if is_tr %}EasyListing uygulaması birkaç saniye içinde açılmazsa aşağıdaki butona dokunun.
+      {% else %}If the EasyListing app doesn't open in a few seconds, tap the button below.{% endif %}
+    </p>
+    <a class="btn" id="open-app" href="easylisting://auth/magic?token={{ token | urlencode }}">
+      {{ 'Uygulamada Aç →' if is_tr else 'Open in EasyListing →' }}
+    </a>
+    <p class="hint">
+      {% if is_tr %}Bu sayfayı iPhone'unuzda açtığınızdan emin olun. Uygulama yüklü değilse önce App Store'dan indirin.
+      {% else %}Make sure you opened this on your iPhone. If the app isn't installed, download it from the App Store first.{% endif %}
+    </p>
+  </div>
+  <script nonce="{{ csp_nonce }}">
+    // Auto-handoff to the app. Works in Safari; the manual button covers
+    // in-app browsers where programmatic navigation may be blocked.
+    setTimeout(function () {
+      window.location.href = document.getElementById('open-app').href;
+    }, 400);
+  </script>
+</body>
+</html>

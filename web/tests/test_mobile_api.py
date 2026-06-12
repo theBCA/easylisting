@@ -310,14 +310,18 @@ class TestMobileOAuth:
 
 class TestMobileMagicLink:
     @patch("apis.auth.send_email", return_value=(True, None))
-    def test_new_email_sends_app_scheme_link(self, mock_send, client):
+    def test_new_email_sends_https_handoff_link(self, mock_send, client):
+        # Mobile email must use an https handoff link (?m=1), not a custom
+        # scheme — email clients strip easylisting:// links, breaking the button.
         r = client.post("/api/magic-link",
                         headers={"X-Mobile-Request": "true"},
                         json={"email": "new@example.com"})
         assert r.status_code == 200
         assert r.get_json()["ok"] is True
         link_text = mock_send.call_args.args[2]
-        assert "easylisting://auth/magic?token=" in link_text
+        assert "/auth/magic?token=" in link_text
+        assert "m=1" in link_text
+        assert "easylisting://" not in link_text
 
     @patch("apis.auth.send_email", return_value=(True, None))
     def test_returning_email_gets_instant_token(self, mock_send, client):

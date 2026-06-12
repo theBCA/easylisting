@@ -937,6 +937,53 @@ def test_auth_magic_invalid_token_shows_error(client):
     assert b"ge" in resp.data  # error text rendered in connect.html
 
 
+def test_mobile_magic_email_uses_https_handoff_link(client):
+    """Mobile-originated magic email must contain an https link (clickable in
+    email clients), not a dead custom-scheme easylisting:// link."""
+    with patch("apis.auth.send_email", return_value=(True, None)) as mock_mail, \
+         patch("apis.auth.count_recent_magic_links", return_value=0), \
+         patch("apis.auth.get_email_shop", return_value=None), \
+         patch("apis.auth.get_or_create_email_shop", return_value="email-shop-mob"), \
+         patch("apis.auth.create_magic_link"):
+        db_module.ensure_shop("email-shop-mob", "Guest")
+        resp = client.post(
+            "/api/magic-link",
+            json={"email": "mobileuser@example.com"},
+            content_type="application/json",
+            headers={"X-Mobile-Request": "true"},
+        )
+    assert resp.status_code == 200
+    html = mock_mail.call_args.args[3]
+    assert "/auth/magic?token=" in html
+    assert "m=1" in html
+    assert "easylisting://" not in html  # custom scheme would be stripped by mail clients
+
+
+def test_auth_magic_browser_handoff_does_not_consume_token(client):
+    """A mobile link (?m=1) opened in a browser renders the handoff page and
+    must NOT consume the token — the app consumes it via the API."""
+    with patch("apis.auth.use_magic_link") as mock_use:
+        resp = client.get("/auth/magic?token=handoff-tok-123&m=1")
+    assert resp.status_code == 200
+    assert mock_use.called is False  # token preserved for the app
+    assert b"easylisting://auth/magic?token=handoff-tok-123" in resp.data
+
+
+def test_auth_magic_mobile_app_still_consumes_token(client):
+    """The iOS app (X-Mobile-Request header) consumes the token and gets a
+    mobile_token back, even when the link carried ?m=1."""
+    fake_row = {"shop_id": "email-shop-app"}
+    with patch("apis.auth.use_magic_link", return_value=fake_row):
+        resp = client.get(
+            "/auth/magic?token=app-tok-456&m=1",
+            headers={"X-Mobile-Request": "true"},
+        )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["ok"] is True
+    assert "mobile_token" in body
+
+
 # ── 12h. Bulk generate flow ──────────────────────────────────────────────────
 
 def test_bulk_generate_returns_data_for_premium(connected_client):

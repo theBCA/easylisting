@@ -218,7 +218,11 @@ def api_magic_link():
     base  = REDIRECT_URI.replace("/auth/callback", "")
     is_tr = "kolaylistele" in base or request.host and "kolaylistele" in request.host
     if is_mobile:
-        link = f"easylisting://auth/magic?token={token}"
+        # Email clients strip custom-scheme (easylisting://) links, so the button
+        # would be dead on mobile. Send an https link that lands on a browser
+        # handoff page (?m=1), which then hands off to the app via the custom
+        # scheme. The token is consumed by the app, not the browser landing.
+        link = f"{base}/auth/magic?token={token}&m=1"
     else:
         link = f"{base}/auth/magic?token={token}"
 
@@ -325,6 +329,14 @@ def api_magic_link():
 def auth_magic():
     token     = request.args.get("token", "")
     is_mobile = bool(request.headers.get("X-Mobile-Request"))
+
+    # Mobile-originated link (?m=1) opened in a browser → hand off to the iOS app
+    # via the custom URL scheme. Do NOT consume the token here; the app consumes
+    # it through this same endpoint with the X-Mobile-Request header.
+    if request.args.get("m") == "1" and not is_mobile and token:
+        is_tr = bool(request.host and "kolaylistele" in request.host)
+        return render_template("magic_handoff.html", token=token, is_tr=is_tr)
+
     row       = use_magic_link(token) if token else None
     if not row:
         if is_mobile:
