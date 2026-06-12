@@ -50,6 +50,10 @@ def upgrade():
             os.getenv("STRIPE_PRO_ANNUAL_PRICE_ID") or os.getenv("STRIPE_PRO_ANNUAL_PRICE_ID_TRY")
         ),
         use_try=use_try,
+        has_active_sub=(
+            str(s.get("stripe_subscription_id") or "").startswith("sub_")
+            and str(s.get("stripe_customer_id") or "").startswith("cus_")
+        ),
     )
 
 _PLAN_PRICE_IDS = {
@@ -277,6 +281,78 @@ def billing_portal():
         return jsonify({"url": portal.url})
     except Exception as e:
         logger.exception("Stripe portal error: %s", e)
+        return jsonify({"error": safe_error(str(e))}), 500
+
+
+@bp.route("/billing/change-plan", methods=["POST"])
+@limiter.limit("5 per minute")
+def billing_change_plan():
+    """Switch an active Stripe subscription to a different plan with proration."""
+    if not is_authorized():
+        return jsonify({"error": "Not connected"}), 401
+    if not os.getenv("STRIPE_SECRET_KEY"):
+        return jsonify({"error": "Stripe not configured"}), 503
+
+    sid = usage_shop_id()
+    shop = get_shop(sid) or {}
+    customer_id = shop.get("stripe_customer_id", "")
+    sub_id      = shop.get("stripe_subscription_id", "")
+    current_plan = shop.get("plan", "free")
+
+    if not str(customer_id).startswith("cus_") or not str(sub_id).startswith("sub_"):
+        return jsonify({"error": "No active subscription found. Use the upgrade flow instead."}), 404
+
+    body = request.get_json(silent=True) or {}
+    new_plan = body.get("plan", "")
+    if new_plan not in ("starter", "pro"):
+        return jsonify({"error": "Invalid plan"}), 400
+    if new_plan == current_plan:
+        return jsonify({"error": "Already on this plan"}), 400
+
+    price_map = _PLAN_PRICE_IDS_TRY if _is_try_domain() else _PLAN_PRICE_IDS
+    price_id  = os.getenv(price_map.get(new_plan, "STRIPE_PRO_PRICE_ID"))
+    if not price_id:
+        return jsonify({"error": "Plan not configured on this domain"}), 503
+
+    # Upgrades: charge difference immediately. Downgrades: credit on next invoice.
+    _rank = {"free": 0, "starter": 1, "pro": 2}
+    is_upgrade = _rank.get(new_plan, 0) > _rank.get(current_plan, 0)
+    proration  = "always_invoice" if is_upgrade else "create_prorations"
+
+    try:
+        import stripe as stripe_lib
+        stripe_lib.api_key = os.getenv("STRIPE_SECRET_KEY")
+
+        sub   = _stripe_to_plain(stripe_lib.Subscription.retrieve(sub_id))
+        items = (sub.get("items") or {}).get("data") or []
+        if not items:
+            return jsonify({"error": "Could not find subscription items"}), 500
+        item_id = items[0]["id"]
+
+        stripe_lib.Subscription.modify(
+            sub_id,
+            items=[{"id": item_id, "price": price_id}],
+            proration_behavior=proration,
+            metadata={"plan": new_plan, "shop_id": str(sid)},
+        )
+
+        # Update DB immediately; webhook will also confirm on next cycle
+        set_premium(sid, customer_id, sub_id, True, new_plan)
+        log_payment_event(
+            "plan_changed",
+            shop_id=sid,
+            shop_name=session.get("shop_name", ""),
+            plan=new_plan,
+            stripe_customer_id=customer_id,
+            stripe_subscription_id=sub_id,
+            detail={"from": current_plan, "to": new_plan, "proration": proration},
+        )
+        logger.info("Plan changed for shop %s: %s → %s", sid, current_plan, new_plan)
+        from core.analytics import capture as _ph_capture
+        _ph_capture(sid, "plan_changed", {"from": current_plan, "to": new_plan})
+        return jsonify({"ok": True, "plan": new_plan})
+    except Exception as e:
+        logger.exception("Plan change error: %s", e)
         return jsonify({"error": safe_error(str(e))}), 500
 
 

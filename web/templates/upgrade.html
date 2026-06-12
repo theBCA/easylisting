@@ -214,6 +214,8 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       </ul>
       {% if current_plan == 'starter' %}
         <button class="btn-plan active-plan" id="t-start-btn">✓ Current plan</button>
+      {% elif current_plan == 'pro' and has_active_sub and has_starter %}
+        <button class="btn-plan ghost" id="t-start-btn" data-change-plan="starter">Switch to Starter</button>
       {% elif has_starter %}
         <button class="btn-plan cta" id="t-start-btn" data-checkout-plan="starter">Get Starter →</button>
       {% else %}
@@ -240,6 +242,8 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
       </ul>
       {% if current_plan == 'pro' %}
         <button class="btn-plan active-plan" id="t-pro-btn">✓ Current plan</button>
+      {% elif current_plan == 'starter' and has_active_sub and has_pro %}
+        <button class="btn-plan cta-green" id="t-pro-btn" data-change-plan="pro">Switch to Pro →</button>
       {% elif has_pro %}
         <button class="btn-plan cta-green" id="t-pro-btn" data-checkout-plan="pro">Get Pro →</button>
       {% else %}
@@ -565,6 +569,45 @@ document.querySelectorAll('.lang-btn').forEach(btn =>
 document.addEventListener('click', e => {
   const btn = e.target.closest('[data-checkout-plan]');
   if (btn) startCheckout(btn.dataset.checkoutPlan);
+});
+
+// Plan switching for existing subscribers
+async function changePlan(plan) {
+  const isDowngrade = (currentPlan === 'pro' && plan === 'starter');
+  if (isDowngrade) {
+    const msg = USE_TRY
+      ? 'Starter planına geçmek istiyor musun? Kullanılmayan Pro süresi bir sonraki faturana kredi olarak eklenir.'
+      : 'Switch to Starter? Your unused Pro time will be credited to your next invoice.';
+    if (!confirm(msg)) return;
+  }
+  const btnId = plan === 'starter' ? 't-start-btn' : 't-pro-btn';
+  const btn = document.getElementById(btnId);
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const resp = await fetch('/billing/change-plan', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+      body: JSON.stringify({plan}),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      window.location.href = '/upgrade?success=1&plan=' + plan;
+    } else {
+      throw new Error(data.error || 'Plan change failed');
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+    const t = document.getElementById('toast');
+    t.textContent = '⚠ ' + e.message;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+}
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-change-plan]');
+  if (btn) changePlan(btn.dataset.changePlan);
 });
 </script>
 <footer style="text-align:center;padding:24px 16px;font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7F0;margin-top:40px;">

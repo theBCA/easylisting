@@ -8,6 +8,9 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 
 ## [Unreleased]
 
+### Added
+- **Plan switching** (`POST /billing/change-plan`): existing subscribers can switch between Starter and Pro without creating a new subscription. Upgrades (Starter→Pro) are prorated and charged immediately; downgrades (Pro→Starter) apply a credit on the next invoice. Upgrade page shows "Switch to Pro →" / "Switch to Starter" buttons for active subscribers.
+
 ### Changed
 - **Lead pipeline (`scripts/lead_pipeline.py`)**: replaced dead `rupom888~etsy-scraper` actor with `crawlerbros~etsy-scraper` which returns `shopName`/`shopUrl` directly; updated `listings_to_shops` and `run_apify_etsy_scrape` to use the new actor's `startUrls`+`maxItems` input format. `APIFY_ETSY_ACTOR` env var overrides the default.
 
