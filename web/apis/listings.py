@@ -202,6 +202,11 @@ def api_generate():
         return jsonify({"error": "All AI providers are over quota right now. Please try again later."}), 503
 
     increment_usage(sid)
+    from core.analytics import capture as _ph_capture
+    _ph_capture(sid, "listing_generated", {
+        "provider": p, "lang": lang, "platform": platform,
+        "image_count": len(image_bytes), "is_guest": is_guest(),
+    })
 
     try:
         if not is_guest() and platform == "etsy":
@@ -398,6 +403,8 @@ def api_publish():
     access_token = session.get("access_token") or ((_mobile_auth() or {}).get("access_token"))
     _bg_post_listing(safe_lid, data, access_token)
 
+    from core.analytics import capture as _ph_capture
+    _ph_capture(str(shop_id()), "listing_published", {"listing_id": listing_id})
     return jsonify({"success": True, "listing_id": listing_id})
 
 # ── Template ──────────────────────────────────────────────────────────────────

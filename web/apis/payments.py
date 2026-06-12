@@ -190,11 +190,15 @@ def stripe_webhook():
         if sid:
             set_premium(sid, obj.get("customer"), obj.get("subscription"), True, plan)
             logger.info("Premium activated for shop %s (plan=%s)", sid, plan)
+            from core.analytics import capture as _ph_capture
+            _ph_capture(sid, "plan_upgraded", {"plan": plan, "source": "stripe"})
     elif event["type"] in ("customer.subscription.deleted",
                            "customer.subscription.paused"):
         s = get_shop_by_stripe_customer(obj.get("customer"))
         if s:
             set_premium(s["shop_id"], obj["customer"], obj["id"], False)
             logger.info("Premium deactivated for shop %s", s["shop_id"])
+            from core.analytics import capture as _ph_capture
+            _ph_capture(s["shop_id"], "plan_cancelled", {"event_type": event["type"]})
 
     return jsonify({"received": True})

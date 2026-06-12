@@ -126,6 +126,9 @@ def auth_callback():
     session["refresh_token"] = refresh_token
     session["token_expires"] = token_expires
 
+    from core.analytics import capture as _ph_capture
+    _ph_capture(str(shop_id_v), "etsy_connected", {"shop_name": shop_name_v, "is_mobile": is_mobile_oauth})
+
     if is_mobile_oauth:
         mob_tok = create_mobile_token(
             shop_id=str(shop_id_v),

@@ -34,6 +34,7 @@ app.config.update(
     SESSION_COOKIE_SECURE      = _is_production,
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 2,  # 48 hours
     WTF_CSRF_TIME_LIMIT        = None,
+    POSTHOG_TOKEN              = os.getenv("POSTHOG_TOKEN", ""),
 )
 
 limiter.init_app(app)
@@ -82,6 +83,25 @@ def inject_security():
     }
 
 
+@app.context_processor
+def inject_analytics():
+    from flask import session as _s
+    from core.session import shop_id as _sid, guest_shop_id as _gsid
+    try:
+        sid = _sid() or _gsid()
+    except Exception:
+        return {"ph_identity": None}
+    if not sid:
+        return {"ph_identity": None}
+    return {
+        "ph_identity": {
+            "id":       str(sid),
+            "name":     _s.get("shop_name") or "Guest",
+            "is_guest": not bool(_sid()),
+        }
+    }
+
+
 # ── Security headers ──────────────────────────────────────────────────────────
 
 @app.after_request
@@ -95,10 +115,10 @@ def set_security_headers(resp):
     nonce = getattr(g, "csp_nonce", "")
     resp.headers["Content-Security-Policy"] = (
         f"default-src 'self'; "
-        f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com https://static.cloudflareinsights.com; "
+        f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com https://static.cloudflareinsights.com https://eu-assets.i.posthog.com; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         f"img-src 'self' data: blob: *.etsystatic.com *.etsy.com; "
-        f"connect-src 'self' https://api.stripe.com https://cloudflareinsights.com; "
+        f"connect-src 'self' https://api.stripe.com https://cloudflareinsights.com https://eu.i.posthog.com; "
         f"frame-src https://js.stripe.com https://hooks.stripe.com; "
         f"font-src 'self' https://fonts.gstatic.com; "
         f"form-action 'self'; "
