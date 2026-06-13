@@ -3,6 +3,18 @@
 Flask app on Railway serving two domains: **easylisting.app** (EUR) and
 **kolaylistele.com** (TRY). AI-powered Etsy/marketplace listing generator.
 
+## Commands
+
+- Install deps (repo root): `pip install -r requirements.txt`
+- Run the dev server: `cd web && python app.py` (port 5050; debug mode unless `ENV=production`).
+  Needs a `.env` in `web/` — copy `.env.example` and fill in `FLASK_SECRET` plus at least one AI key
+  (`GEMINI_API_KEY` or `NVIDIA_API_KEY`).
+- Run unit tests: `cd web && pytest -m "not integration"` (or `pytest web/tests -m "not integration"` from root)
+- Run one test file: `cd web && pytest tests/test_app.py -v`
+- Run one test: `cd web && pytest tests/test_app.py::test_name -v`
+- Integration tests (`-m integration`, in `test_integration.py`) hit live Gemini/FAL/Stripe and need real API keys — skipped in CI.
+- CI (`.github/workflows/test.yml`) runs unit tests on every push/PR to `main` with fake keys and `DB_PATH=:memory:`.
+
 ## Layout
 
 ```
@@ -18,7 +30,11 @@ web/                       # The Flask backend (Railway deploys this — see Dep
 │   ├── etsy.py            # Etsy OAuth token refresh, headers, taxonomy lookup, ETSY_* consts
 │   ├── session.py         # connection state, guest IDs, plan access, _consume_improve_allowance
 │   ├── domains.py         # _is_try_domain, _ip_hash
-│   └── ai.py              # prompt building, Gemini/OpenAI/NVIDIA dispatch, JSON parsing
+│   ├── ai.py              # prompt building, Gemini/OpenAI/NVIDIA dispatch, JSON parsing
+│   ├── admin_auth.py       # is_admin() — Cloudflare Access JWT + bearer token check for /admin/*
+│   ├── analytics.py       # PostHog capture() wrapper, no-ops if POSTHOG_TOKEN unset
+│   ├── backup.py          # daily SQLite backup via daemon thread (start_daily_backup)
+│   └── logging.py         # JSON request logging, request-id binding, redaction of sensitive fields
 ├── apis/                  # Route blueprints — import from core/, db, extensions (never app)
 │   ├── pages.py           # /unsubscribe /privacy /terms /health
 │   ├── admin.py           # /admin/* (token-gated)
@@ -56,9 +72,8 @@ Routes are blueprint-qualified: `url_for("listings.index")`, `url_for("payments.
 `url_for("etsy_oauth.connect")`. Templates only use `url_for('static', ...)`.
 
 ## Tests
-- Run from `web/`: `cd web && pytest -m "not integration"` (or `pytest web/tests` from root).
-- 213 unit tests + 3 smoke (`tests/test_imports.py`) = 216, all green.
-- Integration tests (`-m integration`) hit live Gemini/FAL/Stripe and need real API keys.
+- See Commands above for how to run unit, single, and integration tests.
+- `test_app.py` + `test_mobile_api.py` hold the bulk of unit tests, plus 3 import smoke tests in `test_imports.py`.
 - Tests patch helpers at their module path, e.g. `patch("apis.listings._run_provider")`,
   `patch("apis.photos.FAL_KEY")`, `patch("apis.auth.send_email")`. When moving a symbol,
   repoint its patch target in the same change.
