@@ -138,7 +138,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
     {% endif %}
     {% if current_plan in ('pro', 'starter') %}
       <div style="margin-top:12px;">
-        <button id="manageBillingBtn" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:6px 16px;font-size:13px;color:#6b7280;cursor:pointer;" id="t-manage-billing">Manage billing &amp; cancel</button>
+        <button id="manageBillingBtn" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:6px 16px;font-size:13px;color:#6b7280;cursor:pointer;">Manage billing &amp; cancel</button>
       </div>
     {% endif %}
   </div>
@@ -179,7 +179,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
     <!-- FREE -->
     <div class="plan {% if current_plan == 'free' %}highlight{% endif %}">
       <div class="plan-name" id="t-free-name">Free</div>
-      <div class="plan-price"><sup>€</sup>0</div>
+      <div class="plan-price">{% if use_try %}<sup>₺</sup>0{% else %}<sup>€</sup>0{% endif %}</div>
       <div class="plan-period" id="t-free-period">forever</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> <span id="t-f1">3 AI-generated listings</span></li>
@@ -280,6 +280,11 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 
 <div class="toast" id="toast"></div>
 
+<footer style="text-align:center;padding:24px 16px;font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7F0;margin-top:40px;">
+  <span id="t-footer-trademark">The term "Etsy" is a trademark of Etsy, Inc. This application uses Etsy's API but is not endorsed or certified by Etsy.</span> &nbsp;·&nbsp;
+  <a href="/privacy" style="color:#9CA3AF;" id="t-footer-privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms" style="color:#9CA3AF;" id="t-footer-terms">Terms</a>
+</footer>
+
 {% if stripe_key %}
 <script src="https://js.stripe.com/v3/"></script>
 {% endif %}
@@ -326,6 +331,9 @@ const T = {
     a4:'We only request the minimum permissions needed to read and create listings. We never store your products or images beyond the time needed to generate the listing.',
     bannerSuccess:'🎉 Welcome to EasyListing! Your plan is now active.',
     bannerCancel:'You cancelled — no charges were made.',
+    manageBilling:'Manage billing & cancel',
+    footerTrademark:'The term "Etsy" is a trademark of Etsy, Inc. This application uses Etsy\'s API but is not endorsed or certified by Etsy.',
+    footerPrivacy:'Privacy', footerTerms:'Terms',
   },
   de: {
     title:'Upgrade — EasyListing', back:'← Zurück',
@@ -362,6 +370,9 @@ const T = {
     a4:'Wir fordern nur die minimal notwendigen Berechtigungen an. Wir speichern deine Produkte oder Bilder nie über die Zeit hinaus, die für die Listing-Generierung benötigt wird.',
     bannerSuccess:'🎉 Willkommen bei EasyListing! Dein Plan ist jetzt aktiv.',
     bannerCancel:'Du hast abgebrochen — es wurden keine Kosten berechnet.',
+    manageBilling:'Abrechnung verwalten & kündigen',
+    footerTrademark:'Der Begriff "Etsy" ist eine Marke von Etsy, Inc. Diese Anwendung nutzt die Etsy-API, wird jedoch nicht von Etsy unterstützt oder zertifiziert.',
+    footerPrivacy:'Datenschutz', footerTerms:'AGB',
   },
   tr: {
     title:'Yükselt — kolaylistele', back:'← Geri',
@@ -398,11 +409,17 @@ const T = {
     a4:'Yalnızca ilan okuma ve oluşturma için gereken minimum izinleri talep ediyoruz. Ürünlerini veya görsellerini ilan oluşturma için gereken süreden fazla saklamıyoruz.',
     bannerSuccess:'🎉 kolaylistele\'ye hoş geldin! Planın artık aktif.',
     bannerCancel:'İptal ettin — ücret alınmadı.',
+    manageBilling:'Faturalandırmayı yönet & iptal et',
+    footerTrademark:'"Etsy" ifadesi Etsy, Inc.\'in tescilli markasıdır. Bu uygulama Etsy API\'sini kullanır ancak Etsy tarafından onaylanmamış veya sertifikalandırılmamıştır.',
+    footerPrivacy:'Gizlilik', footerTerms:'Şartlar',
   },
 };
 
+let currentLang = 'en';
+
 function setLang(lang) {
   if (!T[lang]) return;
+  currentLang = lang;
   const s = T[lang];
   const byId = (id) => document.getElementById(id);
   const setText = (id, value) => {
@@ -462,6 +479,11 @@ function setLang(lang) {
   const bc = byId('banner-cancel');
   if (bs) bs.textContent = s.bannerSuccess;
   if (bc) bc.textContent = s.bannerCancel;
+  // Manage billing button + footer
+  setText('manageBillingBtn', s.manageBilling);
+  setText('t-footer-trademark', s.footerTrademark);
+  setText('t-footer-privacy', s.footerPrivacy);
+  setText('t-footer-terms', s.footerTerms);
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
   document.querySelector('html').lang = lang;
   const _lk = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
@@ -552,7 +574,7 @@ document.getElementById('manageBillingBtn')?.addEventListener('click', async fun
     else throw new Error(data.error || 'Could not open billing portal');
   } catch(e) {
     this.disabled = false;
-    this.textContent = 'Manage billing & cancel';
+    this.textContent = (T[currentLang] || T.en).manageBilling;
     const t = document.getElementById('toast');
     t.textContent = '⚠ ' + e.message;
     t.classList.add('show');
@@ -614,10 +636,6 @@ document.addEventListener('click', e => {
   if (btn) changePlan(btn.dataset.changePlan);
 });
 </script>
-<footer style="text-align:center;padding:24px 16px;font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7F0;margin-top:40px;">
-  The term "Etsy" is a trademark of Etsy, Inc. This application uses Etsy's API but is not endorsed or certified by Etsy. &nbsp;·&nbsp;
-  <a href="/privacy" style="color:#9CA3AF;">Privacy</a> &nbsp;·&nbsp; <a href="/terms" style="color:#9CA3AF;">Terms</a>
-</footer>
 {% include "_feedback_widget.html" %}
 </body>
 </html>

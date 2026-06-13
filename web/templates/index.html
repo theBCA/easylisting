@@ -812,6 +812,11 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
   </div>
 </div>
 
+<footer style="text-align:center;padding:24px 16px;font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7F0;margin-top:40px;">
+  <span data-i18n="footer_trademark">The term "Etsy" is a trademark of Etsy, Inc. This application uses Etsy's API but is not endorsed or certified by Etsy.</span> &nbsp;·&nbsp;
+  <a href="/privacy" style="color:#9CA3AF;" data-i18n="footer_privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms" style="color:#9CA3AF;" data-i18n="footer_terms">Terms</a>
+</footer>
+
 <script nonce="{{ csp_nonce }}">
 // ── i18n ──────────────────────────────────────────────────────────────────────
 const STRINGS = {
@@ -880,6 +885,8 @@ const STRINGS = {
     sc_category:'Category selected', sc_price:'Price is valid',
     sc_photos:'Multiple photos attached', sc_personal:'Personalization guidance present',
     sc_shipping:'Shipping profile selected',
+    footer_trademark:'The term "Etsy" is a trademark of Etsy, Inc. This application uses Etsy\'s API but is not endorsed or certified by Etsy.',
+    footer_privacy:'Privacy', footer_terms:'Terms',
   },
   de: {
     guest_verified:"Mit E-Mail angemeldet — du kannst Inhalte erstellen und kopieren. Verbinde deinen Shop, um auf Etsy zu veröffentlichen.",
@@ -944,6 +951,8 @@ const STRINGS = {
     sc_category:'Kategorie ausgewählt', sc_price:'Preis gültig',
     sc_photos:'Mehrere Fotos hochgeladen', sc_personal:'Personalisierungshinweis vorhanden',
     sc_shipping:'Versandprofil ausgewählt',
+    footer_trademark:'Der Begriff "Etsy" ist eine Marke von Etsy, Inc. Diese Anwendung nutzt die Etsy-API, wird jedoch nicht von Etsy unterstützt oder zertifiziert.',
+    footer_privacy:'Datenschutz', footer_terms:'AGB',
   },
   tr: {
     guest_verified:"E-posta ile giriş yapıldı — içerik oluşturabilir, kopyalayabilirsiniz. Etsy'ye göndermek için mağazanızı bağlayın.",
@@ -1010,6 +1019,8 @@ const STRINGS = {
     sc_category:'Kategori seçildi', sc_price:'Fiyat geçerli',
     sc_photos:'Birden fazla fotoğraf eklendi', sc_personal:'Kişiselleştirme talimatı var',
     sc_shipping:'Kargo profili seçildi',
+    footer_trademark:'"Etsy" ifadesi Etsy, Inc.\'in tescilli markasıdır. Bu uygulama Etsy API\'sini kullanır ancak Etsy tarafından onaylanmamış veya sertifikalandırılmamıştır.',
+    footer_privacy:'Gizlilik', footer_terms:'Şartlar',
   }
 };
 const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
@@ -2599,10 +2610,6 @@ function showErr(el, msg) {
   if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
 </script>
-<footer style="text-align:center;padding:24px 16px;font-size:12px;color:#9CA3AF;border-top:1px solid #E5E7F0;margin-top:40px;">
-  The term "Etsy" is a trademark of Etsy, Inc. This application uses Etsy's API but is not endorsed or certified by Etsy. &nbsp;·&nbsp;
-  <a href="/privacy" style="color:#9CA3AF;">Privacy</a> &nbsp;·&nbsp; <a href="/terms" style="color:#9CA3AF;">Terms</a>
-</footer>
 {% include "_feedback_widget.html" %}
 </body>
 </html>
