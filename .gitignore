@@ -9,6 +9,7 @@ images/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+*.db
 .DS_Store
 demo/
 .wrangler
