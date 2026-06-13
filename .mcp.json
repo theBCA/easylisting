@@ -24,6 +24,10 @@
       "type": "stdio",
       "command": "sh",
       "args": ["-c", "npx -y mcp-sqlite \"$SQLITE_DB_PATH\""]
+    },
+    "railway": {
+      "type": "http",
+      "url": "https://mcp.railway.com"
     }
   }
 }
