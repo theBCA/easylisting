@@ -36,7 +36,7 @@
 <script nonce="{{ csp_nonce }}">
 (function () {
   const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
-  const lang = localStorage.getItem(LANG_KEY) || 'en';
+  const defaultLang = window.location.hostname.includes('kolaylistele') ? 'tr' : 'en';
   const T = {
     en: { title:'💬 Feedback or Support', sub:'Tell us what\'s on your mind — we read every message.',
           ph:'What can we improve? Or let us know if something isn\'t working…',
@@ -48,13 +48,22 @@
           ph:'Neyi geliştirebiliriz? Veya bir sorun varsa bize bildir…',
           email:'E-posta adresin (isteğe bağlı — yanıt için)', send:'Gönder', cancel:'İptal', sent:'✅ Gönderildi! Teşekkürler.' },
   };
-  const s = T[lang] || T.en;
-  document.getElementById('fbTitle').textContent   = s.title;
-  document.getElementById('fbSub').textContent     = s.sub;
-  document.getElementById('fbMessage').placeholder = s.ph;
-  document.getElementById('fbEmail').placeholder   = s.email;
-  document.getElementById('fbSend').textContent    = s.send;
-  document.getElementById('fbCancel').textContent  = s.cancel;
+  let s = T[defaultLang];
+
+  function applyLang(lang) {
+    s = T[lang] || T[defaultLang];
+    document.getElementById('fbTitle').textContent   = s.title;
+    document.getElementById('fbSub').textContent     = s.sub;
+    document.getElementById('fbMessage').placeholder = s.ph;
+    document.getElementById('fbEmail').placeholder   = s.email;
+    document.getElementById('fbSend').textContent    = s.send;
+    document.getElementById('fbCancel').textContent  = s.cancel;
+  }
+  applyLang(localStorage.getItem(LANG_KEY) || defaultLang);
+
+  // Keep in sync when the user switches language via the page's lang switcher
+  document.querySelectorAll('.lang-btn').forEach(b =>
+    b.addEventListener('click', () => applyLang(b.dataset.lang)));
 
   const btn     = document.getElementById('fbBtn');
   const overlay = document.getElementById('fbOverlay');

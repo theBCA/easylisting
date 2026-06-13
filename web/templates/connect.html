@@ -249,7 +249,8 @@ function setLang(lang) {
   document.getElementById('t-logomark').textContent   = s.logomark;
   document.getElementById('t-headline').innerHTML     = s.headline;
   document.getElementById('t-sub').textContent        = s.sub;
-  document.getElementById('t-platform-label').textContent = s.platformLabel;
+  const platformLabelEl = document.getElementById('t-platform-label');
+  if (platformLabelEl) platformLabelEl.textContent = s.platformLabel;
   document.querySelectorAll('.soon-badge').forEach(el => el.textContent = s.soon);
   document.getElementById('t-s1h').textContent = s.s1h;
   document.getElementById('t-s1b').textContent = s.s1b;
