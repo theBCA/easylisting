@@ -1,6 +1,7 @@
 ---
 name: pre-deploy
 description: Run before pushing to Railway. Checks tests, changelog, import cycles, and obvious config issues.
+disable-model-invocation: true
 ---
 
 ## Pre-deploy checklist
@@ -14,7 +15,7 @@ description: Run before pushing to Railway. Checks tests, changelog, import cycl
 **Changelog has an entry for recent changes:**
 !`head -20 CHANGELOG.md`
 
-**Import cycle check (apis must not import app):**
+**Import cycle check (apis/core must not import app):**
 !`grep -rn "from app import\|import app" web/apis/ web/core/ 2>/dev/null || echo "Clean"`
 
 **safe_error() not used for logging (only for client responses):**
@@ -24,6 +25,6 @@ description: Run before pushing to Railway. Checks tests, changelog, import cycl
 !`grep -A3 "stripe/webhook" web/apis/payments.py | grep -E "csrf|limiter|exempt"`
 
 **Environment variables defined (check .env.example covers new vars):**
-!`diff <(grep "^[A-Z]" .env.example | cut -d= -f1 | sort) <(grep "^[A-Z_]*=" .env | cut -d= -f1 | sort) 2>/dev/null | head -10 || echo "(no .env.example diff available)"`
+!`diff <(grep "^[A-Z]" .env.example | cut -d= -f1 | sort) <(grep "^[A-Z_]*=" web/.env | cut -d= -f1 | sort) 2>/dev/null | head -10 || echo "(no .env diff available)"`
 
 If any check fails, stop and fix before deploying. Report what failed and why.

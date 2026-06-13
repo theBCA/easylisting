@@ -1,8 +1,10 @@
-# Design Review
+---
+name: design-review
+description: Review SwiftUI code against the EasyListing iOS design system (Theme.swift, Components.swift). Use when reviewing or writing UI code under mobile/ios.
+paths: ["mobile/ios/**/*.swift"]
+---
 
-Review UI/UX against the EasyListing design system.
-
-## Design system tokens (Theme.swift)
+## Design system tokens (mobile/ios/EasyListing/Shared/Theme.swift)
 
 **Colors:** `Theme.purple` (#5B47E0), `Theme.purpleLight` (#F0EEFF), `Theme.green` (#059669), `Theme.amber` (#F59E0B)
 **Semantic:** `Theme.bg`, `Theme.card`, `Theme.border`, `Theme.textPrimary/Secondary/Tertiary`
@@ -11,7 +13,7 @@ Review UI/UX against the EasyListing design system.
 **Radius:** `Theme.radius` = 16, `Theme.radiusSmall` = 10, `Theme.radiusLarge` = 24
 **Shadows:** `Theme.cardShadow` / `Theme.buttonShadow` — always use these, never raw `.shadow(color: .black)`
 
-## Components (Components.swift)
+## Components (mobile/ios/EasyListing/Shared/Components.swift)
 
 - `PrimaryButton` — 52px height, purple gradient, white text, shadow
 - `SecondaryButton` — 52px height, purpleLight bg, purple border
@@ -33,8 +35,7 @@ Review UI/UX against the EasyListing design system.
 7. Loading states use `isLoading: true` on `PrimaryButton` — no ad-hoc `ProgressView` in button labels
 8. Dark mode: adaptive colours (`Theme.bg`, `Theme.card`, `Theme.border`) used — no hardcoded light-mode values
 
-## Usage
+## Diagnostics
 
-Run: `/design-review [SwiftUI file or screen name]`
-
-$SHELL: find /Users/berk.arslan/Desktop/etsy/ios/EasyListing -name "*.swift" | xargs grep -l "Color\.\(black\|white\|gray\)" 2>/dev/null
+Files using raw black/white/gray colors instead of Theme tokens:
+!`grep -rl "Color\.\(black\|white\|gray\)" mobile/ios --include="*.swift" 2>/dev/null || echo "Clean"`
