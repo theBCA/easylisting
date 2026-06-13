@@ -118,6 +118,8 @@ def init_db():
             "ALTER TABLE shops ADD COLUMN listing_period TEXT DEFAULT NULL",
             "ALTER TABLE shops ADD COLUMN improve_used INTEGER DEFAULT 0",
             "ALTER TABLE shops ADD COLUMN improve_period TEXT DEFAULT NULL",
+            "ALTER TABLE shops ADD COLUMN last_seen TIMESTAMP DEFAULT NULL",
+            "ALTER TABLE shops ADD COLUMN country TEXT DEFAULT NULL",
         ):
             try:
                 con.execute(ddl)
@@ -159,7 +161,20 @@ def _bump_monthly(con, shop_id: str, used_col: str, period_col: str, count: int 
         )
 
 
-def increment_usage(shop_id: str):
+def _touch_shop(con, shop_id: str, country: str = None):
+    if country:
+        con.execute(
+            "UPDATE shops SET last_seen = CURRENT_TIMESTAMP, country = ? WHERE shop_id = ?",
+            (country, str(shop_id)),
+        )
+    else:
+        con.execute(
+            "UPDATE shops SET last_seen = CURRENT_TIMESTAMP WHERE shop_id = ?",
+            (str(shop_id),),
+        )
+
+
+def increment_usage(shop_id: str, country: str = None):
     with _conn() as con:
         # Lifetime counter (free-tier paywall) + monthly counter (paid-plan caps).
         con.execute(
@@ -167,15 +182,17 @@ def increment_usage(shop_id: str):
             (str(shop_id),),
         )
         _bump_monthly(con, shop_id, "listing_used", "listing_period")
+        _touch_shop(con, shop_id, country)
 
 
-def increment_improve_usage(shop_id: str):
+def increment_improve_usage(shop_id: str, country: str = None):
     with _conn() as con:
         con.execute(
             "UPDATE shops SET free_improve_used = free_improve_used + 1 WHERE shop_id = ?",
             (str(shop_id),),
         )
         _bump_monthly(con, shop_id, "improve_used", "improve_period")
+        _touch_shop(con, shop_id, country)
 
 
 def _monthly_remaining(shop: dict, used_col: str, period_col: str, cap: int) -> int:

@@ -263,7 +263,9 @@ def admin_dashboard():
     con.row_factory = _sq.Row
     rows = con.execute(
         "SELECT shop_id, shop_name, plan, has_premium, free_used, created_at, "
-        "stripe_customer_id FROM shops ORDER BY rowid DESC"
+        "stripe_customer_id, stripe_subscription_id, listing_used, improve_used, "
+        "last_seen, country "
+        "FROM shops ORDER BY rowid DESC"
     ).fetchall()
     con.close()
 

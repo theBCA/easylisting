@@ -510,9 +510,9 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
       <div class="field-group">
         <label data-i18n="label_lang">Language</label>
         <select id="langSelect" class="field-input" style="padding:10px 14px;">
-          <option value="tr">🇹🇷 Türkçe</option>
           <option value="en">🇬🇧 English</option>
           <option value="de">🇩🇪 Deutsch</option>
+          <option value="tr">🇹🇷 Türkçe</option>
         </select>
       </div>
     </div>
@@ -1073,6 +1073,10 @@ function setLang(lang) {
   const logo = byId('navLogo');
   if (logo && BRAND[lang]) logo.innerHTML = BRAND[lang];
   document.title = lang === 'tr' ? 'kolaylistele — Yapay Zeka ile Ürün İlanı' : 'EasyListing — AI Listing Generator';
+  const langSel = byId('langSelect');
+  if (langSel && STRINGS[lang] && [...langSel.options].some(o => o.value === lang)) {
+    langSel.value = lang;
+  }
 }
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);

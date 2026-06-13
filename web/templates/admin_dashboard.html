@@ -133,7 +133,8 @@
     <thead>
       <tr>
         <th>Shop</th><th>Type</th><th>Shop ID</th><th>Plan</th>
-        <th>Used</th><th>Created</th><th>Set plan</th>
+        <th>Used</th><th>Listings</th><th>Improves</th><th>Subscription</th>
+        <th>Country</th><th>Last seen</th><th>Created</th><th>Set plan</th>
       </tr>
     </thead>
     <tbody>
@@ -144,6 +145,11 @@
         <td class="mono">{{ s.shop_id }}</td>
         <td class="plan-{{ s.plan or 'free' }}" data-plan-cell>{{ (s.plan or 'free')|upper }}{% if s.has_premium %} ✓{% endif %}</td>
         <td>{{ s.free_used }}</td>
+        <td>{{ s.listing_used or 0 }}</td>
+        <td>{{ s.improve_used or 0 }}</td>
+        <td class="mono">{{ s.stripe_subscription_id or '—' }}</td>
+        <td class="mono">{{ s.country or '—' }}</td>
+        <td class="mono">{{ (s.last_seen or '')[:10] or '—' }}</td>
         <td class="mono">{{ (s.created_at or '')[:10] }}</td>
         <td>
           <select data-plan-select>

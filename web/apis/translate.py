@@ -65,7 +65,7 @@ def api_translate():
     try:
         data = _translate_ai(fields, lang)
         if not has_premium_access():
-            increment_improve_usage(sid)
+            increment_improve_usage(sid, request.headers.get("CF-IPCountry"))
         return jsonify(data)
     except Exception as e:
         logger.exception("Translate error: %s", e)

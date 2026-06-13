@@ -205,7 +205,7 @@ def api_generate():
     if data is None:
         return jsonify({"error": "All AI providers are over quota right now. Please try again later."}), 503
 
-    increment_usage(sid)
+    increment_usage(sid, request.headers.get("CF-IPCountry"))
     from core.analytics import capture as _ph_capture
     _ph_capture(sid, "listing_generated", {
         "provider": p, "lang": lang, "platform": platform,
@@ -589,7 +589,7 @@ def api_improve_listing():
         return jsonify({"error": safe_error(str(e))}), 500
 
     if not has_premium_access():
-        increment_improve_usage(sid)
+        increment_improve_usage(sid, request.headers.get("CF-IPCountry"))
     return jsonify(data)
 
 @bp.route("/api/listing-variants", methods=["POST"])
@@ -717,7 +717,7 @@ def api_bulk_generate():
     if data is None:
         return jsonify({"error": "All AI providers are over quota."}), 503
 
-    increment_usage(sid)
+    increment_usage(sid, request.headers.get("CF-IPCountry"))
 
     try:
         if platform == "etsy":
