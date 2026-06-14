@@ -9,6 +9,28 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 ## [Unreleased]
 
 ### Added
+- **AI cost tracking** (`db.ai_cost_log`, `db.log_ai_cost`): new table logs every AI generation call with provider, model, token counts, estimated cost in USD, and endpoint name. `core/ai._gemini_generate` captures `usage_metadata` from the Gemini response; `_openai_generate` captures `resp.usage`; NVIDIA logs zero cost (free tier). Photo generation in `apis/photos.py` logs fixed per-image pricing ($0.039/img via Gemini image model). All logging is fire-and-forget in a background thread — no latency added to requests.
+- **Admin dashboard: AI spend section** (`/admin/dashboard`): shows total cost and call count for last 30 days, plus per-model and per-endpoint breakdowns, sourced from `ai_cost_log`.
+- **Admin dashboard: monthly usage totals**: listing-generated, improvements, and photos-generated counts aggregated across all shops for the current billing period via `db.get_usage_summary()`.
+- **Admin dashboard: email list** (`db.get_admin_email_list`): real subscriber emails from `marketing_consents` with locale, source, and subscription status.
+- **Admin dashboard: feedback inbox** (`db.get_admin_feedback`): last 50 messages from the feedback widget, with shop ID, reply-to email, page URL, and timestamp.
+- **Contact/feedback widget** (`templates/_feedback_widget.html`): floating 💬 button on every page, CSP-compliant (nonce on script block, no inline handlers), EN/DE/TR i18n. POSTs to `POST /api/feedback` (`apis/pages.py`), stores in `db.feedback` table, and emails `berkcemarslan@gmail.com` in a background thread.
+- **Photo limit alert emails** (`apis/photos.py` `_alert_limit_hit`): fire-and-forget email to owner when any shop exhausts their monthly photo quota — fires on both `/api/generate-photos` and `/api/etsy-photo-set`.
+- **Pro photo limit raised** (`core/config.py` `PLAN_LIMITS`): Pro `photo_images` increased from 30 → 60 (10 full sets/month at ~$2.34 AI cost vs €9.99 revenue).
+- **Per-image download buttons** (`templates/photo_set.html`): each generated shot now has its own download button in addition to the collage download.
+- **"Upload to Etsy Listing" feature** (`POST /api/upload-photos-to-listing`, `GET /api/shop-listings`): after generating shots, users can pick an existing Etsy listing and upload selected photos directly to it. Upload panel with listing picker and per-shot checkboxes.
+- **"Create Listing →" button** (`templates/photo_set.html`): appears after first shot is generated, links to the listing generator.
+
+### Changed
+- **Admin dashboard shop table**: added `listing_used`, `improve_used`, `photo_variant_used` columns so usage is visible per shop without drilling into the DB.
+- **Provider names hidden from consumers** (`templates/upgrade.html`, `bulk.html`, `index.html`, `privacy.html`): all mentions of "Gemini", "NVIDIA", "OpenAI", "fal.ai" removed from user-facing UI and replaced with "AI-powered" / "KI-gestützt" / "YZ destekli". Provider dropdown removed from bulk upload.
+- **Photo-set page i18n and CSP** (`templates/photo_set.html`): all hardcoded English strings translated to DE/TR via `PAGE_STRINGS`; inline `onclick=""` handlers replaced with `addEventListener` (CSP compliance); PostHog include removed.
+
+### Fixed
+- **CSP blocking photo-set buttons**: inline `onclick=""` attributes on Generate/Next/Download buttons were blocked by `script-src` nonce policy — converted all to `addEventListener` in a nonce-guarded `<script>` block.
+- **Language not preserved on photo-set page**: page now reads the same `localStorage` key as `index.html` and applies translations on init.
+
+### Added
 - **Etsy Photo Set Generator** (`/photo-set`, premium): upload one product photo → AI generates 6 professional Etsy listing shots one at a time (worn/in-use, studio, macro detail, back/construction, lifestyle flat lay, packaging). Step wizard UI with sidebar progress, inline thumbnails, per-image download, a client-side 3×2 collage download, and a live "photo credits left this month" pill with an upgrade nudge when a Starter user runs out. Backend: `POST /api/etsy-photo-set` in `apis/photos.py` — Gemini vision auto-describes the product on shot 1, then Gemini 2.5 Flash Image generates each shot with Etsy-specific prompts. Linked from the main nav for all paid plans. Uses the per-plan photo-image monthly quota (1 credit per shot).
 - **Per-plan limits config** (`core/config.py` `PLAN_LIMITS` + `plan_limit()`): central, env-overridable monthly caps for `listings`, `improve`, `photo_images`, and `bulk_batch` per plan (free / starter / pro). Defaults: Starter 100 listings + 50 improves + 1 photo set (6 images) + 10 bulk/batch; Pro 800 listings + 200 improves + 5 photo sets (30 images) + 20 bulk/batch. Starter listings match the advertised "100/month"; Pro gives 8× the listings for 2× the price and 5× the photo sets. The Starter photo set is a taster to drive Pro upgrades. Sized so worst-case usage stays profitable (~64% margin on Pro, ~88% on Starter). Every value overridable via `LIMIT_*` env vars per Railway service.
 - **Standalone image-gen smoke test** (`scripts/test_image_gen.py`): verify Gemini image generation (single shot or full 6-shot set) against a local photo before deploying, with cost estimate and saved output files.

@@ -92,6 +92,21 @@ def init_db():
             )
         """)
         con.execute("""
+            CREATE TABLE IF NOT EXISTS ai_cost_log (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                shop_id    TEXT,
+                provider   TEXT NOT NULL,
+                model      TEXT,
+                tokens_in  INTEGER DEFAULT 0,
+                tokens_out INTEGER DEFAULT 0,
+                cost_usd   REAL DEFAULT 0,
+                endpoint   TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        con.execute("CREATE INDEX IF NOT EXISTS idx_ai_cost_time ON ai_cost_log(created_at)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_ai_cost_shop ON ai_cost_log(shop_id)")
+        con.execute("""
             CREATE TABLE IF NOT EXISTS mobile_tokens (
                 token         TEXT PRIMARY KEY,
                 shop_id       TEXT NOT NULL,
@@ -758,3 +773,88 @@ def save_feedback(shop_id: str, message: str, reply_to: str = None, page: str = 
             "INSERT INTO feedback (shop_id, message, reply_to, page) VALUES (?, ?, ?, ?)",
             (shop_id, message[:2000], (reply_to or "")[:200], (page or "")[:200]),
         )
+
+
+def log_ai_cost(shop_id: str, provider: str, model: str,
+                tokens_in: int, tokens_out: int, cost_usd: float, endpoint: str = ""):
+    try:
+        with _conn() as con:
+            con.execute(
+                "INSERT INTO ai_cost_log (shop_id, provider, model, tokens_in, tokens_out, cost_usd, endpoint) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (shop_id, provider, model or "", tokens_in, tokens_out, round(cost_usd, 6), endpoint or ""),
+            )
+    except Exception:
+        pass  # never crash a user request over cost logging
+
+
+def get_ai_cost_summary(days: int = 30) -> dict:
+    with _conn() as con:
+        con.row_factory = sqlite3.Row
+        rows = con.execute(
+            "SELECT provider, model, SUM(tokens_in) as tin, SUM(tokens_out) as tout, "
+            "SUM(cost_usd) as cost, COUNT(*) as calls "
+            "FROM ai_cost_log WHERE created_at >= datetime('now', ?) "
+            "GROUP BY provider, model ORDER BY cost DESC",
+            (f"-{days} days",),
+        ).fetchall()
+        total_row = con.execute(
+            "SELECT SUM(cost_usd) as total, COUNT(*) as calls "
+            "FROM ai_cost_log WHERE created_at >= datetime('now', ?)",
+            (f"-{days} days",),
+        ).fetchone()
+        by_endpoint = con.execute(
+            "SELECT endpoint, SUM(cost_usd) as cost_usd FROM ai_cost_log "
+            "WHERE created_at >= datetime('now', ?) GROUP BY endpoint ORDER BY cost_usd DESC",
+            (f"-{days} days",),
+        ).fetchall()
+    return {
+        "days": days,
+        "total_usd": round((total_row["total"] or 0), 4),
+        "call_count": total_row["calls"] or 0,
+        "by_model": [dict(r) for r in rows],
+        "by_endpoint": [dict(r) for r in by_endpoint],
+    }
+
+
+def get_admin_email_list(limit: int = 200) -> list:
+    with _conn() as con:
+        con.row_factory = sqlite3.Row
+        rows = con.execute(
+            "SELECT email, locale, source, consented_at as created_at, "
+            "CASE WHEN unsubscribed_at IS NULL THEN 1 ELSE 0 END as subscribed "
+            "FROM marketing_consents ORDER BY consented_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_admin_feedback(limit: int = 50) -> list:
+    with _conn() as con:
+        con.row_factory = sqlite3.Row
+        rows = con.execute(
+            "SELECT id, shop_id, message, reply_to, page, created_at "
+            "FROM feedback ORDER BY created_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_usage_summary() -> dict:
+    """Aggregate monthly usage counters across all shops for the current period."""
+    period = datetime.now(timezone.utc).strftime("%Y-%m")
+    with _conn() as con:
+        con.row_factory = sqlite3.Row
+        row = con.execute(
+            "SELECT SUM(listing_used) as listings, SUM(improve_used) as improves, "
+            "SUM(photo_variant_used) as photos, COUNT(*) as total_shops "
+            "FROM shops WHERE listing_period = ? OR improve_period = ? OR photo_variant_period = ?",
+            (period, period, period),
+        ).fetchone()
+    return {
+        "period": period,
+        "listings": row["listings"] or 0,
+        "improves": row["improves"] or 0,
+        "photos":   row["photos"]   or 0,
+        "total_shops": row["total_shops"] or 0,
+    }

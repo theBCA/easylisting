@@ -10,7 +10,8 @@ from flask import Blueprint, request, jsonify, render_template
 
 from extensions import csrf
 from core.admin_auth import is_admin
-from db import get_abuse_summary, get_marketing_stats, get_payment_summary
+from db import (get_abuse_summary, get_marketing_stats, get_payment_summary,
+                get_ai_cost_summary, get_admin_email_list, get_admin_feedback, get_usage_summary)
 
 bp = Blueprint("admin", __name__)
 
@@ -264,7 +265,7 @@ def admin_dashboard():
     rows = con.execute(
         "SELECT shop_id, shop_name, plan, has_premium, free_used, created_at, "
         "stripe_customer_id, stripe_subscription_id, listing_used, improve_used, "
-        "last_seen, country "
+        "photo_variant_used, last_seen, country "
         "FROM shops ORDER BY rowid DESC"
     ).fetchall()
     con.close()
@@ -284,5 +285,12 @@ def admin_dashboard():
         "pro":      sum(1 for s in shops if s.get("plan") == "pro"),
         "starter":  sum(1 for s in shops if s.get("plan") == "starter"),
     }
-    payments = get_payment_summary(30)
-    return render_template("admin_dashboard.html", shops=shops, counts=counts, payments=payments)
+    payments  = get_payment_summary(30)
+    ai_costs  = get_ai_cost_summary(30)
+    emails    = get_admin_email_list(200)
+    feedback  = get_admin_feedback(50)
+    usage     = get_usage_summary()
+    return render_template("admin_dashboard.html",
+                           shops=shops, counts=counts, payments=payments,
+                           ai_costs=ai_costs, emails=emails,
+                           feedback=feedback, usage=usage)

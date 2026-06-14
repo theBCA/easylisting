@@ -102,6 +102,52 @@
     </div>
   </div>
 
+  <!-- ── AI Cost (last 30 days) ─────────────────────────────────────── -->
+  <div class="section-title">AI Spend · Last 30 Days</div>
+  <div class="cards">
+    <div class="stat">
+      <div class="n">${{ "%.4f"|format(ai_costs.total_usd) }}</div>
+      <div class="l">Total Cost</div>
+    </div>
+    <div class="stat">
+      <div class="n">{{ ai_costs.call_count }}</div>
+      <div class="l">API Calls</div>
+    </div>
+  </div>
+  <div class="mini-grid" style="margin-bottom:24px;">
+    <div class="panel">
+      <h2>Cost by Model</h2>
+      {% for row in ai_costs.by_model %}
+        <div class="kv">
+          <span>{{ row.model }}</span>
+          <strong>${{ "%.4f"|format(row.cost_usd) }} <span class="mono">({{ row.calls }} calls)</span></strong>
+        </div>
+      {% else %}
+        <div class="mono">No AI cost data yet.</div>
+      {% endfor %}
+    </div>
+    <div class="panel">
+      <h2>Cost by Endpoint</h2>
+      {% for row in ai_costs.by_endpoint %}
+        <div class="kv">
+          <span>{{ row.endpoint or "—" }}</span>
+          <strong>${{ "%.4f"|format(row.cost_usd) }}</strong>
+        </div>
+      {% else %}
+        <div class="mono">No AI cost data yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Monthly Usage Totals ───────────────────────────────────────── -->
+  <div class="section-title">Monthly Usage Totals (Current Period)</div>
+  <div class="cards" style="margin-bottom:24px;">
+    <div class="stat"><div class="n">{{ usage.listings }}</div><div class="l">Listings Generated</div></div>
+    <div class="stat"><div class="n">{{ usage.improves }}</div><div class="l">Improvements</div></div>
+    <div class="stat"><div class="n">{{ usage.photos }}</div><div class="l">Photos Generated</div></div>
+    <div class="stat"><div class="n">{{ usage.total_shops }}</div><div class="l">Active Shops</div></div>
+  </div>
+
   <div class="section-title">Recent Billing Events</div>
   <table style="margin-bottom:24px;">
     <thead>
@@ -133,8 +179,8 @@
     <thead>
       <tr>
         <th>Shop</th><th>Type</th><th>Shop ID</th><th>Plan</th>
-        <th>Used</th><th>Listings</th><th>Improves</th><th>Subscription</th>
-        <th>Country</th><th>Last seen</th><th>Created</th><th>Set plan</th>
+        <th>Lists</th><th>Impr.</th><th>Photos</th><th>Free Used</th>
+        <th>Sub ID</th><th>Country</th><th>Last Seen</th><th>Created</th><th>Set plan</th>
       </tr>
     </thead>
     <tbody>
@@ -144,9 +190,10 @@
         <td><span class="badge b-{{ s.kind }}">{{ s.kind }}</span></td>
         <td class="mono">{{ s.shop_id }}</td>
         <td class="plan-{{ s.plan or 'free' }}" data-plan-cell>{{ (s.plan or 'free')|upper }}{% if s.has_premium %} ✓{% endif %}</td>
-        <td>{{ s.free_used }}</td>
         <td>{{ s.listing_used or 0 }}</td>
         <td>{{ s.improve_used or 0 }}</td>
+        <td>{{ s.photo_variant_used or 0 }}</td>
+        <td>{{ s.free_used }}</td>
         <td class="mono">{{ s.stripe_subscription_id or '—' }}</td>
         <td class="mono">{{ s.country or '—' }}</td>
         <td class="mono">{{ (s.last_seen or '')[:10] or '—' }}</td>
@@ -160,6 +207,46 @@
           <button class="btn" data-set-plan data-shop-id="{{ s.shop_id }}" data-shop-name="{{ s.shop_name or '' }}">Save</button>
         </td>
       </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- ── Email List ─────────────────────────────────────────────────── -->
+  <div class="section-title">Email List ({{ emails|length }} subscribers)</div>
+  <table style="margin-bottom:24px;">
+    <thead>
+      <tr><th>Email</th><th>Locale</th><th>Signed Up</th></tr>
+    </thead>
+    <tbody>
+      {% for e in emails %}
+      <tr>
+        <td>{{ e.email }}</td>
+        <td>{{ e.locale or '—' }}</td>
+        <td class="mono">{{ (e.created_at or '')[:10] }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="mono">No subscribers yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- ── Feedback Inbox ─────────────────────────────────────────────── -->
+  <div class="section-title">Feedback Inbox (last 50)</div>
+  <table style="margin-bottom:24px;">
+    <thead>
+      <tr><th>Time</th><th>Shop</th><th>Reply-to</th><th>Page</th><th>Message</th></tr>
+    </thead>
+    <tbody>
+      {% for f in feedback %}
+      <tr>
+        <td class="mono">{{ (f.created_at or '')[:16] }}</td>
+        <td class="mono">{{ f.shop_id or '—' }}</td>
+        <td>{{ f.reply_to or '—' }}</td>
+        <td>{{ f.page or '—' }}</td>
+        <td style="max-width:400px;white-space:pre-wrap;word-break:break-word;">{{ f.message }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="mono">No feedback yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>

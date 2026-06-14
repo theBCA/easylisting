@@ -7,8 +7,32 @@ import os
 import json
 import base64
 
+import threading
+
 from core.config import logger, ALLOW_PAID_OPENAI
 from db import get_template
+
+
+# ── Cost rates (USD per token) ────────────────────────────────────────────────
+# Source: Google / OpenAI pricing pages. Thinking disabled on all Gemini calls.
+_COST_PER_TOKEN = {
+    "gemini-2.5-flash":      (0.15 / 1_000_000, 0.60 / 1_000_000),
+    "gemini-2.5-flash-lite": (0.10 / 1_000_000, 0.40 / 1_000_000),
+    "gpt-4o-mini":           (0.15 / 1_000_000, 0.60 / 1_000_000),
+    "nvidia":                (0, 0),
+}
+
+def _log_cost(shop_id: str, provider: str, model: str,
+              tokens_in: int, tokens_out: int, endpoint: str = ""):
+    r_in, r_out = _COST_PER_TOKEN.get(model, (0.0003 / 1000, 0.0006 / 1000))
+    cost = tokens_in * r_in + tokens_out * r_out
+    def _store():
+        try:
+            from db import log_ai_cost
+            log_ai_cost(shop_id, provider, model, tokens_in, tokens_out, cost, endpoint)
+        except Exception as e:
+            logger.warning("_log_cost failed: %s", e)
+    threading.Thread(target=_store, daemon=True).start()
 
 
 def provider_chain(premium=False):
@@ -273,7 +297,7 @@ def _parse_ai_json(text):
     text = re.sub(r'```\s*$', '', text, flags=re.MULTILINE)
     return json.loads(text.strip())
 
-def _gemini_generate(image_bytes_list, hint, api_key=None, lang="en", platform="etsy"):
+def _gemini_generate(image_bytes_list, hint, api_key=None, lang="en", platform="etsy", shop_id="", endpoint=""):
     from google import genai as ggenai
     from google.genai import types as gtypes
     from google.genai.errors import ClientError
@@ -295,7 +319,16 @@ def _gemini_generate(image_bytes_list, hint, api_key=None, lang="en", platform="
         try:
             resp = client.models.generate_content(model=model, contents=parts, config=_cfg)
             try:
-                return _parse_ai_json(resp.text)
+                result = _parse_ai_json(resp.text)
+                try:
+                    um = resp.usage_metadata
+                    _log_cost(shop_id, "gemini", model,
+                              getattr(um, "prompt_token_count", 0) or 0,
+                              getattr(um, "candidates_token_count", 0) or 0,
+                              endpoint)
+                except Exception:
+                    pass
+                return result
             except (json.JSONDecodeError, ValueError) as je:
                 logger.warning("Gemini JSON parse failed (model=%s): %s. Raw: %s", model, je, (resp.text or "")[:500])
                 last_exc = je
@@ -321,7 +354,7 @@ def _gemini_generate(image_bytes_list, hint, api_key=None, lang="en", platform="
         raise last_exc
     raise RuntimeError("quota_exceeded")
 
-def _openai_generate(image_bytes_list, hint, api_key=None, lang="en", platform="etsy"):
+def _openai_generate(image_bytes_list, hint, api_key=None, lang="en", platform="etsy", shop_id="", endpoint=""):
     from openai import OpenAI, RateLimitError
     client  = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY", ""), timeout=60.0)
     content = [{"type": "text", "text": _build_prompt(hint, lang, platform)}]
@@ -340,7 +373,14 @@ def _openai_generate(image_bytes_list, hint, api_key=None, lang="en", platform="
         )
     except RateLimitError as e:
         raise RuntimeError("quota_exceeded") from e
-    return json.loads(resp.choices[0].message.content)
+    result = json.loads(resp.choices[0].message.content)
+    try:
+        _log_cost("", "openai", model,
+                  getattr(resp.usage, "prompt_tokens", 0) or 0,
+                  getattr(resp.usage, "completion_tokens", 0) or 0)
+    except Exception:
+        pass
+    return result
 
 NVIDIA_MODELS = {
     "llama-90b": "meta/llama-3.2-90b-vision-instruct",
@@ -382,13 +422,15 @@ def _nvidia_generate(image_bytes_list, hint, model_key="llama-90b", api_key=None
 _PROVIDER_CHAIN_FREE    = provider_chain(premium=False)
 _PROVIDER_CHAIN_PREMIUM = provider_chain(premium=True)
 
-def _run_provider(provider, image_bytes, hint, nvidia_model, api_key=None, lang="en", platform="etsy"):
+def _run_provider(provider, image_bytes, hint, nvidia_model, api_key=None, lang="en", platform="etsy",
+                  shop_id="", endpoint=""):
     if provider == "gemini":
-        return _gemini_generate(image_bytes, hint, api_key, lang, platform)
+        return _gemini_generate(image_bytes, hint, api_key, lang, platform, shop_id=shop_id, endpoint=endpoint)
     elif provider == "nvidia":
+        _log_cost(shop_id, "nvidia", "nvidia", 0, 0, endpoint)
         return _nvidia_generate(image_bytes, hint, nvidia_model, api_key, lang, platform)
     else:
-        return _openai_generate(image_bytes, hint, api_key, lang, platform)
+        return _openai_generate(image_bytes, hint, api_key, lang, platform, shop_id=shop_id, endpoint=endpoint)
 
 def _run_text_json(prompt: str):
     if os.getenv("GEMINI_API_KEY"):
