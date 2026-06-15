@@ -793,9 +793,9 @@ def get_ai_cost_summary(days: int = 30) -> dict:
         con.row_factory = sqlite3.Row
         rows = con.execute(
             "SELECT provider, model, SUM(tokens_in) as tin, SUM(tokens_out) as tout, "
-            "SUM(cost_usd) as cost, COUNT(*) as calls "
+            "SUM(cost_usd) as cost_usd, COUNT(*) as calls "
             "FROM ai_cost_log WHERE created_at >= datetime('now', ?) "
-            "GROUP BY provider, model ORDER BY cost DESC",
+            "GROUP BY provider, model ORDER BY cost_usd DESC",
             (f"-{days} days",),
         ).fetchall()
         total_row = con.execute(
