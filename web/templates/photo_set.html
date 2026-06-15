@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Etsy Photo Set — EasyListing</title>
+<title>AI Photo Studio — EasyListing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -170,7 +170,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
   <div class="nav-links">
     <span style="font-size:13px;font-weight:600;color:var(--muted)">🛍 {{ shop_name }}</span>
     <a href="/listings">My Listings</a>
-    <a href="/bulk">Bulk Upload</a>
+    <a href="/bulk">Bulk Listings</a>
     <a href="/">Single Listing</a>
     <span class="pro-badge">Pro</span>
   </div>
@@ -178,7 +178,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 
 <div class="container">
   <div class="page-header">
-    <h1>📸 Etsy Photo Set Generator</h1>
+    <h1>📸 AI Photo Studio</h1>
     <p>Upload one product photo — get a professional 7-shot Etsy listing set, one image at a time.</p>
     <div class="credits-row" id="creditsRow">
       <span class="credits-pill" id="creditsPill">📸 <strong id="creditsLeft">…</strong> photo credits left this month</span>
@@ -222,7 +222,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
       </div>
       <div class="step-item" data-step="4" id="si-4">
         <div class="step-dot" id="sd-4">4</div>
-        <div class="step-info"><div class="step-name">Back / Construction</div></div>
+        <div class="step-info"><div class="step-name">Size Reference</div></div>
         <img class="step-thumb" id="st-4" alt="">
       </div>
       <div class="step-item" data-step="5" id="si-5">
@@ -313,8 +313,8 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
 const _lang = localStorage.getItem(LANG_KEY) || 'en';
 const PAGE_STRINGS = {
-  en: { nav_listings:'My Listings', nav_bulk:'Bulk Upload', nav_single:'Single Listing',
-        page_title:'Etsy Photo Set Generator',
+  en: { nav_listings:'My Listings', nav_bulk:'Bulk Listings', nav_single:'Single Listing',
+        page_title:'AI Photo Studio',
         page_sub:'Upload one product photo — get a professional 6-shot Etsy listing set, one image at a time.',
         credits_left:'photo credits left this month', upgrade_cta:'Upgrade for more →',
         drop_title:'Drop your product photo here', drop_sub:'One photo → 6 professional Etsy shots + collage preview',
@@ -333,8 +333,8 @@ const PAGE_STRINGS = {
         pick_listing:'— Pick a listing —', loading_listings:'Loading…',
         no_listings:'No listings found', failed_listings:'Failed to load listings',
         uploading:'Uploading…', resets:'Resets' },
-  de: { nav_listings:'Meine Listings', nav_bulk:'Massen-Upload', nav_single:'Einzel-Listing',
-        page_title:'Etsy Foto-Set Generator',
+  de: { nav_listings:'Meine Listings', nav_bulk:'Massen-Listings', nav_single:'Einzel-Listing',
+        page_title:'KI-Fotostudio',
         page_sub:'Lade ein Produktfoto hoch – erhalte 6 professionelle Etsy-Fotos, eines nach dem anderen.',
         credits_left:'Foto-Credits diesen Monat', upgrade_cta:'Mehr kaufen →',
         drop_title:'Produktfoto hier ablegen', drop_sub:'Ein Foto → 6 professionelle Etsy-Fotos + Collage-Vorschau',
@@ -352,8 +352,8 @@ const PAGE_STRINGS = {
         pick_listing:'— Listing auswählen —', loading_listings:'Lädt…',
         no_listings:'Keine Listings gefunden', failed_listings:'Laden fehlgeschlagen',
         uploading:'Wird hochgeladen…', resets:'Setzt sich zurück' },
-  tr: { nav_listings:'Listelerim', nav_bulk:'Toplu Yükleme', nav_single:'Tekil İlan',
-        page_title:'Etsy Foto Seti Oluşturucu',
+  tr: { nav_listings:'Listelerim', nav_bulk:'Toplu İlanlar', nav_single:'Tekil İlan',
+        page_title:'Yapay Zeka Foto Stüdyosu',
         page_sub:'Bir ürün fotoğrafı yükle — 6 profesyonel Etsy fotoğrafı al, birer birer.',
         credits_left:'bu ay foto kredisi kaldı', upgrade_cta:'Daha fazlası için yükselt →',
         drop_title:'Ürün fotoğrafını buraya bırak', drop_sub:'Bir fotoğraf → 6 profesyonel Etsy fotoğrafı + kolaj',
@@ -423,7 +423,7 @@ const SHOT_META = {
   1: { title: 'Worn / In-Use Scale Shot',      desc: 'Shows the product being worn, held, or used in a realistic human-scale context — helps buyers understand size.' },
   2: { title: 'Clean Studio Product Shot',      desc: 'Bright, uncluttered image on a neutral background showing the whole product clearly.' },
   3: { title: 'Macro Detail Shot',              desc: 'Close-up of craftsmanship, texture, stitching, or construction details buyers care about.' },
-  4: { title: 'Back / Construction Shot',       desc: 'Shows the reverse side, closure, seam quality, or construction detail.' },
+  4: { title: 'Size Reference Shot',             desc: 'Product held in a hand or placed beside a common object — helps buyers instantly understand real-world dimensions.' },
   5: { title: 'Lifestyle Flat Lay',             desc: 'Product styled in a themed environment — wedding, baby gift, home, or seasonal use.' },
   6: { title: 'Packaging / Gift-Ready Shot',    desc: 'Product beautifully packaged with ribbon, box, tissue paper, or a handmade insert.' },
 };

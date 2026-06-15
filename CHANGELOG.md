@@ -8,6 +8,13 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 
 ## [Unreleased]
 
+### Changed
+- **Image model upgrade** (`core/config.py`, `apis/photos.py`): switched default `GEMINI_IMAGE_MODEL` from `gemini-2.5-flash-image` to `gemini-3.1-flash-image` — same pricing (~$0.039/image), better quality in side-by-side testing. Cost log estimate updated to `$0.04/image` as a conservative rounding. Overridable via `GEMINI_IMAGE_MODEL` env var.
+- **Etsy Photo Set Shot 4 replaced** (`apis/photos.py`, `templates/photo_set.html`): "Back / Construction Shot" replaced with "Size Reference Shot" — product held in hand or beside a common object to communicate real-world dimensions. More universally useful across product categories (e.g. ceramic plates, jewellery, textiles) than a back/construction view.
+- **UI naming refresh (Phase 1 of premium UI pass)**: renamed two features across nav links, page titles, `<h1>`s, and EN/DE/TR i18n dictionaries in `templates/index.html`, `photo_set.html`, `bulk.html`, and `upgrade.html`:
+  - "Photo Set" → **AI Photo Studio** (DE: KI-Fotostudio, TR: Yapay Zeka Foto Stüdyosu). The `photo_set.html` `<h1>` previously read "Etsy Photo Set Generator", contradicting the nav — now consistent. Routes (`/photo-set`) unchanged; "photo set" retained where it describes the actual 6-shot output.
+  - "Bulk Upload" → **Bulk Listings** (DE: Massen-Listings, TR: Toplu İlanlar). Route (`/bulk`) unchanged.
+
 ### Fixed
 - **Admin dashboard crash** (`db.get_ai_cost_summary`): `by_model` query aliased cost column as `cost` but template expected `cost_usd` — renamed alias to match.
 - **Photo set page nav logo** (`templates/photo_set.html`): nav logo was hardcoded to "EasyListing"; now uses the same BRAND map as other pages — kolaylistele.com shows `kolaylistele`, EN/DE show `EasyListing`.
