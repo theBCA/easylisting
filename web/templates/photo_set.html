@@ -166,7 +166,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 </head>
 <body>
 <nav>
-  <a href="/" class="nav-logo">Easy<span style="color:var(--text)">Listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">Easy<span style="color:var(--text)">Listing</span></a>
   <div class="nav-links">
     <span style="font-size:13px;font-weight:600;color:var(--muted)">🛍 {{ shop_name }}</span>
     <a href="/listings">My Listings</a>
@@ -374,7 +374,15 @@ const PAGE_STRINGS = {
 };
 const S = PAGE_STRINGS[_lang] || PAGE_STRINGS.en;
 
+const BRAND = {
+  en: 'Easy<span style="color:var(--text)">Listing</span>',
+  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  tr: '<span style="color:var(--text)">kolay</span>listele',
+};
+
 function applyLang() {
+  const logo = document.getElementById('navLogo');
+  if (logo && BRAND[_lang]) logo.innerHTML = BRAND[_lang];
   const listingsEl = document.querySelector('a[href="/listings"]');
   const bulkEl     = document.querySelector('a[href="/bulk"]');
   const singleEl   = document.querySelector('a[href="/"]');

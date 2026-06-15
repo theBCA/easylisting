@@ -10,6 +10,7 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 
 ### Fixed
 - **Admin dashboard crash** (`db.get_ai_cost_summary`): `by_model` query aliased cost column as `cost` but template expected `cost_usd` — renamed alias to match.
+- **Photo set page nav logo** (`templates/photo_set.html`): nav logo was hardcoded to "EasyListing"; now uses the same BRAND map as other pages — kolaylistele.com shows `kolaylistele`, EN/DE show `EasyListing`.
 
 ### Added
 - **AI cost tracking** (`db.ai_cost_log`, `db.log_ai_cost`): new table logs every AI generation call with provider, model, token counts, estimated cost in USD, and endpoint name. `core/ai._gemini_generate` captures `usage_metadata` from the Gemini response; `_openai_generate` captures `resp.usage`; NVIDIA logs zero cost (free tier). Photo generation in `apis/photos.py` logs fixed per-image pricing ($0.039/img via Gemini image model). All logging is fire-and-forget in a background thread — no latency added to requests.
