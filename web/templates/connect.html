@@ -255,8 +255,9 @@ function setLang(lang) {
   if (!T[lang]) return;
   const s = T[lang];
   document.title = s.title;
-  document.getElementById('navLogo').innerHTML        = BRAND[lang];
-  document.getElementById('t-logomark').textContent   = s.logomark;
+  const _isTr = /kolaylistele/.test(location.hostname);
+  document.getElementById('navLogo').innerHTML        = BRAND[_isTr ? 'tr' : 'en'];
+  document.getElementById('t-logomark').textContent   = _isTr ? 'KL' : 'EL';
   document.getElementById('t-headline').innerHTML     = s.headline;
   document.getElementById('t-sub').textContent        = s.sub;
   const platformLabelEl = document.getElementById('t-platform-label');

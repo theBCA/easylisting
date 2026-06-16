@@ -375,10 +375,10 @@ const BRAND = {
 
 function applyLang() {
   const logo = document.getElementById('navLogo');
-  if (logo && BRAND[_lang]) logo.innerHTML = BRAND[_lang];
+  if (logo) logo.innerHTML = BRAND[/kolaylistele/.test(location.hostname) ? 'tr' : 'en'];
   const pageTitle = document.getElementById('pageTitle');
   if (pageTitle) pageTitle.textContent = S.page_title;
-  document.title = S.page_title + (_lang === 'tr' ? ' — kolaylistele' : ' — easylisting');
+  document.title = S.page_title + (/kolaylistele/.test(location.hostname) ? ' — kolaylistele' : ' — easylisting');
   const listingsEl = document.querySelector('a[href="/listings"]');
   const bulkEl     = document.querySelector('a[href="/bulk"]');
   const singleEl   = document.getElementById('navSingle');

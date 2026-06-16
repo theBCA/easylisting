@@ -1127,7 +1127,7 @@ function setLang(lang) {
   document.querySelectorAll('.lang-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.lang === lang));
   const logo = byId('navLogo');
-  if (logo && BRAND[lang]) logo.innerHTML = BRAND[lang];
+  if (logo) logo.innerHTML = BRAND[/kolaylistele/.test(location.hostname) ? 'tr' : 'en'];
   document.title = lang === 'tr' ? 'kolaylistele — Yapay Zeka ile Ürün İlanı' : 'easylisting — AI Listing Generator';
   const langSel = byId('langSelect');
   if (langSel && STRINGS[lang] && [...langSel.options].some(o => o.value === lang)) {

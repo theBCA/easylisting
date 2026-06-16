@@ -432,7 +432,7 @@ function setLang(lang) {
   };
 
   document.title = s.title;
-  if (byId('navLogo')) byId('navLogo').innerHTML = BRAND[lang];
+  if (byId('navLogo')) byId('navLogo').innerHTML = BRAND[/kolaylistele/.test(location.hostname) ? 'tr' : 'en'];
   setText('t-back', s.back);
   setText('t-h1', s.h1);
   setText('t-sub', s.sub);
