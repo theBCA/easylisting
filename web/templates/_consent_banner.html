@@ -31,16 +31,15 @@
     <a href="/privacy" id="cbPrivacyLink">Privacy Policy</a>
   </p>
   <div class="cb-btns">
-    <button class="cb-decline" onclick="handleConsent(false)" id="cbDecline">Decline</button>
-    <button class="cb-accept" onclick="handleConsent(true)" id="cbAccept">Accept cookies</button>
+    <button class="cb-decline" id="cbDecline">Decline</button>
+    <button class="cb-accept" id="cbAccept">Accept cookies</button>
   </div>
 </div>
 
 <script nonce="{{ csp_nonce }}">
 (function () {
   var _key = 'el_cookie_consent';
-  var _stored = localStorage.getItem(_key);
-  if (_stored !== null) return; // already decided — don't show banner
+  if (localStorage.getItem(_key) !== null) return; // already decided
 
   var banner = document.getElementById('cookieBanner');
   if (banner) banner.style.display = 'flex';
@@ -55,21 +54,22 @@
   };
   var c = _copy[_lang] || _copy.en;
   var textEl = document.getElementById('cbText');
-  if (textEl) textEl.innerHTML = c.text + ' <a href="/privacy" id="cbPrivacyLink">' + c.privacy + '</a>';
+  if (textEl) textEl.innerHTML = c.text + ' <a href="/privacy">' + c.privacy + '</a>';
   var accEl = document.getElementById('cbAccept');
   if (accEl) accEl.textContent = c.accept;
   var decEl = document.getElementById('cbDecline');
   if (decEl) decEl.textContent = c.decline;
-})();
 
-function handleConsent(accepted) {
-  localStorage.setItem('el_cookie_consent', accepted ? 'granted' : 'denied');
-  var banner = document.getElementById('cookieBanner');
-  if (banner) banner.style.display = 'none';
-  if (typeof gtag === 'function') {
-    gtag('consent', 'update', {
-      analytics_storage: accepted ? 'granted' : 'denied'
-    });
+  function handleConsent(accepted) {
+    localStorage.setItem(_key, accepted ? 'granted' : 'denied');
+    if (banner) banner.style.display = 'none';
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: accepted ? 'granted' : 'denied' });
+    }
   }
-}
+
+  // Use addEventListener instead of onclick — inline handlers are blocked by CSP nonce policy
+  if (accEl) accEl.addEventListener('click', function() { handleConsent(true); });
+  if (decEl) decEl.addEventListener('click', function() { handleConsent(false); });
+})();
 </script>
