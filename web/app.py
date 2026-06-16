@@ -93,9 +93,11 @@ def setup_request():
 
 @app.context_processor
 def inject_security():
+    from core.domains import _is_try_domain
     return {
         "csp_nonce":  getattr(g, "csp_nonce", ""),
         "csrf_token": generate_csrf,
+        "use_try":    _is_try_domain(),
     }
 
 
