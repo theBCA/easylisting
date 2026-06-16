@@ -3,6 +3,18 @@
 <script nonce="{{ csp_nonce }}">
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
+
+  // Consent Mode v2 — deny by default, grant after user accepts
+  var _consentKey = 'el_cookie_consent';
+  var _consent = localStorage.getItem(_consentKey);
+  gtag('consent', 'default', {
+    analytics_storage:   _consent === 'granted' ? 'granted' : 'denied',
+    ad_storage:          'denied',
+    ad_user_data:        'denied',
+    ad_personalization:  'denied',
+    wait_for_update:     500
+  });
+
   gtag('js', new Date());
   gtag('config', 'G-W32V01W3L2');
 </script>

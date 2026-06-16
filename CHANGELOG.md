@@ -9,6 +9,7 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 ## [Unreleased]
 
 ### Added
+- **GA4 Consent Mode v2 + cookie banner** (`templates/_gtag.html`, `templates/_consent_banner.html`, all public templates): `_gtag.html` now sets `analytics_storage: denied` by default and grants it only if the user previously accepted. A cookie consent banner (EN/DE/TR, matches app style) is included before `</body>` on all 8 public pages, updates consent via `gtag('consent','update',...)` on accept/decline, and stores the choice in `localStorage`. Required for EEA/GDPR compliance with GA4.
 - **Google Analytics (GA4) tag** (`templates/_gtag.html`, all public templates): added `G-W32V01W3L2` gtag.js snippet as a shared partial included immediately after `<head>` in all 11 public-facing templates. Admin dashboard excluded.
 
 ### Fixed
