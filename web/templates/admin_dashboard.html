@@ -51,7 +51,8 @@
   #search { width:340px; max-width:100%; padding:10px 14px; border:1px solid var(--border);
             border-radius:10px; font-size:14px; font-family:inherit; background:#fff; }
   #search:focus { outline:none; border-color:var(--primary); }
-  .table-wrap { border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:var(--shadow); }
+  /* overflow:hidden on any ancestor breaks position:sticky — use clip-path instead for rounded corners */
+  .table-wrap { border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); clip-path: inset(0 round 12px); }
   table { width:100%; border-collapse:collapse; background:var(--card); }
   th,td { text-align:left; padding:11px 14px; font-size:13px; border-bottom:1px solid var(--border); }
   th { background:#FAFAFE; color:var(--muted); font-weight:700; text-transform:uppercase;
