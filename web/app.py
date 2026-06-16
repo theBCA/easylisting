@@ -133,10 +133,10 @@ def set_security_headers(resp):
     nonce = getattr(g, "csp_nonce", "")
     resp.headers["Content-Security-Policy"] = (
         f"default-src 'self'; "
-        f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com https://static.cloudflareinsights.com https://www.googletagmanager.com; "
+        f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        f"img-src 'self' data: blob: *.etsystatic.com *.etsy.com https://www.googletagmanager.com; "
-        f"connect-src 'self' https://api.stripe.com https://cloudflareinsights.com https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com; "
+        f"img-src 'self' data: blob: *.etsystatic.com *.etsy.com https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com; "
+        f"connect-src 'self' https://api.stripe.com https://cloudflareinsights.com https://www.google-analytics.com https://ssl.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://region1.analytics.google.com; "
         f"frame-src https://js.stripe.com https://hooks.stripe.com; "
         f"font-src 'self' https://fonts.gstatic.com; "
         f"form-action 'self'; "
