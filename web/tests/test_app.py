@@ -164,6 +164,24 @@ def test_csp_has_nonce(client):
     assert "nonce-" in csp
 
 
+def test_external_scripts_carry_nonce_under_strict_dynamic(client):
+    # With 'strict-dynamic' in script-src, the browser ignores 'self' and host
+    # allowlists — every parser-inserted <script src=...> must carry the nonce or
+    # it is blocked. A nonce-less Stripe/security.js tag silently breaks the page
+    # (regression: kolaylistele.com froze on the English static default).
+    import re
+
+    for path in ["/", "/privacy", "/terms", "/connect"]:
+        resp = client.get(path)
+        if "text/html" not in (resp.content_type or ""):
+            continue
+        csp = resp.headers.get("Content-Security-Policy", "")
+        assert "strict-dynamic" in csp, f"{path} CSP missing strict-dynamic"
+        html = resp.get_data(as_text=True)
+        for tag in re.findall(r"<script\b[^>]*\bsrc=[^>]*>", html):
+            assert "nonce=" in tag, f"{path} has nonce-less script tag: {tag}"
+
+
 def test_html_responses_have_no_store_cache_control(client):
     for path in ["/", "/privacy", "/terms", "/connect"]:
         resp = client.get(path)
