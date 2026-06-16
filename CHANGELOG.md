@@ -8,6 +8,9 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 
 ## [Unreleased]
 
+### Added
+- **Google Analytics (GA4) tag** (`templates/_gtag.html`, all public templates): added `G-W32V01W3L2` gtag.js snippet as a shared partial included immediately after `<head>` in all 11 public-facing templates. Admin dashboard excluded.
+
 ### Fixed
 - **Admin dashboard sticky table header overlap** (`templates/admin_dashboard.html`): the sticky `th` had no `z-index`, so it created no stacking context and the later-in-DOM `<tbody>` rows painted on top of it while scrolling (visible overlap in "Shops & Plans"). Added `z-index:10` — above the body rows, still below the `.admin-bar` (`z-index:50`).
 - **Untranslated value-prop stats on `/upgrade`** (`templates/upgrade.html`): the three stat labels (`t-stat1/2/3`) and value description (`t-value-desc`) were hardcoded in Turkish and never updated by `setLang()`, so they stayed Turkish under EN/DE. Added `stat1/stat2/stat3/valueDesc` keys to the EN/DE/TR `T` dictionaries, wired them into `setLang()`, and changed the static HTML defaults to English.
