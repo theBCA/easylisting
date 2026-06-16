@@ -51,8 +51,8 @@
   #search { width:340px; max-width:100%; padding:10px 14px; border:1px solid var(--border);
             border-radius:10px; font-size:14px; font-family:inherit; background:#fff; }
   #search:focus { outline:none; border-color:var(--primary); }
-  table { width:100%; border-collapse:collapse; background:var(--card);
-          border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:var(--shadow); }
+  .table-wrap { border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:var(--shadow); }
+  table { width:100%; border-collapse:collapse; background:var(--card); }
   th,td { text-align:left; padding:11px 14px; font-size:13px; border-bottom:1px solid var(--border); }
   th { background:#FAFAFE; color:var(--muted); font-weight:700; text-transform:uppercase;
        font-size:11px; letter-spacing:.4px; position:sticky; top:62px; z-index:10; }
@@ -229,7 +229,7 @@
   </div>
 
   <div class="section-title">Recent Billing Events</div>
-  <table style="margin-bottom:24px;">
+  <div class="table-wrap"><table style="margin-bottom:24px;">
     <thead>
       <tr>
         <th>Time</th><th>Event</th><th>Shop</th><th>Plan</th><th>Surface</th><th>Domain</th>
@@ -249,14 +249,14 @@
       <tr><td colspan="6" class="mono">No billing events yet.</td></tr>
       {% endfor %}
     </tbody>
-  </table>
+  </table></div>
 
   <div class="section-title" id="shops">Shops &amp; Plans</div>
   <div class="toolbar">
     <input id="search" type="text" placeholder="Search by shop name or ID…" autocomplete="off">
   </div>
 
-  <table id="shops-table">
+  <div class="table-wrap"><table id="shops-table">
     <thead>
       <tr>
         <th>Shop</th><th>Type</th><th>Shop ID</th><th>Plan</th>
@@ -290,11 +290,11 @@
       </tr>
       {% endfor %}
     </tbody>
-  </table>
+  </table></div>
 
   <!-- ── Email List ─────────────────────────────────────────────────── -->
   <div class="section-title" id="emails">Email List ({{ emails|length }} subscribers)</div>
-  <table style="margin-bottom:24px;">
+  <div class="table-wrap"><table style="margin-bottom:24px;">
     <thead>
       <tr><th>Email</th><th>Locale</th><th>Signed Up</th></tr>
     </thead>
@@ -309,11 +309,11 @@
       <tr><td colspan="3" class="mono">No subscribers yet.</td></tr>
       {% endfor %}
     </tbody>
-  </table>
+  </table></div>
 
   <!-- ── Feedback Inbox ─────────────────────────────────────────────── -->
   <div class="section-title" id="feedback">Feedback Inbox (last 50)</div>
-  <table style="margin-bottom:24px;">
+  <div class="table-wrap"><table style="margin-bottom:24px;">
     <thead>
       <tr><th>Time</th><th>Shop</th><th>Reply-to</th><th>Page</th><th>Message</th></tr>
     </thead>
@@ -330,7 +330,7 @@
       <tr><td colspan="5" class="mono">No feedback yet.</td></tr>
       {% endfor %}
     </tbody>
-  </table>
+  </table></div>
 
   <div id="toast"></div>
 
