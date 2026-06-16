@@ -258,6 +258,13 @@ def _classify_shop(shop_id: str) -> str:
 def admin_dashboard():
     if not is_admin():
         return "", 404
+    # Date-range toggle: ?days=7|30|90 (default 30); clamp to the allowed set.
+    try:
+        days = int(request.args.get("days", 30))
+    except (TypeError, ValueError):
+        days = 30
+    if days not in (7, 30, 90):
+        days = 30
     import db as _db
     import sqlite3 as _sq
     con = _sq.connect(_db.DB_PATH)
@@ -285,12 +292,13 @@ def admin_dashboard():
         "pro":      sum(1 for s in shops if s.get("plan") == "pro"),
         "starter":  sum(1 for s in shops if s.get("plan") == "starter"),
     }
-    payments  = get_payment_summary(30)
-    ai_costs  = get_ai_cost_summary(30)
+    payments  = get_payment_summary(days)
+    ai_costs  = get_ai_cost_summary(days)
     emails    = get_admin_email_list(200)
     feedback  = get_admin_feedback(50)
     usage     = get_usage_summary()
+    abuse     = get_abuse_summary(days)
     return render_template("admin_dashboard.html",
                            shops=shops, counts=counts, payments=payments,
                            ai_costs=ai_costs, emails=emails,
-                           feedback=feedback, usage=usage)
+                           feedback=feedback, usage=usage, abuse=abuse, days=days)

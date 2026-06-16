@@ -1,0 +1,41 @@
+/* =============================================================
+   EasyListing / kolaylistele — shared base stylesheet
+   Single source of truth for design tokens, font, and reset.
+   Page-specific component CSS still lives inline in each template.
+   ============================================================= */
+
+/* Font: Plus Jakarta Sans — covers Latin, Latin-ext (Turkish ş ğ ı İ),
+   and German ä ö ü ß. Loaded from Google Fonts via <link> in each template. */
+
+:root {
+  /* Brand */
+  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
+
+  /* Surfaces */
+  --bg: #F6F7FB; --card: #FFFFFF; --border: #E5E7F0;
+
+  /* Text */
+  --text: #111827; --muted: #6B7280;
+
+  /* Status — both alias names kept so no template breaks */
+  --green: #059669; --green-bg: #ECFDF5; --green-light: #ECFDF5;
+  --red: #DC2626; --red-light: #FEF2F2;
+  --amber: #D97706; --amber-light: #FFFBEB;
+
+  /* Shape — unified soft shadow (was .08/.09 across files) */
+  --radius: 14px;
+  --shadow: 0 2px 16px rgba(91,71,224,.08);
+
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

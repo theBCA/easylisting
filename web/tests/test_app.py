@@ -1620,7 +1620,8 @@ def test_admin_dashboard_lists_shops_with_bearer(client):
         resp = client.get("/admin/dashboard", headers={"Authorization": "Bearer dash-tok"})
     assert resp.status_code == 200
     assert b"ZSArtBoutique" in resp.data
-    assert b"Users &amp; Plans" in resp.data
+    assert b"Overview" in resp.data
+    assert b"Abuse" in resp.data  # tracing section present
 
 
 def test_admin_auth_cf_access_allows_owner_email(client):

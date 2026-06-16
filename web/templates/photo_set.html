@@ -10,17 +10,10 @@
 <title>AI Photo Studio — EasyListing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 <style>
-:root {
-  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
-  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
-  --text: #111827; --muted: #6B7280; --green: #059669; --green-light: #ECFDF5;
-  --amber: #D97706; --amber-light: #FFFBEB;
-  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.08);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+/* Tokens, reset, and base font now live in static/app.css */
 
 nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
 .nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; text-decoration: none; }
@@ -166,9 +159,9 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 </head>
 <body>
 <nav>
-  <a href="/" class="nav-logo" id="navLogo">Easy<span style="color:var(--text)">Listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">easy<span style="color:var(--text)">listing</span></a>
   <div class="nav-links">
-    <span style="font-size:13px;font-weight:600;color:var(--muted)">🛍 {{ shop_name }}</span>
+    <span style="font-size:13px;font-weight:600;color:var(--muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> {{ shop_name }}</span>
     <a href="/listings">My Listings</a>
     <a href="/bulk">Bulk Listings</a>
     <a href="/">Single Listing</a>
@@ -178,7 +171,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 
 <div class="container">
   <div class="page-header">
-    <h1>📸 AI Photo Studio</h1>
+    <h1><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>AI Photo Studio</h1>
     <p>Upload one product photo — get a professional 7-shot Etsy listing set, one image at a time.</p>
     <div class="credits-row" id="creditsRow">
       <span class="credits-pill" id="creditsPill">📸 <strong id="creditsLeft">…</strong> photo credits left this month</span>
@@ -188,7 +181,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 
   <!-- Upload -->
   <div class="upload-zone" id="dropZone">
-    <div class="icon">🖼</div>
+    <div class="icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
     <h3>Drop your product photo here</h3>
     <p>One photo → 6 professional Etsy shots + collage preview</p>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -375,8 +368,8 @@ const PAGE_STRINGS = {
 const S = PAGE_STRINGS[_lang] || PAGE_STRINGS.en;
 
 const BRAND = {
-  en: 'Easy<span style="color:var(--text)">Listing</span>',
-  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  en: 'easy<span style="color:var(--text)">listing</span>',
+  de: 'easy<span style="color:var(--text)">listing</span>',
   tr: '<span style="color:var(--text)">kolay</span>listele',
 };
 

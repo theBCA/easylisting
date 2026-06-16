@@ -11,16 +11,10 @@
 <title>EasyListing — AI Listing Generator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 <style>
-:root {
-  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
-  --bg: #F6F7FB; --card: #FFFFFF; --border: #E5E7F0;
-  --text: #111827; --muted: #6B7280; --green: #059669; --green-bg: #ECFDF5;
-  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.09);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+/* Tokens, reset, and base font now live in static/app.css */
 
 /* NAV */
 nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 8px; }
@@ -72,10 +66,20 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 .provider-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
 .badge-free { background: #D4EDDA; color: #155724; }
 .badge-paid { background: #FFF3CD; color: #856404; }
-.btn-generate { width: 100%; margin-top: 24px; padding: 16px; background: linear-gradient(135deg, #6B5AED, var(--primary)); color: white; border: none; border-radius: 11px; font-size: 16px; font-weight: 800; cursor: pointer; transition: opacity .15s; letter-spacing: .2px; box-shadow: 0 4px 16px rgba(91,71,224,.35); }
-.btn-generate:hover { opacity: .9; }
-.btn-generate:disabled { background: #D1D5DB; box-shadow: none; cursor: not-allowed; opacity: 1; }
+.btn-generate { width: 100%; margin-top: 24px; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 11px; font-size: 16px; font-weight: 800; cursor: pointer; transition: transform .15s, box-shadow .15s, background .15s; letter-spacing: .2px; box-shadow: 0 1px 2px rgba(91,71,224,.18); }
+.btn-generate:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(91,71,224,.22); }
+.btn-generate:disabled { background: #D1D5DB; box-shadow: none; cursor: not-allowed; transform: none; }
 .template-row { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 13px; }
+/* Recent generations */
+.recent-wrap { margin-top: 32px; border-top: 1px solid var(--border); padding-top: 20px; }
+.recent-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.recent-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.recent-card { background: white; border: 1px solid var(--border); border-radius: 11px; overflow: hidden; cursor: pointer; transition: border-color .15s, transform .15s, box-shadow .15s; text-align: left; padding: 0; font-family: inherit; }
+.recent-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow); }
+.recent-card img { width: 100%; height: 96px; object-fit: cover; display: block; background: var(--bg); }
+.recent-card .rc-body { padding: 8px 10px; }
+.recent-card .rc-title { font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.recent-card .rc-time { font-size: 10px; color: var(--muted); margin-top: 3px; }
 .btn-text { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary); padding: 0; text-decoration: underline; }
 
 /* LOADING */
@@ -85,10 +89,26 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 #loading-screen h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
 #loading-screen p { font-size: 14px; color: var(--muted); }
 .loading-steps { margin-top: 28px; text-align: left; display: inline-block; }
-.step { font-size: 13px; color: var(--muted); padding: 5px 0; display: flex; align-items: center; gap: 10px; }
+.step { font-size: 13px; color: var(--muted); padding: 6px 0; display: flex; align-items: center; gap: 10px; transition: color .2s; }
 .step.done { color: var(--green); }
 .step.done::before { content: "✓"; font-weight: 700; }
-.step:not(.done)::before { content: "○"; }
+.step.active { color: var(--primary); font-weight: 600; }
+.step.active::before { content: ""; width: 13px; height: 13px; border: 2px solid var(--primary-light); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+.step:not(.done):not(.active)::before { content: "○"; }
+/* Uploaded photo on loading screen */
+.loading-photo-wrap { position: relative; width: 180px; height: 180px; margin: 0 auto 24px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.loading-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.loading-photo-scan { position: absolute; left: 0; right: 0; height: 40%; top: -40%;
+  background: linear-gradient(180deg, transparent, rgba(91,71,224,.28), transparent);
+  animation: photoScan 1.8s ease-in-out infinite; }
+@keyframes photoScan { 0% { top: -40%; } 100% { top: 100%; } }
+/* Error screen */
+#error-screen { max-width: 480px; margin: 90px auto; padding: 24px; text-align: center; }
+.error-box { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 36px 28px; box-shadow: var(--shadow); }
+.error-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--red-light); color: var(--red); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
+#error-screen h2 { font-size: 21px; font-weight: 800; margin-bottom: 8px; }
+.error-detail { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+.error-actions { display: flex; flex-direction: column; gap: 10px; }
 
 /* REVIEW */
 #review-screen { max-width: 1060px; margin: 0 auto; padding: 32px 24px 80px; }
@@ -139,9 +159,9 @@ textarea.field-input { resize: vertical; min-height: 120px; line-height: 1.6; }
 .instagram-preview { background: #fafafa; border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 60px; }
 .copy-btn { margin-top: 8px; padding: 7px 14px; background: none; border: 1.5px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); }
 .copy-btn:hover { border-color: var(--primary); color: var(--primary); }
-.btn-publish { width: 100%; padding: 16px; background: linear-gradient(135deg, #6B5AED, var(--primary)); color: white; border: none; border-radius: 11px; font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 8px; transition: opacity .15s; letter-spacing: .2px; box-shadow: 0 4px 16px rgba(91,71,224,.35); }
-.btn-publish:hover { opacity: .9; }
-.btn-publish:disabled { background: #D1D5DB; box-shadow: none; cursor: not-allowed; opacity: 1; }
+.btn-publish { width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 11px; font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 8px; transition: transform .15s, box-shadow .15s, background .15s; letter-spacing: .2px; box-shadow: 0 1px 2px rgba(91,71,224,.18); }
+.btn-publish:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(91,71,224,.22); }
+.btn-publish:disabled { background: #D1D5DB; box-shadow: none; cursor: not-allowed; transform: none; }
 .btn-save-template { width: 100%; padding: 12px; background: none; border: 2px solid var(--border); border-radius: 11px; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--muted); margin-top: 6px; }
 .btn-save-template:hover { border-color: var(--primary); color: var(--primary); }
 .manual-hint-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 5px 0; border-bottom: 1px solid #F0F0F0; }
@@ -244,9 +264,11 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
   /* Nav */
   nav { padding: 0 14px; height: auto; min-height: 54px; flex-wrap: wrap; gap: 6px; padding-top: 8px; padding-bottom: 8px; }
   .nav-logo { font-size: 15px; }
-  .nav-links { gap: 4px; width: 100%; flex-wrap: wrap; }
-  .nav-links a[href="/bulk"] { display: none; }
-  .nav-links a[href="/photo-set"] { display: none; }
+  .nav-links { gap: 6px; width: 100%; flex-wrap: wrap; }
+  /* Bulk + AI Photo Studio stay reachable on mobile (paid features) — shown as compact pills */
+  .nav-links a[href="/bulk"], .nav-links a[href="/photo-set"], .nav-links a[href="/listings"] {
+    background: var(--primary-light); color: var(--primary); padding: 5px 10px; border-radius: 7px; font-size: 12px;
+  }
   .nav-sep { display: none; }
   .btn-icon { font-size: 12px; padding: 4px 8px; background: var(--primary-light); color: var(--primary); border-radius: 6px; }
   .lang-switcher { display: none; }
@@ -291,7 +313,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
 <body>
 
 <nav>
-  <div class="nav-logo" id="navLogo">Easy<span>Listing</span></div>
+  <div class="nav-logo" id="navLogo">easy<span>listing</span></div>
   <div class="nav-links">
     <a href="/listings" data-i18n="nav_listings">My Listings</a>
     {% if has_premium %}
@@ -320,7 +342,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
       <button class="lang-btn" data-lang="tr">TR</button>
     </div>
     <span class="nav-sep">|</span>
-    <span style="font-size:13px;font-weight:600;color:var(--muted)">🛍 {{ shop_name }}</span>
+    <span style="font-size:13px;font-weight:600;color:var(--muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> {{ shop_name }}</span>
     <a href="/disconnect" style="font-size:13px;color:var(--muted);" data-i18n="nav_disconnect">Disconnect</a>
   </div>
 </nav>
@@ -466,16 +488,16 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
       <div class="platform-row-label" data-i18n="label_platform">Sell on</div>
       <div class="platform-grid" id="platformGrid">
         <div class="platform-card active" data-platform="etsy">
-          <span class="platform-icon">🛍️</span>
+          <span class="platform-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>
           <span class="platform-name">Etsy</span>
         </div>
         <div class="platform-card coming-soon" data-platform="shopify">
-          <span class="platform-icon">🛒</span>
+          <span class="platform-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
           <span class="platform-name">Shopify</span>
           <span style="font-size:9px;color:#9CA3AF;">Soon</span>
         </div>
         <div class="platform-card coming-soon" data-platform="amazon">
-          <span class="platform-icon">📦</span>
+          <span class="platform-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
           <span class="platform-name">Amazon</span>
           <span style="font-size:9px;color:#9CA3AF;">Soon</span>
         </div>
@@ -485,7 +507,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
           <span id="trendyolBadge" style="font-size:9px;display:none;color:#10B981;">Bağlı</span>
         </div>
         <div class="platform-card coming-soon" data-platform="woocommerce">
-          <span class="platform-icon">🌐</span>
+          <span class="platform-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
           <span class="platform-name">WooCommerce</span>
           <span style="font-size:9px;color:#9CA3AF;">Soon</span>
         </div>
@@ -525,12 +547,25 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     <button class="btn-generate" id="generateBtn" disabled data-i18n="btn_generate">
       Generate Listing with AI →
     </button>
+
+    <!-- Recent generations (localStorage, client-side) -->
+    <div class="recent-wrap" id="recentWrap" style="display:none">
+      <div class="recent-head">
+        <span data-i18n="recent_title">Recent generations</span>
+        <button class="btn-text" id="recentClearBtn" data-i18n="recent_clear">Clear</button>
+      </div>
+      <div class="recent-list" id="recentList"></div>
+    </div>
   </div>
 </div>
 
 <!-- ── LOADING SCREEN ── -->
 <div id="loading-screen" class="screen">
-  <div class="spinner"></div>
+  <div class="loading-photo-wrap" id="loadingPhotoWrap" style="display:none;">
+    <img id="loadingPhoto" alt="" class="loading-photo">
+    <div class="loading-photo-scan"></div>
+  </div>
+  <div class="spinner" id="loadingSpinner"></div>
   <h2 data-i18n="loading_title">Analyzing your product…</h2>
   <p data-i18n="loading_sub">AI is writing your title, description, tags, and more.</p>
   <div class="loading-steps" id="loadingSteps">
@@ -538,6 +573,21 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
     <div class="step" id="step2" data-i18n="step2">Writing title &amp; description</div>
     <div class="step" id="step3" data-i18n="step3">Generating tags &amp; materials</div>
     <div class="step" id="step4" data-i18n="step4">Matching category</div>
+  </div>
+</div>
+
+<!-- ── ERROR SCREEN ── -->
+<div id="error-screen" class="screen">
+  <div class="error-box">
+    <div class="error-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <h2 data-i18n="error_title">Generation failed</h2>
+    <p id="errorDetail" class="error-detail" data-i18n="error_body">Something went wrong while generating your listing. Your photo is still loaded — give it another try.</p>
+    <div class="error-actions">
+      <button class="btn-generate" id="errorRetryBtn" style="margin-top:0;" data-i18n="error_retry">Try again</button>
+      <button class="btn-save-template" id="errorBackBtn" data-i18n="error_back">Back to upload</button>
+    </div>
   </div>
 </div>
 
@@ -752,7 +802,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
           <div style="font-size:12px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">⚠️ Etsy'de manuel eklenecekler</div>
           <div style="display:flex;flex-direction:column;gap:7px;">
             <div class="manual-hint-row" id="hint-colors" style="display:none;">
-              <span style="font-size:13px;color:#374151;">🎨 <strong>Renkler / Varyasyonlar:</strong> <span id="hint-colors-val" style="color:#5B47E0;font-weight:600;"></span></span>
+              <span style="font-size:13px;color:#374151;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"/></svg> <strong>Renkler / Varyasyonlar:</strong> <span id="hint-colors-val" style="color:#5B47E0;font-weight:600;"></span></span>
               <span style="font-size:11px;color:#9CA3AF;margin-left:6px;">→ Etsy &gt; Ürün Seçenekleri</span>
             </div>
             <div class="manual-hint-row">
@@ -764,7 +814,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
               <span style="font-size:11px;color:#9CA3AF;margin-left:6px;">→ Etsy &gt; Ürün Seçenekleri</span>
             </div>
             <div class="manual-hint-row">
-              <span style="font-size:13px;color:#374151;">🏷️ <strong>Birincil renk özelliği</strong></span>
+              <span style="font-size:13px;color:#374151;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> <strong>Birincil renk özelliği</strong></span>
               <span style="font-size:11px;color:#9CA3AF;margin-left:6px;">→ Etsy &gt; Nitelikler</span>
             </div>
             <div class="manual-hint-row">
@@ -797,7 +847,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
       <div class="image-panel">
         <img id="plt-mainImg" class="main-img" src="" alt="">
         <div class="img-strip" id="plt-imgStrip"></div>
-        <button class="btn-export-all" id="exportAllBtn" style="margin-top:14px;">⬇ Export All as Text</button>
+        <button class="btn-export-all" id="exportAllBtn" style="margin-top:14px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export All as Text</button>
       </div>
       <div class="fields-panel" id="plt-fields-panel">
         <!-- dynamically populated by populatePlatformReview() -->
@@ -828,6 +878,8 @@ const STRINGS = {
     nav_listings:"My Listings", nav_bulk:"Bulk Listings", nav_photo_set:"AI Photo Studio", nav_upgrade:"Upgrade",
     nav_disconnect:"Disconnect", nav_free_left:"free left",
     label_platform:"Sell on",
+    recent_title:"Recent generations", recent_clear:"Clear", recent_restored:"Restored",
+    error_title:"Generation failed", error_body:"Something went wrong while generating your listing. Your photo is still loaded — give it another try.", error_retry:"Try again", error_back:"Back to upload",
     hero_label:"AI-powered listing tool",
     hero_title:"Upload a photo.<br>AI writes your listing.",
     hero_sub:"Drop your product photo, add a short hint, and get a fully optimized title, description, tags, and more — ready to publish in seconds.",
@@ -896,6 +948,8 @@ const STRINGS = {
     nav_listings:"Meine Listings", nav_bulk:"Massen-Listings", nav_photo_set:"KI-Fotostudio", nav_upgrade:"Upgrade",
     nav_disconnect:"Trennen", nav_free_left:"kostenlose übrig",
     label_platform:"Verkaufen auf",
+    recent_title:"Letzte Generierungen", recent_clear:"Löschen", recent_restored:"Wiederhergestellt",
+    error_title:"Generierung fehlgeschlagen", error_body:"Bei der Generierung ist etwas schiefgelaufen. Dein Foto ist noch geladen — versuch es einfach noch einmal.", error_retry:"Erneut versuchen", error_back:"Zurück zum Upload",
     hero_label:"KI-gestütztes Listing-Tool",
     hero_title:"Foto hochladen.<br>KI schreibt dein Listing.",
     hero_sub:"Produktfoto hochladen, kurzen Hinweis hinzufügen und ein vollständig optimiertes Listing erhalten — in Sekunden fertig.",
@@ -962,17 +1016,19 @@ const STRINGS = {
     nav_listings:"Listelerim", nav_bulk:"Toplu İlanlar", nav_photo_set:"Yapay Zeka Foto Stüdyosu", nav_upgrade:"Yükselt",
     nav_disconnect:"Bağlantıyı Kes", nav_free_left:"ücretsiz kaldı",
     label_platform:"Platform seç",
-    hero_label:"YZ destekli ilan aracı",
-    hero_title:"Bir fotoğraf yükle.<br>YZ ilanını yazar.",
+    recent_title:"Son oluşturulanlar", recent_clear:"Temizle", recent_restored:"Geri yüklendi",
+    error_title:"Oluşturma başarısız", error_body:"İlanınız oluşturulurken bir sorun oluştu. Fotoğrafınız hâlâ yüklü — tekrar deneyin.", error_retry:"Tekrar dene", error_back:"Yüklemeye dön",
+    hero_label:"yapay zeka destekli ilan aracı",
+    hero_title:"Bir fotoğraf yükle.<br>Yapay zeka ilanını yazar.",
     hero_sub:"Ürün fotoğrafınızı bırakın, kısa bir ipucu ekleyin; saniyeler içinde tam optimize başlık, açıklama, etiket ve daha fazlasını alın.",
     drop_title:"Ürün fotoğraflarını buraya bırakın", drop_sub:"JPG, PNG, WebP — en fazla 5 fotoğraf", drop_browse:"Dosya seç",
     label_hint:"Ürün ipucu", hint_placeholder:"örn. bebek hırkası, el örgüsü, mavi",
     template_hint:"Varsayılan şablonunuz hazır", template_load:"Şablonu uygula", template_applied:"Şablon uygulandı ✓",
-    btn_generate:"YZ ile Liste Oluştur →",
-    loading_title:"Ürününüz analiz ediliyor…", loading_sub:"YZ başlık, açıklama, etiket ve daha fazlasını yazıyor.",
+    btn_generate:"Yapay Zeka ile Liste Oluştur →",
+    loading_title:"Ürününüz analiz ediliyor…", loading_sub:"Yapay zeka başlık, açıklama, etiket ve daha fazlasını yazıyor.",
     step1:"Ürün görseli analiz ediliyor", step2:"Başlık & açıklama yazılıyor", step3:"Etiket & malzeme üretiliyor", step4:"Kategori eşleştiriliyor",
     review_title:"İncele ve Yayınla", btn_back:"← Başa dön",
-    ai_badge:"YZ tarafından oluşturuldu — yayınlamadan önce inceleyin",
+    ai_badge:"Yapay zeka tarafından oluşturuldu — yayınlamadan önce inceleyin",
     label_title:"Başlık", label_desc:"Açıklama", label_tags:"Etiketler",
     tag_placeholder:"Etiket ekle, Enter'a bas", material_placeholder:"Malzeme ekle, Enter'a bas",
     label_materials:"Malzemeler", label_variations:"Varyasyonlar",
@@ -995,10 +1051,10 @@ const STRINGS = {
     magic_sent_sub:"Bağlantı gönderildi. Linke tıklayınca bu sayfaya dönersiniz.",
     magic_consent_label:"Listelemi iyileştirme ipuçları ve ara sıra ürün güncellemeleri almak istiyorum. İstediğiniz zaman abonelikten çıkabilirsiniz.",
     magic_resend:"Farklı e-posta dene", magic_verified:"E-posta doğrulandı ✓",
-    tools_improve_title:"YZ iyileştirme araçları",
+    tools_improve_title:"Yapay zeka iyileştirme araçları",
     tools_title_seo:"Başlığı daha aranabilir yap", tools_desc_warm:"Açıklamayı daha samimi yap",
     tools_better_tags:"Daha iyi etiketler üret", tools_shorten_etsy:"Etsy için kısalt",
-    tools_improve_note:"Ücretsiz kullanıcılar 1 YZ iyileştirmesi veya çeviri hakkı alır. Daha fazla YZ düzenlemesi için ücretli plan gereklidir.",
+    tools_improve_note:"Ücretsiz kullanıcılar 1 yapay zeka iyileştirmesi veya çeviri hakkı alır. Daha fazla yapay zeka düzenlemesi için ücretli plan gereklidir.",
     tools_variants_title:"İlan varyantları", tools_variants_btn:"3 ücretli varyant oluştur",
     tools_photos_title:"Pro fotoğraf varyantları", tools_photos_btn:"Beyaz, yaşam tarzı, mevsimsel fotoğraflar oluştur",
     tools_photos_note:"Yalnızca Pro. Aylık kotası olan ücretli görüntü API'si kullanır.",
@@ -1012,7 +1068,7 @@ const STRINGS = {
     tools_materials_placeholder:"yumuşak pamuklu iplik, el örgüsü detayı",
     tools_shipping_placeholder:"Takip numarasıyla özenle paketlenerek kargoya verilir.",
     tools_cta_placeholder:"Özel renk veya beden için sipariş vermeden önce mesaj atın.",
-    tools_brand_note:"Bu varsayılanlar şablonunuzla kaydedilir ve gelecekteki YZ istemlerine dahil edilir.",
+    tools_brand_note:"Bu varsayılanlar şablonunuzla kaydedilir ve gelecekteki yapay zeka istemlerine dahil edilir.",
     sc_title_len:'Başlık 70–140 karakter', sc_desc_len:'Açıklama ≥800 karakter',
     sc_tags_count:'13 etiketin tamamı kullanıldı', sc_tags_safe:'Etiketler max. 20 karakter',
     sc_tags_multi:'Etiketler çok kelimeli ifadeler', sc_materials:'Malzeme girildi (≥2)',
@@ -1047,8 +1103,8 @@ function setValue(id, value) {
 }
 
 const BRAND = {
-  en: 'Easy<span style="color:var(--text)">Listing</span>',
-  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  en: 'easy<span style="color:var(--text)">listing</span>',
+  de: 'easy<span style="color:var(--text)">listing</span>',
   tr: '<span style="color:var(--text)">kolay</span>listele',
 };
 
@@ -1080,6 +1136,12 @@ function setLang(lang) {
 }
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
+  renderRecent();
+  const recentClear = byId('recentClearBtn');
+  if (recentClear) recentClear.addEventListener('click', clearRecent);
+  const errRetry = byId('errorRetryBtn'), errBack = byId('errorBackBtn');
+  if (errRetry) errRetry.addEventListener('click', () => { if (selectedFiles.length) startGenerate(); else showScreen('upload-screen'); });
+  if (errBack)  errBack.addEventListener('click', () => showScreen('upload-screen'));
   if (IS_GUEST) _fpReady = _sendFingerprint();
   // Pick up regenerate prefill from My Listings page
   const raw = sessionStorage.getItem('sd_regenerate');
@@ -1624,10 +1686,16 @@ async function startGenerate() {
     const res  = await fetch('/api/generate', { method:'POST', body:fd });
     const data = await res.json();
     if (data.error === 'free_limit_reached') {
+      _stepTimers.forEach(clearTimeout); _stepTimers = [];
       showScreen('upload-screen'); openModal('paywallModal'); return;
     }
-    if (data.error) { showToast(data.error, 'error'); showScreen('upload-screen'); return; }
+    if (data.error) {
+      _stepTimers.forEach(clearTimeout); _stepTimers = [];
+      showError(data.error); return;
+    }
+    finishSteps();
     aiData = data;
+    saveToHistory(data, selectedPlatform);
     if (selectedPlatform === 'etsy') {
       populateReview(data);
       if (window._savedTemplate) applyTemplate(window._savedTemplate);
@@ -1640,9 +1708,16 @@ async function startGenerate() {
     if (trBtn) trBtn.style.display = _trConnected ? 'block' : 'none';
     refreshUsageBadge();
   } catch(e) {
-    showToast('Generation failed: ' + e.message, 'error');
-    showScreen('upload-screen');
+    _stepTimers.forEach(clearTimeout); _stepTimers = [];
+    showError(e.message);
   }
+}
+
+// Inline error state with retry (replaces the silent toast + bounce-to-upload)
+function showError(detail) {
+  const d = byId('errorDetail');
+  if (d) d.textContent = detail || (tI18n('error_body') || 'Something went wrong — give it another try.');
+  showScreen('error-screen');
 }
 
 function applyTemplate(t) {
@@ -1660,10 +1735,131 @@ function applyTemplate(t) {
   setValue('style-cta', t.brand_cta || '');
 }
 
-function animateSteps() {
-  ['step1','step2','step3','step4'].forEach((id,i) =>
-    setTimeout(() => document.getElementById(id).classList.add('done'), (i+1)*900));
+// Honest progress: advance steps on a realistic cadence, but never mark the
+// final step done until the real response arrives (driven by finishSteps()).
+let _stepTimers = [];
+const _STEP_IDS = ['step1','step2','step3','step4'];
+
+function showLoadingPhoto() {
+  const wrap = byId('loadingPhotoWrap'), img = byId('loadingPhoto'), spin = byId('loadingSpinner');
+  if (!wrap || !img || !selectedFiles.length) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    img.src = e.target.result;
+    wrap.style.display = 'block';
+    if (spin) spin.style.display = 'none';   // photo with scan replaces the bare spinner
+  };
+  reader.readAsDataURL(selectedFiles[0]);
 }
+
+function animateSteps() {
+  // reset
+  _stepTimers.forEach(clearTimeout); _stepTimers = [];
+  _STEP_IDS.forEach(id => { const el = byId(id); if (el) el.classList.remove('done','active'); });
+  showLoadingPhoto();
+
+  // step 1 starts immediately; each subsequent step "completes" the prior and
+  // becomes active. We pace through the first 3; the last stays active until
+  // finishSteps() fires, so it can't lie about being done.
+  const setActive = i => {
+    const el = byId(_STEP_IDS[i]); if (el) el.classList.add('active');
+  };
+  const complete = i => {
+    const el = byId(_STEP_IDS[i]); if (el) { el.classList.remove('active'); el.classList.add('done'); }
+  };
+  setActive(0);
+  _stepTimers.push(setTimeout(() => { complete(0); setActive(1); }, 1400));
+  _stepTimers.push(setTimeout(() => { complete(1); setActive(2); }, 3200));
+  _stepTimers.push(setTimeout(() => { complete(2); setActive(3); }, 5200));
+  // step4 (active) waits for finishSteps()
+}
+
+function finishSteps() {
+  _stepTimers.forEach(clearTimeout); _stepTimers = [];
+  _STEP_IDS.forEach(id => { const el = byId(id); if (el) { el.classList.remove('active'); el.classList.add('done'); } });
+}
+
+// ── Recent generations (client-side history in localStorage) ────────────────
+const _HIST_KEY = 'el_recent_generations';
+const _HIST_MAX = 6;
+
+function _loadHistory() {
+  try { return JSON.parse(localStorage.getItem(_HIST_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function saveToHistory(data, platform) {
+  try {
+    const hist = _loadHistory();
+    const previews = data.image_previews || [];
+    hist.unshift({
+      ts: Date.now(),
+      platform: platform || 'etsy',
+      title: (data.title || data.product_title || '').slice(0, 120),
+      thumb: previews[0] || '',     // primary preview only, to bound storage
+      data: data,                   // full payload so populateReview can restore it
+    });
+    // Keep newest _HIST_MAX; trim oldest if quota is hit.
+    let trimmed = hist.slice(0, _HIST_MAX);
+    while (trimmed.length) {
+      try { localStorage.setItem(_HIST_KEY, JSON.stringify(trimmed)); break; }
+      catch (e) { trimmed = trimmed.slice(0, trimmed.length - 1); }  // QuotaExceeded → drop oldest
+    }
+    renderRecent();
+  } catch (e) { /* history is best-effort; never block generation */ }
+}
+
+function renderRecent() {
+  const wrap = byId('recentWrap'), list = byId('recentList');
+  if (!wrap || !list) return;
+  const hist = _loadHistory();
+  if (!hist.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = '';
+  hist.forEach((h, i) => {
+    const card = document.createElement('button');
+    card.className = 'recent-card';
+    card.type = 'button';
+    const when = _relTime(h.ts);
+    card.innerHTML =
+      (h.thumb ? `<img src="${h.thumb}" alt="">` : `<img alt="">`) +
+      `<div class="rc-body"><div class="rc-title">${_esc(h.title) || '—'}</div>` +
+      `<div class="rc-time">${when}</div></div>`;
+    card.addEventListener('click', () => restoreGeneration(i));
+    list.appendChild(card);
+  });
+}
+
+function restoreGeneration(i) {
+  const hist = _loadHistory();
+  const h = hist[i];
+  if (!h || !h.data) return;
+  aiData = h.data;
+  if ((h.platform || 'etsy') === 'etsy') {
+    populateReview(h.data);
+    if (window._savedTemplate) applyTemplate(window._savedTemplate);
+    showScreen('review-screen');
+  } else {
+    populatePlatformReview(h.data, h.platform);
+  }
+  showToast(tI18n('recent_restored') || 'Restored', 'success');
+}
+
+function clearRecent() {
+  try { localStorage.removeItem(_HIST_KEY); } catch (e) {}
+  renderRecent();
+}
+
+function _esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function _relTime(ts) {
+  const diff = Math.max(0, Date.now() - (ts || 0)), m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const hr = Math.floor(m / 60); if (hr < 24) return hr + 'h ago';
+  return Math.floor(hr / 24) + 'd ago';
+}
+// Small i18n accessor that tolerates missing keys
+function tI18n(key) { try { return STRINGS[currentLang]?.[key] || STRINGS.en?.[key]; } catch (e) { return null; } }
 
 // ── Populate review ────────────────────────────────────────────────────────
 function populateReview(data) {

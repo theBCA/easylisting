@@ -11,16 +11,10 @@
 <title>Upgrade — EasyListing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 <style>
-:root {
-  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
-  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
-  --text: #111827; --muted: #6B7280; --green: #059669;
-  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.09);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+/* Tokens, reset, and base font now live in static/app.css */
 
 nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
 .nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; text-decoration: none; }
@@ -62,10 +56,10 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 .btn-plan { display: block; width: 100%; padding: 12px 0; border-radius: 10px; font-size: 14px; font-weight: 700; text-align: center; cursor: pointer; border: none; transition: all .15s; font-family: inherit; text-decoration: none; }
 .btn-plan.ghost    { background: white; border: 2px solid var(--border); color: var(--muted); cursor: default; }
 .btn-plan.active-plan { background: var(--primary-light); border: 2px solid var(--primary); color: var(--primary); cursor: default; }
-.btn-plan.cta      { background: linear-gradient(135deg,#6B5AED,var(--primary)); color: white; box-shadow: 0 4px 14px rgba(91,71,224,.3); }
-.btn-plan.cta:hover { opacity: .9; }
-.btn-plan.cta-green { background: linear-gradient(135deg, #16a34a, var(--green)); color: white; box-shadow: 0 4px 14px rgba(5,150,105,.3); }
-.btn-plan.cta-green:hover { opacity: .9; }
+.btn-plan.cta      { background: var(--primary); color: white; box-shadow: 0 1px 2px rgba(91,71,224,.18); transition: transform .15s, box-shadow .15s, background .15s; }
+.btn-plan.cta:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(91,71,224,.22); }
+.btn-plan.cta-green { background: var(--green); color: white; box-shadow: 0 1px 2px rgba(5,150,105,.18); transition: transform .15s, box-shadow .15s, background .15s; }
+.btn-plan.cta-green:hover { background: #047857; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(5,150,105,.22); }
 .btn-plan:disabled { opacity: .5; cursor: not-allowed; }
 
 /* Banners */
@@ -105,7 +99,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 <body>
 
 <nav>
-  <a href="/" class="nav-logo" id="navLogo">Easy<span>Listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">easy<span>listing</span></a>
   <div class="nav-right">
     <div class="lang-switcher">
       <button class="lang-btn" data-lang="en">EN</button>
@@ -148,19 +142,19 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
     <div style="display:flex;gap:28px;flex-wrap:wrap;">
       <div style="text-align:center;">
         <div style="font-size:28px;font-weight:900;color:var(--primary);">30<span style="font-size:16px;">dk</span></div>
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat1">manuel ilan süresi</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat1">manual listing time</div>
       </div>
       <div style="text-align:center;">
         <div style="font-size:28px;font-weight:900;color:var(--primary);">{% if use_try %}₺260{% else %}€5{% endif %}</div>
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat2">kazanılan zaman değeri</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat2">value of time saved</div>
       </div>
       <div style="text-align:center;">
         <div style="font-size:28px;font-weight:900;color:var(--green);">2</div>
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat3">ilan = Pro kendini karşılar</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;" id="t-stat3">listings = Pro pays for itself</div>
       </div>
     </div>
     <div style="font-size:13px;color:var(--muted);max-width:260px;line-height:1.6;" id="t-value-desc">
-      Etsy satıcıları ilan başına ortalama 30 dakika harcar. Pro planla bu süreyi 30 saniyeye indirin.
+      Etsy sellers spend an average of 30 minutes per listing. With Pro, cut that down to 30 seconds.
     </div>
   </div>
 
@@ -290,8 +284,8 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 {% endif %}
 <script nonce="{{ csp_nonce }}">
 const BRAND = {
-  en: 'Easy<span style="color:var(--text)">Listing</span>',
-  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  en: 'easy<span style="color:var(--text)">listing</span>',
+  de: 'easy<span style="color:var(--text)">listing</span>',
   tr: '<span style="color:var(--text)">kolay</span>listele',
 };
 
@@ -302,6 +296,8 @@ const T = {
     sub:'Start free, upgrade when you need more AI generations for your shop.',
     monthly:'Monthly', annual:'Annually', saveBadge:'2 months free',
     annualOr:'or', annualYearSuffix:'/year', annualFreeLabel:'— 2 months free',
+    stat1:'manual listing time', stat2:'value of time saved', stat3:'listings = Pro pays for itself',
+    valueDesc:'Etsy sellers spend an average of 30 minutes per listing. With Pro, cut that down to 30 seconds.',
     pillFree:'free generations left', pillStart:'Starter — 100 generations / month', pillPro:'Pro — unlimited generations',
     freeName:'Free', freePeriod:'forever',
     f1:'3 AI-generated listings', f2:'Advanced AI models', f3:'Multi-image upload',
@@ -341,6 +337,8 @@ const T = {
     sub:'Starte kostenlos, upgrade wenn du mehr KI-Generierungen benötigst.',
     monthly:'Monatlich', annual:'Jährlich', saveBadge:'2 Monate gratis',
     annualOr:'oder', annualYearSuffix:'/Jahr', annualFreeLabel:'— 2 Monate gratis',
+    stat1:'manuelle Listing-Zeit', stat2:'Wert der gesparten Zeit', stat3:'Listings = Pro zahlt sich aus',
+    valueDesc:'Etsy-Verkäufer verbringen durchschnittlich 30 Minuten pro Listing. Mit Pro reduzierst du das auf 30 Sekunden.',
     pillFree:'kostenlose Generierungen übrig', pillStart:'Starter — 100 Generierungen / Monat', pillPro:'Pro — unbegrenzte Generierungen',
     freeName:'Kostenlos', freePeriod:'für immer',
     f1:'3 KI-generierte Listings', f2:'Fortschrittliche KI-Modelle', f3:'Mehrere Bilder hochladen',
@@ -377,24 +375,26 @@ const T = {
   tr: {
     title:'Yükselt — kolaylistele', back:'← Geri',
     h1:'Sade, Şeffaf Fiyatlandırma',
-    sub:'Ücretsiz başla, mağazana daha fazla YZ üretimi gerektiğinde yükselt.',
+    sub:'Ücretsiz başla, mağazana daha fazla yapay zeka üretimi gerektiğinde yükselt.',
     monthly:'Aylık', annual:'Yıllık', saveBadge:'2 ay bedava',
     annualOr:'veya', annualYearSuffix:'/yıl', annualFreeLabel:'— 2 ay bedava',
+    stat1:'manuel ilan süresi', stat2:'kazanılan zaman değeri', stat3:'ilan = Pro kendini karşılar',
+    valueDesc:'Etsy satıcıları ilan başına ortalama 30 dakika harcar. Pro planla bu süreyi 30 saniyeye indirin.',
     pillFree:'ücretsiz ilan hakkı kaldı', pillStart:'Starter — ayda 100 üretim', pillPro:'Pro — sınırsız üretim',
     freeName:'Ücretsiz', freePeriod:'sonsuza dek',
-    f1:'3 YZ destekli ilan', f2:'Gelişmiş YZ modelleri', f3:'Çoklu görsel yükleme',
+    f1:'3 yapay zeka destekli ilan', f2:'Gelişmiş yapay zeka modelleri', f3:'Çoklu görsel yükleme',
     f4:'EN / DE / TR çevirileri', f5:'Instagram açıklama üreticisi',
     f6:'Yapay Zeka Foto Stüdyosu', f7:'Toplu İlanlar', f8:'Şablon kaydetme',
     freeBtnCurrent:'Mevcut plan', freeBtnDefault:'Ücretsiz plan',
     startBadge:'⭐ En İyi Değer', startName:'Starter', startPeriod:'aylık · istediğin zaman iptal',
     s1:'Ayda <strong>100 ilan</strong>', s2:'📸 Ayda <strong>1 foto seti</strong>',
-    s3:'Toplu İlanlar (tek seferde 10\'a kadar)', s4:'YZ destekli ilan oluşturucu',
+    s3:'Toplu İlanlar (tek seferde 10\'a kadar)', s4:'yapay zeka destekli ilan oluşturucu',
     s5:'Varsayılan şablonları kaydet', s6:'Çoklu görsel yükleme',
     s7:'EN / DE / TR çevirileri', s8:'Instagram açıklama üreticisi',
     startBtnCurrent:'✓ Mevcut plan', startBtnCta:'Starter\'a geç →',
     proBadge:'🚀 Sınırsız', proName:'Pro', proPeriod:'aylık · istediğin zaman iptal',
-    p1:'<strong>Sınırsız</strong> YZ destekli ilan', p2:'📸 Ayda <strong>5 foto seti</strong>',
-    p3:'Toplu İlanlar (tek seferde 20\'ye kadar)', p4:'Premium YZ modelleri',
+    p1:'<strong>Sınırsız</strong> yapay zeka destekli ilan', p2:'📸 Ayda <strong>5 foto seti</strong>',
+    p3:'Toplu İlanlar (tek seferde 20\'ye kadar)', p4:'Premium yapay zeka modelleri',
     p5:'Varsayılan şablonları kaydet', p6:'Çoklu görsel yükleme',
     p7:'EN / DE / TR çevirileri', p8:'Öncelikli destek',
     proBtnCurrent:'✓ Mevcut plan', proBtnCta:'Pro\'ya geç →',
@@ -437,6 +437,11 @@ function setLang(lang) {
   setText('t-h1', s.h1);
   setText('t-sub', s.sub);
   setText('t-pill', s['pill' + (currentPlan === 'pro' ? 'Pro' : currentPlan === 'starter' ? 'Start' : 'Free')]);
+  // Value-prop stat labels
+  setText('t-stat1', s.stat1);
+  setText('t-stat2', s.stat2);
+  setText('t-stat3', s.stat3);
+  setText('t-value-desc', s.valueDesc);
   // Free plan
   setText('t-free-name', s.freeName);
   setText('t-free-period', s.freePeriod);

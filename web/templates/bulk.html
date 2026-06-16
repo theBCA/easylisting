@@ -11,17 +11,10 @@
 <title>Bulk Listings — EasyListing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 <style>
-:root {
-  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
-  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
-  --text: #111827; --muted: #6B7280; --green: #059669; --green-light: #ECFDF5;
-  --red: #DC2626; --red-light: #FEF2F2;
-  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.08);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+/* Tokens, reset, and base font now live in static/app.css */
 
 /* Nav */
 nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
@@ -162,9 +155,9 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 </head>
 <body>
 <nav>
-  <a href="/" class="nav-logo" id="navLogo">Easy<span>Listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">easy<span>listing</span></a>
   <div class="nav-links">
-    <span style="font-size:13px;font-weight:600;color:var(--muted);">🛍 {{ shop_name }}</span>
+    <span style="font-size:13px;font-weight:600;color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> {{ shop_name }}</span>
     <a href="/listings" style="font-size:13px;" data-i18n="nav_listings">My Listings</a>
     <div class="lang-switcher">
       <button class="lang-btn" data-lang="en">EN</button>
@@ -181,7 +174,7 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 
   <!-- Drop zone -->
   <div class="upload-zone" id="dropZone">
-    <div class="icon">📦</div>
+    <div class="icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
     <h3 data-i18n="drop_title">Drop product photos here</h3>
     <p data-i18n="drop_sub">Up to {n} photos — one listing generated per photo</p>
     <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
@@ -286,8 +279,8 @@ const STRINGS = {
   }
 };
 const BRAND = {
-  en: 'Easy<span style="color:var(--text)">Listing</span>',
-  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  en: 'easy<span style="color:var(--text)">listing</span>',
+  de: 'easy<span style="color:var(--text)">listing</span>',
   tr: '<span style="color:var(--text)">kolay</span>listele',
 };
 const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
