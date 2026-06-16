@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 {% include '_gtag.html' %}
+{% include '_gtm_head.html' %}
 <meta charset="UTF-8">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <script src="{{ url_for('static', filename='security.js') }}"></script>
@@ -155,6 +156,7 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 {% include '_posthog.html' %}
 </head>
 <body>
+{% include '_gtm_body.html' %}
 <nav>
   <a href="/" class="nav-logo" id="navLogo">easy<span>listing</span></a>
   <div class="nav-links">

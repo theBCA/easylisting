@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 {% include '_gtag.html' %}
+{% include '_gtm_head.html' %}
 <meta charset="UTF-8">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <script src="{{ url_for('static', filename='security.js') }}"></script>
@@ -312,6 +313,7 @@ textarea.plt-input { resize: vertical; min-height: 110px; line-height: 1.6; }
 {% include '_posthog.html' %}
 </head>
 <body>
+{% include '_gtm_body.html' %}
 
 <nav>
   <div class="nav-logo" id="navLogo">easy<span>listing</span></div>

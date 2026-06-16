@@ -2,6 +2,7 @@
 <html lang="{{ 'tr' if is_tr else 'en' }}">
 <head>
 {% include '_gtag.html' %}
+{% include '_gtm_head.html' %}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ 'EasyListing uygulamasına dönülüyor…' if is_tr else 'Opening EasyListing…' }}</title>
@@ -32,6 +33,7 @@
 </style>
 </head>
 <body>
+{% include '_gtm_body.html' %}
   <div class="card">
     <div class="logo">
       {% if is_tr %}<span class="a">kolay</span><span class="b">listele</span>
