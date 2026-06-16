@@ -8,7 +8,7 @@
 <link rel="alternate icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EasyListing — AI Listing Generator</title>
+<title>easylisting — AI Listing Generator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1128,7 +1128,7 @@ function setLang(lang) {
     b.classList.toggle('active', b.dataset.lang === lang));
   const logo = byId('navLogo');
   if (logo && BRAND[lang]) logo.innerHTML = BRAND[lang];
-  document.title = lang === 'tr' ? 'kolaylistele — Yapay Zeka ile Ürün İlanı' : 'EasyListing — AI Listing Generator';
+  document.title = lang === 'tr' ? 'kolaylistele — Yapay Zeka ile Ürün İlanı' : 'easylisting — AI Listing Generator';
   const langSel = byId('langSelect');
   if (langSel && STRINGS[lang] && [...langSel.options].some(o => o.value === lang)) {
     langSel.value = lang;

@@ -8,7 +8,7 @@
 <link rel="alternate icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Listings — EasyListing</title>
+<title>My Listings — easylisting</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -195,13 +195,13 @@ const LISTINGS_DATA = {{ items | tojson | safe }};
 
 const STRINGS = {
   en: {
-    page_title:'My Listings — EasyListing', disconnect:'Disconnect', new_listing:'+ New Listing',
+    page_title:'My Listings — easylisting', disconnect:'Disconnect', new_listing:'+ New Listing',
     title:'My Listings', drafts:'Drafts', active:'Active', draft:'Draft', total_views:'Total Views', total_favorites:'Total Favorites',
     no_image:'No image', view:'View', regenerate:'Re-generate', empty_body:'Create your first listing using AI — just upload a photo.',
     empty_cta:'Create a listing →', empty_title:state => `No ${state} listings yet`, count_label:state => `${state} Listings`, opening:'Opening editor…'
   },
   de: {
-    page_title:'Meine Listings — EasyListing', disconnect:'Trennen', new_listing:'+ Neues Listing',
+    page_title:'Meine Listings — easylisting', disconnect:'Trennen', new_listing:'+ Neues Listing',
     title:'Meine Listings', drafts:'Entwürfe', active:'Aktiv', draft:'Entwurf', total_views:'Aufrufe gesamt', total_favorites:'Favoriten gesamt',
     no_image:'Kein Bild', view:'Ansehen', regenerate:'Neu generieren', empty_body:'Erstelle dein erstes Listing mit KI — lade einfach ein Foto hoch.',
     empty_cta:'Listing erstellen →', empty_title:state => `Noch keine ${state === 'draft' ? 'Entwürfe' : 'aktiven Listings'}`, count_label:state => `${state === 'draft' ? 'Entwürfe' : 'Aktive Listings'}`, opening:'Editor wird geöffnet…'
