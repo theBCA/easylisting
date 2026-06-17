@@ -9,6 +9,7 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 ## [Unreleased]
 
 ### Fixed
+- **CSP blocking all inline JS on upgrade page** (`web/app.py`): Cloudflare was injecting a second nonce into the `Content-Security-Policy` header alongside `'strict-dynamic'`, which caused it to also rewrite `nonce=` attributes in the HTML — so our scripts had a mismatched nonce and were blocked entirely (setLang never ran, page stayed in English). Replaced `'strict-dynamic'` with `'unsafe-inline'` (ignored by nonce-supporting browsers, but prevents Cloudflare's nonce rewriter from triggering). Also added PostHog (`eu.i.posthog.com`, `eu-assets.i.posthog.com`) and `stats.g.doubleclick.net` to `connect-src` to stop console noise from those blocked fetches.
 - **Branding/language flash on kolaylistele.com across all pages** (`templates/index.html`, `bulk.html`, `connect.html`, `listings.html`, `photo_set.html`, `privacy.html`, `terms.html`, `upgrade.html`): `<html lang>`, `<title>`, nav logo, and active lang button were hardcoded in English/easylisting on every template and only corrected by JS after load — visible flash on first render. Now all set server-side via `use_try` Jinja variable (global context processor). `privacy.html` and `terms.html` nav logos were hardcoded "KolayListele" (wrong on easylisting.app); now conditional on both.
 
 ### Added
