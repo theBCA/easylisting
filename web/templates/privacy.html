@@ -1,20 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+{% include '_gtag.html' %}
+{% include '_gtm_head.html' %}
 <meta charset="UTF-8">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <script src="{{ url_for('static', filename='security.js') }}"></script>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link rel="alternate icon" href="/static/favicon.ico">
+<link rel="icon" type="image/svg+xml" href="/static/{% if use_try %}favicon.svg{% else %}favicon-e.svg{% endif %}">
+<link rel="alternate icon" href="/static/{% if use_try %}favicon.ico{% else %}favicon-e.svg{% endif %}">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy Policy — EasyListing / KolayListele</title>
+<title>Privacy Policy — easylisting / kolaylistele</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 <style>
-:root { --primary:#5B47E0; --bg:#F6F7FB; --border:#E5E7F0; --text:#111827; --muted:#6B7280; }
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text); }
+/* Tokens, reset, and base font now live in static/app.css */
 nav { background:white; border-bottom:1px solid var(--border); padding:0 24px; height:58px; display:flex; align-items:center; }
 .nav-logo { font-size:17px; font-weight:800; color:var(--primary); text-decoration:none; }
 .nav-logo span { color:var(--text); }
@@ -31,6 +32,7 @@ footer { text-align:center; padding:32px; font-size:13px; color:var(--muted); bo
 {% include '_posthog.html' %}
 </head>
 <body>
+{% include '_gtm_body.html' %}
 <nav>
   <a class="nav-logo" href="/">Kolay<span>Listele</span></a>
 </nav>
@@ -92,5 +94,6 @@ footer { text-align:center; padding:32px; font-size:13px; color:var(--muted); bo
   <a href="mailto:info@kolaylistele.com">info@kolaylistele.com</a></p>
 </div>
 <footer>© 2025 EasyListing / KolayListele. All rights reserved.</footer>
+{% include '_consent_banner.html' %}
 </body>
 </html>

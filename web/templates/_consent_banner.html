@@ -1,0 +1,75 @@
+<style nonce="{{ csp_nonce }}">
+#cookieBanner {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+  background: #1f2937; color: #f9fafb;
+  padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+  font-family: inherit; font-size: 13px; line-height: 1.5;
+  box-shadow: 0 -4px 24px rgba(0,0,0,.18);
+}
+#cookieBanner p { margin: 0; max-width: 680px; color: #d1d5db; }
+#cookieBanner a { color: #a5b4fc; text-decoration: underline; }
+#cookieBanner .cb-btns { display: flex; gap: 10px; flex-shrink: 0; }
+#cookieBanner .cb-accept {
+  background: #5B47E0; color: #fff; border: none;
+  padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+#cookieBanner .cb-accept:hover { background: #4a38c7; }
+#cookieBanner .cb-decline {
+  background: transparent; color: #9ca3af; border: 1px solid #374151;
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+#cookieBanner .cb-decline:hover { color: #d1d5db; border-color: #6b7280; }
+</style>
+
+<div id="cookieBanner" style="display:none;">
+  <p id="cbText">
+    We use cookies to understand how visitors use our site and to improve your experience.
+    <a href="/privacy" id="cbPrivacyLink">Privacy Policy</a>
+  </p>
+  <div class="cb-btns">
+    <button class="cb-decline" id="cbDecline">Decline</button>
+    <button class="cb-accept" id="cbAccept">Accept cookies</button>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var _key = 'el_cookie_consent';
+  if (localStorage.getItem(_key) !== null) return; // already decided
+
+  var banner = document.getElementById('cookieBanner');
+  if (banner) banner.style.display = 'flex';
+
+  // Translate banner text if language is already known
+  var _isTr = /kolaylistele/.test(location.hostname);
+  var _lang = localStorage.getItem(_isTr ? 'kolaylistele_lang' : 'easylisting_lang') || (_isTr ? 'tr' : 'en');
+  var _copy = {
+    tr: { text: 'Sitemizin nasıl kullanıldığını anlamak ve deneyiminizi iyileştirmek için çerezler kullanıyoruz.', privacy: 'Gizlilik Politikası', accept: 'Çerezleri kabul et', decline: 'Reddet' },
+    de: { text: 'Wir verwenden Cookies, um zu verstehen, wie Besucher unsere Website nutzen und um dein Erlebnis zu verbessern.', privacy: 'Datenschutz', accept: 'Cookies akzeptieren', decline: 'Ablehnen' },
+    en: { text: 'We use cookies to understand how visitors use our site and to improve your experience.', privacy: 'Privacy Policy', accept: 'Accept cookies', decline: 'Decline' }
+  };
+  var c = _copy[_lang] || _copy.en;
+  var textEl = document.getElementById('cbText');
+  if (textEl) textEl.innerHTML = c.text + ' <a href="/privacy">' + c.privacy + '</a>';
+  var accEl = document.getElementById('cbAccept');
+  if (accEl) accEl.textContent = c.accept;
+  var decEl = document.getElementById('cbDecline');
+  if (decEl) decEl.textContent = c.decline;
+
+  function handleConsent(accepted) {
+    localStorage.setItem(_key, accepted ? 'granted' : 'denied');
+    if (banner) banner.style.display = 'none';
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: accepted ? 'granted' : 'denied' });
+    }
+  }
+
+  // Use addEventListener instead of onclick — inline handlers are blocked by CSP nonce policy
+  if (accEl) accEl.addEventListener('click', function() { handleConsent(true); });
+  if (decEl) decEl.addEventListener('click', function() { handleConsent(false); });
+})();
+</script>

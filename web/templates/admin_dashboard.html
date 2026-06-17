@@ -3,34 +3,61 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin — Users &amp; Plans</title>
+<title>Admin — easylisting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 <style>
-  :root { --primary:#5B47E0; --bg:#F6F7FB; --card:#fff; --border:#E5E7F0;
-          --text:#111827; --muted:#6B7280; --green:#059669; --amber:#B45309; }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-         background:var(--bg); color:var(--text); padding:28px; }
+  /* tokens, reset, base font from app.css; admin-only extras below */
+  :root { --amber:#B45309; }
+  body { padding:0 0 60px; }
+
+  /* Sticky top bar with section jump-nav for fast tracing */
+  .admin-bar { position:sticky; top:0; z-index:50; background:#fff; border-bottom:1px solid var(--border);
+               padding:14px 28px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; box-shadow:var(--shadow); }
+  .admin-bar .brand { font-size:16px; font-weight:800; color:var(--primary); }
+  .admin-bar .brand span { color:var(--text); }
+  .admin-bar nav { display:flex; gap:6px; flex-wrap:wrap; }
+  .admin-bar nav a { font-size:12px; font-weight:700; color:var(--muted); text-decoration:none;
+                     padding:5px 11px; border-radius:8px; transition:all .12s; }
+  .admin-bar nav a:hover { background:var(--primary-light); color:var(--primary); }
+  .range-toggle { margin-left:auto; display:flex; gap:2px; background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:3px; }
+  .range-toggle a { font-size:12px; font-weight:700; color:var(--muted); text-decoration:none; padding:5px 12px; border-radius:7px; transition:all .12s; }
+  .range-toggle a:hover { color:var(--text); }
+  .range-toggle a.active { background:var(--primary); color:#fff; }
+  .wrap { padding:24px 28px; }
+
   h1 { font-size:22px; margin-bottom:4px; }
   .sub { color:var(--muted); font-size:13px; margin-bottom:24px; }
   .cards { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
   .stat { background:var(--card); border:1px solid var(--border); border-radius:12px;
-          padding:14px 18px; min-width:120px; }
-  .stat .n { font-size:26px; font-weight:800; }
-  .stat .l { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+          padding:16px 18px; min-width:128px; box-shadow:var(--shadow); }
+  .stat .n { font-size:27px; font-weight:800; letter-spacing:-.5px; }
+  .stat .l { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:700; margin-top:2px; }
+  .stat.accent { background:var(--primary-light); border-color:#D6CEFF; }
+  .stat.accent .n { color:var(--primary); }
+  .stat.warn .n { color:var(--amber); }
   .toolbar { margin-bottom:14px; }
-  .section-title { font-size:15px; font-weight:800; margin:22px 0 10px; }
-  .mini-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:18px; }
-  .panel { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
-  .panel h2 { font-size:13px; margin-bottom:10px; }
-  .kv { display:flex; justify-content:space-between; gap:14px; padding:5px 0; font-size:13px; }
+  .section-title { font-size:15px; font-weight:800; margin:30px 0 12px; scroll-margin-top:70px;
+                   display:flex; align-items:center; gap:8px; }
+  .section-title::before { content:''; width:4px; height:16px; background:var(--primary); border-radius:3px; }
+  .mini-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:18px; }
+  .panel { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; box-shadow:var(--shadow); }
+  .panel h2 { font-size:12px; margin-bottom:10px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700; }
+  .kv { display:flex; justify-content:space-between; gap:14px; padding:6px 0; font-size:13px; border-bottom:1px solid #F3F4F8; }
+  .kv:last-child { border-bottom:none; }
   .kv span:first-child { color:var(--muted); }
-  #search { width:320px; max-width:100%; padding:10px 14px; border:1px solid var(--border);
-            border-radius:10px; font-size:14px; }
-  table { width:100%; border-collapse:collapse; background:var(--card);
-          border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  #search { width:340px; max-width:100%; padding:10px 14px; border:1px solid var(--border);
+            border-radius:10px; font-size:14px; font-family:inherit; background:#fff; }
+  #search:focus { outline:none; border-color:var(--primary); }
+  /* overflow:hidden on any ancestor breaks position:sticky — use clip-path instead for rounded corners */
+  .table-wrap { border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); clip-path: inset(0 round 12px); }
+  table { width:100%; border-collapse:collapse; background:var(--card); }
   th,td { text-align:left; padding:11px 14px; font-size:13px; border-bottom:1px solid var(--border); }
   th { background:#FAFAFE; color:var(--muted); font-weight:700; text-transform:uppercase;
-       font-size:11px; letter-spacing:.4px; }
+       font-size:11px; letter-spacing:.4px; position:sticky; top:62px; z-index:10; }
+  tbody tr:hover { background:#FAFAFE; }
   tr:last-child td { border-bottom:none; }
   .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
   .b-etsy { background:#FEF3C7; color:var(--amber); }
@@ -42,8 +69,8 @@
   .plan-free { color:var(--muted); }
   select,.btn { padding:6px 10px; border:1px solid var(--border); border-radius:8px;
                 font-size:13px; font-family:inherit; }
-  .btn { background:var(--primary); color:#fff; border:none; font-weight:700; cursor:pointer; }
-  .btn:hover { opacity:.9; }
+  .btn { background:var(--primary); color:#fff; border:none; font-weight:700; cursor:pointer; transition:background .12s; }
+  .btn:hover { background:var(--primary-dark); }
   .mono { font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--muted); }
   #toast { position:fixed; bottom:24px; right:24px; background:#111827; color:#fff;
            padding:12px 18px; border-radius:10px; font-size:13px; opacity:0;
@@ -52,11 +79,30 @@
 </style>
 </head>
 <body>
-  <h1>Users &amp; Plans</h1>
+  <div class="admin-bar">
+    <div class="brand">easy<span>listing</span> · admin</div>
+    <nav>
+      <a href="#overview">Overview</a>
+      <a href="#billing">Billing</a>
+      <a href="#ai-spend">AI Spend</a>
+      <a href="#usage">Usage</a>
+      <a href="#abuse">Abuse</a>
+      <a href="#shops">Shops</a>
+      <a href="#emails">Emails</a>
+      <a href="#feedback">Feedback</a>
+    </nav>
+    <div class="range-toggle" aria-label="Date range">
+      <a href="?days=7"  class="{{ 'active' if days == 7  else '' }}">7d</a>
+      <a href="?days=30" class="{{ 'active' if days == 30 else '' }}">30d</a>
+      <a href="?days=90" class="{{ 'active' if days == 90 else '' }}">90d</a>
+    </div>
+  </div>
+  <div class="wrap">
+  <h1 id="overview">Overview</h1>
   <div class="sub">{{ counts.total }} accounts · manage plans inline · changes are immediate</div>
 
   <div class="cards">
-    <div class="stat"><div class="n">{{ counts.total }}</div><div class="l">Total</div></div>
+    <div class="stat accent"><div class="n">{{ counts.total }}</div><div class="l">Total</div></div>
     <div class="stat"><div class="n">{{ counts.etsy }}</div><div class="l">Etsy</div></div>
     <div class="stat"><div class="n">{{ counts.email }}</div><div class="l">Email</div></div>
     <div class="stat"><div class="n">{{ counts.guest }}</div><div class="l">Guest</div></div>
@@ -65,7 +111,7 @@
     <div class="stat"><div class="n">{{ counts.starter }}</div><div class="l">Starter</div></div>
   </div>
 
-  <div class="section-title">Billing Funnel · Last {{ payments.days }} Days</div>
+  <div class="section-title" id="billing">Billing Funnel · Last {{ payments.days }} Days</div>
   <div class="cards">
     <div class="stat"><div class="n">{{ payments.attempts }}</div><div class="l">Checkout Attempts</div></div>
     <div class="stat"><div class="n">{{ payments.completed }}</div><div class="l">Paid</div></div>
@@ -102,8 +148,89 @@
     </div>
   </div>
 
+  <!-- ── AI Cost (last 30 days) ─────────────────────────────────────── -->
+  <div class="section-title" id="ai-spend">AI Spend · Last {{ days }} Days</div>
+  <div class="cards">
+    <div class="stat warn">
+      <div class="n">${{ "%.4f"|format(ai_costs.total_usd) }}</div>
+      <div class="l">Total Cost</div>
+    </div>
+    <div class="stat">
+      <div class="n">{{ ai_costs.call_count }}</div>
+      <div class="l">API Calls</div>
+    </div>
+  </div>
+  <div class="mini-grid" style="margin-bottom:24px;">
+    <div class="panel">
+      <h2>Cost by Model</h2>
+      {% for row in ai_costs.by_model %}
+        <div class="kv">
+          <span>{{ row.model }}</span>
+          <strong>${{ "%.4f"|format(row.cost_usd) }} <span class="mono">({{ row.calls }} calls)</span></strong>
+        </div>
+      {% else %}
+        <div class="mono">No AI cost data yet.</div>
+      {% endfor %}
+    </div>
+    <div class="panel">
+      <h2>Cost by Endpoint</h2>
+      {% for row in ai_costs.by_endpoint %}
+        <div class="kv">
+          <span>{{ row.endpoint or "—" }}</span>
+          <strong>${{ "%.4f"|format(row.cost_usd) }}</strong>
+        </div>
+      {% else %}
+        <div class="mono">No AI cost data yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Monthly Usage Totals ───────────────────────────────────────── -->
+  <div class="section-title" id="usage">Monthly Usage Totals (Current Period)</div>
+  <div class="cards" style="margin-bottom:24px;">
+    <div class="stat"><div class="n">{{ usage.listings }}</div><div class="l">Listings Generated</div></div>
+    <div class="stat"><div class="n">{{ usage.improves }}</div><div class="l">Improvements</div></div>
+    <div class="stat"><div class="n">{{ usage.photos }}</div><div class="l">Photos Generated</div></div>
+    <div class="stat"><div class="n">{{ usage.total_shops }}</div><div class="l">Active Shops</div></div>
+  </div>
+
+  <!-- ── Abuse / Tracing (last 7 days) ──────────────────────────────── -->
+  <div class="section-title" id="abuse">Abuse &amp; Tracing · Last {{ days }} Days</div>
+  <div class="mini-grid">
+    <div class="panel">
+      <h2>Signal Events</h2>
+      {% for event, n in abuse.by_event.items() %}
+        <div class="kv"><span>{{ event }}</span><strong>{{ n }}</strong></div>
+      {% else %}
+        <div class="mono">No abuse signals — all clear.</div>
+      {% endfor %}
+    </div>
+    <div class="panel">
+      <h2>Top IPs · by distinct guests</h2>
+      {% for r in abuse.top_ips %}
+        <div class="kv">
+          <span class="mono">{{ r.ip_hash[:12] }}…</span>
+          <strong>{{ r.guests }} guests <span class="mono">({{ r.events }} ev)</span></strong>
+        </div>
+      {% else %}
+        <div class="mono">No IP signals.</div>
+      {% endfor %}
+    </div>
+    <div class="panel">
+      <h2>Top Fingerprints · by distinct guests</h2>
+      {% for r in abuse.top_fps %}
+        <div class="kv">
+          <span class="mono">{{ r.fp_hash[:12] }}…</span>
+          <strong>{{ r.guests }} guests <span class="mono">({{ r.events }} ev)</span></strong>
+        </div>
+      {% else %}
+        <div class="mono">No fingerprint signals.</div>
+      {% endfor %}
+    </div>
+  </div>
+
   <div class="section-title">Recent Billing Events</div>
-  <table style="margin-bottom:24px;">
+  <div class="table-wrap"><table style="margin-bottom:24px;">
     <thead>
       <tr>
         <th>Time</th><th>Event</th><th>Shop</th><th>Plan</th><th>Surface</th><th>Domain</th>
@@ -123,18 +250,19 @@
       <tr><td colspan="6" class="mono">No billing events yet.</td></tr>
       {% endfor %}
     </tbody>
-  </table>
+  </table></div>
 
+  <div class="section-title" id="shops">Shops &amp; Plans</div>
   <div class="toolbar">
     <input id="search" type="text" placeholder="Search by shop name or ID…" autocomplete="off">
   </div>
 
-  <table id="shops">
+  <div class="table-wrap"><table id="shops-table">
     <thead>
       <tr>
         <th>Shop</th><th>Type</th><th>Shop ID</th><th>Plan</th>
-        <th>Used</th><th>Listings</th><th>Improves</th><th>Subscription</th>
-        <th>Country</th><th>Last seen</th><th>Created</th><th>Set plan</th>
+        <th>Lists</th><th>Impr.</th><th>Photos</th><th>Free Used</th>
+        <th>Sub ID</th><th>Country</th><th>Last Seen</th><th>Created</th><th>Set plan</th>
       </tr>
     </thead>
     <tbody>
@@ -144,9 +272,10 @@
         <td><span class="badge b-{{ s.kind }}">{{ s.kind }}</span></td>
         <td class="mono">{{ s.shop_id }}</td>
         <td class="plan-{{ s.plan or 'free' }}" data-plan-cell>{{ (s.plan or 'free')|upper }}{% if s.has_premium %} ✓{% endif %}</td>
-        <td>{{ s.free_used }}</td>
         <td>{{ s.listing_used or 0 }}</td>
         <td>{{ s.improve_used or 0 }}</td>
+        <td>{{ s.photo_variant_used or 0 }}</td>
+        <td>{{ s.free_used }}</td>
         <td class="mono">{{ s.stripe_subscription_id or '—' }}</td>
         <td class="mono">{{ s.country or '—' }}</td>
         <td class="mono">{{ (s.last_seen or '')[:10] or '—' }}</td>
@@ -162,7 +291,47 @@
       </tr>
       {% endfor %}
     </tbody>
-  </table>
+  </table></div>
+
+  <!-- ── Email List ─────────────────────────────────────────────────── -->
+  <div class="section-title" id="emails">Email List ({{ emails|length }} subscribers)</div>
+  <div class="table-wrap"><table style="margin-bottom:24px;">
+    <thead>
+      <tr><th>Email</th><th>Locale</th><th>Signed Up</th></tr>
+    </thead>
+    <tbody>
+      {% for e in emails %}
+      <tr>
+        <td>{{ e.email }}</td>
+        <td>{{ e.locale or '—' }}</td>
+        <td class="mono">{{ (e.created_at or '')[:10] }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="mono">No subscribers yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+
+  <!-- ── Feedback Inbox ─────────────────────────────────────────────── -->
+  <div class="section-title" id="feedback">Feedback Inbox (last 50)</div>
+  <div class="table-wrap"><table style="margin-bottom:24px;">
+    <thead>
+      <tr><th>Time</th><th>Shop</th><th>Reply-to</th><th>Page</th><th>Message</th></tr>
+    </thead>
+    <tbody>
+      {% for f in feedback %}
+      <tr>
+        <td class="mono">{{ (f.created_at or '')[:16] }}</td>
+        <td class="mono">{{ f.shop_id or '—' }}</td>
+        <td>{{ f.reply_to or '—' }}</td>
+        <td>{{ f.page or '—' }}</td>
+        <td style="max-width:400px;white-space:pre-wrap;word-break:break-word;">{{ f.message }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="mono">No feedback yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
 
   <div id="toast"></div>
 
@@ -175,7 +344,7 @@
 
     document.getElementById('search').addEventListener('input', (e) => {
       const q = e.target.value.trim().toLowerCase();
-      document.querySelectorAll('#shops tbody tr').forEach(tr => {
+      document.querySelectorAll('#shops-table tbody tr').forEach(tr => {
         tr.style.display = !q || tr.dataset.search.includes(q) ? '' : 'none';
       });
     });
@@ -209,5 +378,6 @@
       });
     });
   </script>
+  </div><!-- /.wrap -->
 </body>
 </html>

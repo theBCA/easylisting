@@ -1,27 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+{% include '_gtag.html' %}
+{% include '_gtm_head.html' %}
 <meta charset="UTF-8">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <script src="{{ url_for('static', filename='security.js') }}"></script>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link rel="alternate icon" href="/static/favicon.ico">
+<link rel="icon" type="image/svg+xml" href="/static/{% if use_try %}favicon.svg{% else %}favicon-e.svg{% endif %}">
+<link rel="alternate icon" href="/static/{% if use_try %}favicon.ico{% else %}favicon-e.svg{% endif %}">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bulk Upload — EasyListing</title>
+<title>Bulk Listings — easylisting</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 <style>
-:root {
-  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
-  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
-  --text: #111827; --muted: #6B7280; --green: #059669; --green-light: #ECFDF5;
-  --red: #DC2626; --red-light: #FEF2F2;
-  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.08);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+/* Tokens, reset, and base font now live in static/app.css */
 
 /* Nav */
 nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
@@ -161,10 +156,11 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 {% include '_posthog.html' %}
 </head>
 <body>
+{% include '_gtm_body.html' %}
 <nav>
-  <a href="/" class="nav-logo" id="navLogo">Easy<span>Listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">easy<span>listing</span></a>
   <div class="nav-links">
-    <span style="font-size:13px;font-weight:600;color:var(--muted);">🛍 {{ shop_name }}</span>
+    <span style="font-size:13px;font-weight:600;color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> {{ shop_name }}</span>
     <a href="/listings" style="font-size:13px;" data-i18n="nav_listings">My Listings</a>
     <div class="lang-switcher">
       <button class="lang-btn" data-lang="en">EN</button>
@@ -176,12 +172,12 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 </nav>
 
 <div class="container">
-  <h1 data-i18n="title">Bulk Upload</h1>
+  <h1 data-i18n="title">Bulk Listings</h1>
   <p class="sub" data-i18n="sub">Upload multiple product photos — each gets its own AI-generated listing.</p>
 
   <!-- Drop zone -->
   <div class="upload-zone" id="dropZone">
-    <div class="icon">📦</div>
+    <div class="icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
     <h3 data-i18n="drop_title">Drop product photos here</h3>
     <p data-i18n="drop_sub">Up to {n} photos — one listing generated per photo</p>
     <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
@@ -234,14 +230,14 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 <script nonce="{{ csp_nonce }}">
 const STRINGS = {
   en: {
-    page_title:'Bulk Upload — EasyListing', nav_listings:'My Listings', nav_single:'Single Listing',
-    title:'Bulk Upload', sub:'Upload multiple product photos — each gets its own AI-generated listing.',
+    page_title:'Bulk Listings — easylisting', nav_listings:'My Listings', nav_single:'Single Listing',
+    title:'Bulk Listings', sub:'Upload multiple product photos — each gets its own AI-generated listing.',
     drop_title:'Drop product photos here', drop_sub:'Up to {n} photos — one listing generated per photo',
     hint_label:'Hint (optional, applies to all)', hint_placeholder:'e.g. handmade ceramic mugs',
     generate_all:'Generate All', results_heading:'Generated Listings', publish_all:'Publish Selected as Draft',
     only_images:'Only JPEG/PNG/WebP/GIF allowed', max_photos:'Max {n} photos at a time',
     free_limit:'Free limit reached. Upgrade for more.', skipped:'Free limit reached — remaining listings skipped.',
-    premium_required:'Bulk upload is available only on a paid plan.',
+    premium_required:'Bulk Listings is available only on a paid plan.',
     quota:'Quota reached', failed:'Failed', network:'Network error', price:'Price (€)', category:'Category',
     save_draft:'Save as Draft', title_price_required:'Title and price are required',
     category_missing:'Category not found — edit manually then retry', publishing:'Publishing…',
@@ -251,14 +247,14 @@ const STRINGS = {
     shipping_hint:'Applied to all listings when publishing', select:'Select'
   },
   de: {
-    page_title:'Bulk-Upload — EasyListing', nav_listings:'Meine Listings', nav_single:'Einzelnes Listing',
-    title:'Bulk-Upload', sub:'Lade mehrere Produktfotos hoch — jedes erhält ein eigenes KI-generiertes Listing.',
+    page_title:'Massen-Listings — easylisting', nav_listings:'Meine Listings', nav_single:'Einzelnes Listing',
+    title:'Massen-Listings', sub:'Lade mehrere Produktfotos hoch — jedes erhält ein eigenes KI-generiertes Listing.',
     drop_title:'Produktfotos hier ablegen', drop_sub:'Bis zu {n} Fotos — ein Listing pro Foto',
     hint_label:'Hinweis (optional, gilt für alle)', hint_placeholder:'z.B. handgemachte Keramiktassen',
     generate_all:'Alle generieren', results_heading:'Generierte Listings', publish_all:'Ausgewählte als Entwurf veröffentlichen',
     only_images:'Nur JPEG/PNG/WebP/GIF erlaubt', max_photos:'Maximal {n} Fotos auf einmal',
     free_limit:'Kostenloses Limit erreicht. Upgrade für mehr.', skipped:'Kostenloses Limit erreicht — übrige Listings übersprungen.',
-    premium_required:'Bulk-Upload ist nur mit einem kostenpflichtigen Plan verfügbar.',
+    premium_required:'Massen-Listings ist nur mit einem kostenpflichtigen Plan verfügbar.',
     quota:'Kontingent erreicht', failed:'Fehlgeschlagen', network:'Netzwerkfehler', price:'Preis (€)', category:'Kategorie',
     save_draft:'Als Entwurf speichern', title_price_required:'Titel und Preis sind erforderlich',
     category_missing:'Kategorie nicht gefunden — bitte manuell bearbeiten und erneut versuchen', publishing:'Wird veröffentlicht…',
@@ -268,14 +264,14 @@ const STRINGS = {
     shipping_hint:'Gilt für alle Listings beim Veröffentlichen', select:'Auswählen'
   },
   tr: {
-    page_title:'Toplu Yükleme — kolaylistele', nav_listings:'Listelerim', nav_single:'Tek İlan',
-    title:'Toplu Yükleme', sub:'Birden fazla ürün fotoğrafı yükleyin — her fotoğraf için ayrı bir yapay zeka ilanı oluşturulur.',
+    page_title:'Toplu İlanlar — kolaylistele', nav_listings:'Listelerim', nav_single:'Tek İlan',
+    title:'Toplu İlanlar', sub:'Birden fazla ürün fotoğrafı yükleyin — her fotoğraf için ayrı bir yapay zeka ilanı oluşturulur.',
     drop_title:'Ürün fotoğraflarını buraya bırakın', drop_sub:'{n} fotoğrafa kadar — her fotoğraf için bir ilan',
     hint_label:'İpucu (opsiyonel, tümüne uygulanır)', hint_placeholder:'örn. el yapımı seramik kupalar',
     generate_all:'Tümünü Oluştur', results_heading:'Oluşturulan İlanlar', publish_all:'Seçilenleri Taslak Olarak Yayınla',
     only_images:'Yalnızca JPEG/PNG/WebP/GIF kabul edilir', max_photos:'Tek seferde en fazla {n} fotoğraf',
     free_limit:'Ücretsiz limit doldu. Daha fazlası için yükseltin.', skipped:'Ücretsiz limit doldu — kalan ilanlar atlandı.',
-    premium_required:'Toplu Yükleme sadece ücretli planlarda kullanılabilir.',
+    premium_required:'Toplu İlanlar sadece ücretli planlarda kullanılabilir.',
     quota:'Kota doldu', failed:'Başarısız', network:'Ağ hatası', price:'Fiyat (TL)', category:'Kategori',
     save_draft:'Taslak Olarak Kaydet', title_price_required:'Başlık ve fiyat gerekli',
     category_missing:'Kategori bulunamadı — elle düzenleyip tekrar deneyin', publishing:'Yayınlanıyor…',
@@ -286,8 +282,8 @@ const STRINGS = {
   }
 };
 const BRAND = {
-  en: 'Easy<span style="color:var(--text)">Listing</span>',
-  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  en: 'easy<span style="color:var(--text)">listing</span>',
+  de: 'easy<span style="color:var(--text)">listing</span>',
   tr: '<span style="color:var(--text)">kolay</span>listele',
 };
 const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
@@ -305,7 +301,7 @@ function setLang(lang) {
   localStorage.setItem(LANG_KEY, lang);
   document.documentElement.lang = lang;
   document.title = STRINGS[lang].page_title;
-  document.getElementById('navLogo').innerHTML = BRAND[lang];
+  document.getElementById('navLogo').innerHTML = BRAND[/kolaylistele/.test(location.hostname) ? 'tr' : 'en'];
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.dataset.i18n;
     if (STRINGS[lang][key] !== undefined)
@@ -668,5 +664,6 @@ document.getElementById('resultGrid')?.addEventListener('click', e => {
 });
 </script>
 {% include "_feedback_widget.html" %}
+{% include '_consent_banner.html' %}
 </body>
 </html>

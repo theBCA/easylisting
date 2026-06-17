@@ -189,7 +189,8 @@ def api_generate():
         if not os.getenv(key_env[p]):
             continue
         try:
-            data = _run_provider(p, image_bytes, hint, nvidia_model, lang=lang, platform=platform)
+            data = _run_provider(p, image_bytes, hint, nvidia_model, lang=lang, platform=platform,
+                                  shop_id=sid, endpoint="api_generate")
             if p != provider:
                 logger.info("Fell back from %s to %s (quota)", provider, p)
             break
@@ -706,7 +707,8 @@ def api_bulk_generate():
         if not os.getenv(key_env[p]):
             continue
         try:
-            data = _run_provider(p, image_bytes, hint, "llama-90b", lang=lang, platform=platform)
+            data = _run_provider(p, image_bytes, hint, "llama-90b", lang=lang, platform=platform,
+                                  shop_id=sid, endpoint="api_bulk_generate")
             break
         except RuntimeError as e:
             logger.warning("Bulk AI RuntimeError (provider=%s), trying next: %s", p, e)

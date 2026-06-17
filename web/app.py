@@ -93,9 +93,11 @@ def setup_request():
 
 @app.context_processor
 def inject_security():
+    from core.domains import _is_try_domain
     return {
         "csp_nonce":  getattr(g, "csp_nonce", ""),
         "csrf_token": generate_csrf,
+        "use_try":    _is_try_domain(),
     }
 
 
@@ -131,11 +133,11 @@ def set_security_headers(resp):
     nonce = getattr(g, "csp_nonce", "")
     resp.headers["Content-Security-Policy"] = (
         f"default-src 'self'; "
-        f"script-src 'self' 'nonce-{nonce}' https://js.stripe.com https://static.cloudflareinsights.com; "
+        f"script-src 'self' 'nonce-{nonce}' 'strict-dynamic' https://js.stripe.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        f"img-src 'self' data: blob: *.etsystatic.com *.etsy.com; "
-        f"connect-src 'self' https://api.stripe.com https://cloudflareinsights.com; "
-        f"frame-src https://js.stripe.com https://hooks.stripe.com; "
+        f"img-src 'self' data: blob: *.etsystatic.com *.etsy.com https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com; "
+        f"connect-src 'self' https://api.stripe.com https://cloudflareinsights.com https://www.google-analytics.com https://ssl.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://region1.analytics.google.com; "
+        f"frame-src https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com; "
         f"font-src 'self' https://fonts.gstatic.com; "
         f"form-action 'self'; "
         f"base-uri 'self'; "

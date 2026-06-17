@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+{% include '_gtag.html' %}
+{% include '_gtm_head.html' %}
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>E-posta Doğrulandı</title>
@@ -45,6 +47,7 @@
 {% include '_posthog.html' %}
 </head>
 <body>
+{% include '_gtm_body.html' %}
   <div class="card">
     <div class="icon">✅</div>
     <h1>E-posta doğrulandı!</h1>

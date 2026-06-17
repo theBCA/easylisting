@@ -10,7 +10,8 @@ from flask import Blueprint, request, jsonify, render_template
 
 from extensions import csrf
 from core.admin_auth import is_admin
-from db import get_abuse_summary, get_marketing_stats, get_payment_summary
+from db import (get_abuse_summary, get_marketing_stats, get_payment_summary,
+                get_ai_cost_summary, get_admin_email_list, get_admin_feedback, get_usage_summary)
 
 bp = Blueprint("admin", __name__)
 
@@ -257,6 +258,13 @@ def _classify_shop(shop_id: str) -> str:
 def admin_dashboard():
     if not is_admin():
         return "", 404
+    # Date-range toggle: ?days=7|30|90 (default 30); clamp to the allowed set.
+    try:
+        days = int(request.args.get("days", 30))
+    except (TypeError, ValueError):
+        days = 30
+    if days not in (7, 30, 90):
+        days = 30
     import db as _db
     import sqlite3 as _sq
     con = _sq.connect(_db.DB_PATH)
@@ -264,7 +272,7 @@ def admin_dashboard():
     rows = con.execute(
         "SELECT shop_id, shop_name, plan, has_premium, free_used, created_at, "
         "stripe_customer_id, stripe_subscription_id, listing_used, improve_used, "
-        "last_seen, country "
+        "photo_variant_used, last_seen, country "
         "FROM shops ORDER BY rowid DESC"
     ).fetchall()
     con.close()
@@ -284,5 +292,13 @@ def admin_dashboard():
         "pro":      sum(1 for s in shops if s.get("plan") == "pro"),
         "starter":  sum(1 for s in shops if s.get("plan") == "starter"),
     }
-    payments = get_payment_summary(30)
-    return render_template("admin_dashboard.html", shops=shops, counts=counts, payments=payments)
+    payments  = get_payment_summary(days)
+    ai_costs  = get_ai_cost_summary(days)
+    emails    = get_admin_email_list(200)
+    feedback  = get_admin_feedback(50)
+    usage     = get_usage_summary()
+    abuse     = get_abuse_summary(days)
+    return render_template("admin_dashboard.html",
+                           shops=shops, counts=counts, payments=payments,
+                           ai_costs=ai_costs, emails=emails,
+                           feedback=feedback, usage=usage, abuse=abuse, days=days)

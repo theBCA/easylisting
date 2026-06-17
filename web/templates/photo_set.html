@@ -1,26 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+{% include '_gtag.html' %}
+{% include '_gtm_head.html' %}
 <meta charset="UTF-8">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <script src="{{ url_for('static', filename='security.js') }}"></script>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="/static/{% if use_try %}favicon.svg{% else %}favicon-e.svg{% endif %}">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Etsy Photo Set — EasyListing</title>
+<title>AI Photo Studio — easylisting</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 <style>
-:root {
-  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
-  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
-  --text: #111827; --muted: #6B7280; --green: #059669; --green-light: #ECFDF5;
-  --amber: #D97706; --amber-light: #FFFBEB;
-  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.08);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+/* Tokens, reset, and base font now live in static/app.css */
 
 nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
 .nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; text-decoration: none; }
@@ -165,20 +160,21 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 </style>
 </head>
 <body>
+{% include '_gtm_body.html' %}
 <nav>
-  <a href="/" class="nav-logo">Easy<span style="color:var(--text)">Listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">easy<span style="color:var(--text)">listing</span></a>
   <div class="nav-links">
-    <span style="font-size:13px;font-weight:600;color:var(--muted)">🛍 {{ shop_name }}</span>
+    <span style="font-size:13px;font-weight:600;color:var(--muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> {{ shop_name }}</span>
     <a href="/listings">My Listings</a>
-    <a href="/bulk">Bulk Upload</a>
-    <a href="/">Single Listing</a>
+    <a href="/bulk">Bulk Listings</a>
+    <a href="/" id="navSingle">Single Listing</a>
     <span class="pro-badge">Pro</span>
   </div>
 </nav>
 
 <div class="container">
   <div class="page-header">
-    <h1>📸 Etsy Photo Set Generator</h1>
+    <h1><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg><span id="pageTitle">AI Photo Studio</span></h1>
     <p>Upload one product photo — get a professional 7-shot Etsy listing set, one image at a time.</p>
     <div class="credits-row" id="creditsRow">
       <span class="credits-pill" id="creditsPill">📸 <strong id="creditsLeft">…</strong> photo credits left this month</span>
@@ -188,7 +184,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 
   <!-- Upload -->
   <div class="upload-zone" id="dropZone">
-    <div class="icon">🖼</div>
+    <div class="icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
     <h3>Drop your product photo here</h3>
     <p>One photo → 6 professional Etsy shots + collage preview</p>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -222,7 +218,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
       </div>
       <div class="step-item" data-step="4" id="si-4">
         <div class="step-dot" id="sd-4">4</div>
-        <div class="step-info"><div class="step-name">Back / Construction</div></div>
+        <div class="step-info"><div class="step-name">Size Reference</div></div>
         <img class="step-thumb" id="st-4" alt="">
       </div>
       <div class="step-item" data-step="5" id="si-5">
@@ -313,8 +309,8 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 const LANG_KEY = window.location.hostname.includes('kolaylistele') ? 'kolaylistele_lang' : 'easylisting_lang';
 const _lang = localStorage.getItem(LANG_KEY) || 'en';
 const PAGE_STRINGS = {
-  en: { nav_listings:'My Listings', nav_bulk:'Bulk Upload', nav_single:'Single Listing',
-        page_title:'Etsy Photo Set Generator',
+  en: { nav_listings:'My Listings', nav_bulk:'Bulk Listings', nav_single:'Single Listing',
+        page_title:'AI Photo Studio',
         page_sub:'Upload one product photo — get a professional 6-shot Etsy listing set, one image at a time.',
         credits_left:'photo credits left this month', upgrade_cta:'Upgrade for more →',
         drop_title:'Drop your product photo here', drop_sub:'One photo → 6 professional Etsy shots + collage preview',
@@ -333,8 +329,8 @@ const PAGE_STRINGS = {
         pick_listing:'— Pick a listing —', loading_listings:'Loading…',
         no_listings:'No listings found', failed_listings:'Failed to load listings',
         uploading:'Uploading…', resets:'Resets' },
-  de: { nav_listings:'Meine Listings', nav_bulk:'Massen-Upload', nav_single:'Einzel-Listing',
-        page_title:'Etsy Foto-Set Generator',
+  de: { nav_listings:'Meine Listings', nav_bulk:'Massen-Listings', nav_single:'Einzel-Listing',
+        page_title:'KI-Fotostudio',
         page_sub:'Lade ein Produktfoto hoch – erhalte 6 professionelle Etsy-Fotos, eines nach dem anderen.',
         credits_left:'Foto-Credits diesen Monat', upgrade_cta:'Mehr kaufen →',
         drop_title:'Produktfoto hier ablegen', drop_sub:'Ein Foto → 6 professionelle Etsy-Fotos + Collage-Vorschau',
@@ -352,8 +348,8 @@ const PAGE_STRINGS = {
         pick_listing:'— Listing auswählen —', loading_listings:'Lädt…',
         no_listings:'Keine Listings gefunden', failed_listings:'Laden fehlgeschlagen',
         uploading:'Wird hochgeladen…', resets:'Setzt sich zurück' },
-  tr: { nav_listings:'Listelerim', nav_bulk:'Toplu Yükleme', nav_single:'Tekil İlan',
-        page_title:'Etsy Foto Seti Oluşturucu',
+  tr: { nav_listings:'Listelerim', nav_bulk:'Toplu İlanlar', nav_single:'Tekil İlan',
+        page_title:'Yapay Zeka Foto Stüdyosu',
         page_sub:'Bir ürün fotoğrafı yükle — 6 profesyonel Etsy fotoğrafı al, birer birer.',
         credits_left:'bu ay foto kredisi kaldı', upgrade_cta:'Daha fazlası için yükselt →',
         drop_title:'Ürün fotoğrafını buraya bırak', drop_sub:'Bir fotoğraf → 6 profesyonel Etsy fotoğrafı + kolaj',
@@ -374,10 +370,21 @@ const PAGE_STRINGS = {
 };
 const S = PAGE_STRINGS[_lang] || PAGE_STRINGS.en;
 
+const BRAND = {
+  en: 'easy<span style="color:var(--text)">listing</span>',
+  de: 'easy<span style="color:var(--text)">listing</span>',
+  tr: '<span style="color:var(--text)">kolay</span>listele',
+};
+
 function applyLang() {
+  const logo = document.getElementById('navLogo');
+  if (logo) logo.innerHTML = BRAND[/kolaylistele/.test(location.hostname) ? 'tr' : 'en'];
+  const pageTitle = document.getElementById('pageTitle');
+  if (pageTitle) pageTitle.textContent = S.page_title;
+  document.title = S.page_title + (/kolaylistele/.test(location.hostname) ? ' — kolaylistele' : ' — easylisting');
   const listingsEl = document.querySelector('a[href="/listings"]');
   const bulkEl     = document.querySelector('a[href="/bulk"]');
-  const singleEl   = document.querySelector('a[href="/"]');
+  const singleEl   = document.getElementById('navSingle');
   if (listingsEl) listingsEl.textContent = S.nav_listings;
   if (bulkEl)     bulkEl.textContent     = S.nav_bulk;
   if (singleEl)   singleEl.textContent   = S.nav_single;
@@ -415,7 +422,7 @@ const SHOT_META = {
   1: { title: 'Worn / In-Use Scale Shot',      desc: 'Shows the product being worn, held, or used in a realistic human-scale context — helps buyers understand size.' },
   2: { title: 'Clean Studio Product Shot',      desc: 'Bright, uncluttered image on a neutral background showing the whole product clearly.' },
   3: { title: 'Macro Detail Shot',              desc: 'Close-up of craftsmanship, texture, stitching, or construction details buyers care about.' },
-  4: { title: 'Back / Construction Shot',       desc: 'Shows the reverse side, closure, seam quality, or construction detail.' },
+  4: { title: 'Size Reference Shot',             desc: 'Product held in a hand or placed beside a common object — helps buyers instantly understand real-world dimensions.' },
   5: { title: 'Lifestyle Flat Lay',             desc: 'Product styled in a themed environment — wedding, baby gift, home, or seasonal use.' },
   6: { title: 'Packaging / Gift-Ready Shot',    desc: 'Product beautifully packaged with ribbon, box, tissue paper, or a handmade insert.' },
 };
@@ -845,5 +852,6 @@ applyLang();
 renderCredits();
 </script>
 {% include "_feedback_widget.html" %}
+{% include '_consent_banner.html' %}
 </body>
 </html>

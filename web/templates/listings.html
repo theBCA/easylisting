@@ -1,26 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+{% include '_gtag.html' %}
+{% include '_gtm_head.html' %}
 <meta charset="UTF-8">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <script src="{{ url_for('static', filename='security.js') }}"></script>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link rel="alternate icon" href="/static/favicon.ico">
+<link rel="icon" type="image/svg+xml" href="/static/{% if use_try %}favicon.svg{% else %}favicon-e.svg{% endif %}">
+<link rel="alternate icon" href="/static/{% if use_try %}favicon.ico{% else %}favicon-e.svg{% endif %}">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Listings — EasyListing</title>
+<title>My Listings — easylisting</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 <style>
-:root {
-  --primary: #5B47E0; --primary-dark: #4A37C9; --primary-light: #F0EEFF;
-  --bg: #F6F7FB; --card: #fff; --border: #E5E7F0;
-  --text: #111827; --muted: #6B7280; --green: #059669;
-  --radius: 14px; --shadow: 0 2px 16px rgba(91,71,224,.09);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+/* Tokens, reset, and base font now live in static/app.css */
 nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100; }
 .nav-logo { font-size: 17px; font-weight: 800; color: var(--primary); letter-spacing: -.3px; text-decoration: none; }
 .nav-logo span { color: var(--text); }
@@ -51,7 +47,8 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 .card { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s; display: flex; flex-direction: column; }
 .card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
 .card-img { width: 100%; height: 190px; background: var(--bg); overflow: hidden; position: relative; }
-.card-img img { width: 100%; height: 100%; object-fit: cover; }
+.card-img img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s ease; }
+.card-img img.loaded { opacity: 1; }
 .card-img .no-img { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
 .card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .card-title { font-size: 13px; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -94,10 +91,11 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 {% include '_posthog.html' %}
 </head>
 <body>
+{% include '_gtm_body.html' %}
 <nav>
-  <a href="/" class="nav-logo" id="navLogo">Easy<span>Listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">easy<span>listing</span></a>
   <div class="nav-links">
-    <span style="font-size:13px;font-weight:600;color:var(--muted);">🛍 {{ shop_name }}</span>
+    <span style="font-size:13px;font-weight:600;color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> {{ shop_name }}</span>
     <div class="lang-switcher">
       <button class="lang-btn" data-lang="en">EN</button>
       <button class="lang-btn" data-lang="de">DE</button>
@@ -200,13 +198,13 @@ const LISTINGS_DATA = {{ items | tojson | safe }};
 
 const STRINGS = {
   en: {
-    page_title:'My Listings — EasyListing', disconnect:'Disconnect', new_listing:'+ New Listing',
+    page_title:'My Listings — easylisting', disconnect:'Disconnect', new_listing:'+ New Listing',
     title:'My Listings', drafts:'Drafts', active:'Active', draft:'Draft', total_views:'Total Views', total_favorites:'Total Favorites',
     no_image:'No image', view:'View', regenerate:'Re-generate', empty_body:'Create your first listing using AI — just upload a photo.',
     empty_cta:'Create a listing →', empty_title:state => `No ${state} listings yet`, count_label:state => `${state} Listings`, opening:'Opening editor…'
   },
   de: {
-    page_title:'Meine Listings — EasyListing', disconnect:'Trennen', new_listing:'+ Neues Listing',
+    page_title:'Meine Listings — easylisting', disconnect:'Trennen', new_listing:'+ Neues Listing',
     title:'Meine Listings', drafts:'Entwürfe', active:'Aktiv', draft:'Entwurf', total_views:'Aufrufe gesamt', total_favorites:'Favoriten gesamt',
     no_image:'Kein Bild', view:'Ansehen', regenerate:'Neu generieren', empty_body:'Erstelle dein erstes Listing mit KI — lade einfach ein Foto hoch.',
     empty_cta:'Listing erstellen →', empty_title:state => `Noch keine ${state === 'draft' ? 'Entwürfe' : 'aktiven Listings'}`, count_label:state => `${state === 'draft' ? 'Entwürfe' : 'Aktive Listings'}`, opening:'Editor wird geöffnet…'
@@ -219,8 +217,8 @@ const STRINGS = {
   }
 };
 const BRAND = {
-  en: 'Easy<span style="color:var(--text)">Listing</span>',
-  de: 'Easy<span style="color:var(--text)">Listing</span>',
+  en: 'easy<span style="color:var(--text)">listing</span>',
+  de: 'easy<span style="color:var(--text)">listing</span>',
   tr: '<span style="color:var(--text)">kolay</span>listele',
 };
 const CURRENT_STATE = '{{ state }}';
@@ -235,7 +233,7 @@ function setLang(lang) {
   const s = STRINGS[lang];
   document.documentElement.lang = lang;
   document.title = s.page_title;
-  document.getElementById('navLogo').innerHTML = BRAND[lang];
+  document.getElementById('navLogo').innerHTML = BRAND[/kolaylistele/.test(location.hostname) ? 'tr' : 'en'];
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.dataset.i18n;
     if (s[key] !== undefined) el.textContent = s[key];
@@ -288,7 +286,15 @@ document.addEventListener('click', e => {
   const btn = e.target.closest('[data-listing-id]');
   if (btn) regenerate(btn.dataset.listingId);
 });
+
+// Fade in listing images as they load (avoids jarring pop-in)
+document.querySelectorAll('.card-img img').forEach(img => {
+  if (img.complete && img.naturalWidth > 0) img.classList.add('loaded');
+  else img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+  img.addEventListener('error', () => img.classList.add('loaded'), { once: true });  // don't leave broken imgs invisible
+});
 </script>
 {% include "_feedback_widget.html" %}
+{% include '_consent_banner.html' %}
 </body>
 </html>

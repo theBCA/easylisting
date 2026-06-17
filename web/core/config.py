@@ -29,9 +29,9 @@ READINESS_ID = 1489219211571
 FAL_KEY           = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
 ALLOW_PAID_OPENAI = os.getenv("ALLOW_PAID_OPENAI", "false").lower() == "true"
 # Image-to-image model used for photo variants + Etsy photo sets.
-# Gemini 2.5 Flash Image ("nano banana") — ~$0.039/img, same google-genai SDK
-# we already use for text. No separate vendor (fal.ai) needed.
-GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+# Gemini 3.1 Flash Image — ~$0.039/img (same pricing tier as 2.5), better quality
+# in side-by-side testing. Same google-genai SDK, no separate vendor needed.
+GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
 
 # ── Per-plan limits (abuse control) ──────────────────────────────────────────
 # Every number is env-overridable so limits can be tuned per Railway service

@@ -1,0 +1,24 @@
+<!-- Google tag (gtag.js) -->
+<script async nonce="{{ csp_nonce }}" src="https://www.googletagmanager.com/gtag/js?id=G-W32V01W3L2"></script>
+<script nonce="{{ csp_nonce }}">
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+
+  // Consent Mode v2 — set before config so GA respects it from the start
+  var _consent = localStorage.getItem('el_cookie_consent');
+  gtag('consent', 'default', {
+    analytics_storage:   _consent === 'granted' ? 'granted' : 'denied',
+    ad_storage:          'denied',
+    ad_user_data:        'denied',
+    ad_personalization:  'denied'
+  });
+
+  gtag('js', new Date());
+  // url_passthrough + redact_ads_storage allow cookieless measurement
+  // so GA4 can verify the tag even when consent is denied
+  gtag('config', 'G-W32V01W3L2', {
+    url_passthrough: true,
+    redact_ads_storage: 'true',
+    ads_data_redaction: true
+  });
+</script>

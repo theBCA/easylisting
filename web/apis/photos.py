@@ -1,4 +1,4 @@
-"""Pro photo generation (variants + Etsy photo sets) via Gemini 2.5 Flash Image."""
+"""Pro photo generation (variants + Etsy photo sets) via Gemini 3.1 Flash Image."""
 import base64
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -12,7 +12,7 @@ from core.config import logger, PHOTO_VARIANT_COUNT, GEMINI_IMAGE_MODEL
 from core.validators import safe_error
 from core.email import send_email
 from core.session import is_authorized, is_guest, has_premium_access, shop_id, guest_shop_id
-from db import can_generate_photo_variants, increment_photo_variant_usage
+from db import can_generate_photo_variants, increment_photo_variant_usage, log_ai_cost
 
 _ALERT_TO = os.getenv("ADMIN_EMAIL", "berkcemarslan@gmail.com")
 
@@ -138,6 +138,10 @@ def api_generate_photos():
         return jsonify({"error": safe_error(str(e))}), 500
 
     increment_photo_variant_usage(sid, len(variants))
+    try:
+        log_ai_cost(sid, "gemini", GEMINI_IMAGE_MODEL, 0, 0, 0.04 * len(variants), "api_generate_photos")
+    except Exception:
+        pass
     return jsonify({"variants": variants, "remaining": max(0, remaining - len(variants))})
 
 
@@ -150,8 +154,8 @@ _ETSY_SHOTS = {
         "Clean studio product shot on a pure white or very light neutral background. Entire product clearly and accurately visible, centered, full product in frame."),
     3: ("Macro Detail Shot",
         "Extreme close-up macro shot showing craftsmanship and material texture: stitching, fibers, buttons, finish, pattern, weave, or handmade construction details."),
-    4: ("Back / Construction Shot",
-        "Backside and construction shot: reverse side, closure mechanism, button placket, seam quality, lining, attachment detail, or construction quality clearly visible."),
+    4: ("Size Reference Shot",
+        "Scale and size reference shot: product held in a human hand, placed beside a common everyday object (coffee mug, book, coin), or shown with a subtle ruler/measuring tape — helping buyers instantly understand the real-world dimensions."),
     5: ("Lifestyle Flat Lay",
         "Lifestyle flat lay: product styled on a textured or themed surface with tasteful props connected to its purpose — wedding, baby gift, home decor, fashion, holiday gifting."),
     6: ("Packaging / Gift Shot",
@@ -249,6 +253,10 @@ def api_etsy_photo_set():
         return jsonify({"error": safe_error(str(e))}), 500
 
     increment_photo_variant_usage(sid, 1)
+    try:
+        log_ai_cost(sid, "gemini", GEMINI_IMAGE_MODEL, 0, 0, 0.04, "api_etsy_photo_set")
+    except Exception:
+        pass
     label, _ = _ETSY_SHOTS[shot]
     return jsonify({
         "image": generated,
