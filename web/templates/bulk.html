@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{% if use_try %}tr{% else %}en{% endif %}">
 <head>
 {% include '_gtag.html' %}
 {% include '_gtm_head.html' %}
@@ -10,7 +10,7 @@
 <link rel="alternate icon" href="/static/{% if use_try %}favicon.ico{% else %}favicon-e.svg{% endif %}">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bulk Listings — easylisting</title>
+<title>{% if use_try %}Toplu İlanlar — kolaylistele{% else %}Bulk Listings — easylisting{% endif %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -158,14 +158,14 @@ h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
 <body>
 {% include '_gtm_body.html' %}
 <nav>
-  <a href="/" class="nav-logo" id="navLogo">easy<span>listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">{% if use_try %}<span>kolay</span>listele{% else %}easy<span>listing</span>{% endif %}</a>
   <div class="nav-links">
     <span style="font-size:13px;font-weight:600;color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> {{ shop_name }}</span>
     <a href="/listings" style="font-size:13px;" data-i18n="nav_listings">My Listings</a>
     <div class="lang-switcher">
-      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn{% if not use_try %} active{% endif %}" data-lang="en">EN</button>
       <button class="lang-btn" data-lang="de">DE</button>
-      <button class="lang-btn" data-lang="tr">TR</button>
+      <button class="lang-btn{% if use_try %} active{% endif %}" data-lang="tr">TR</button>
     </div>
     <a href="/" class="btn-outline" data-i18n="nav_single">Single Listing</a>
   </div>

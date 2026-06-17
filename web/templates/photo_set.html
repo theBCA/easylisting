@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{% if use_try %}tr{% else %}en{% endif %}">
 <head>
 {% include '_gtag.html' %}
 {% include '_gtm_head.html' %}
@@ -9,7 +9,7 @@
 <link rel="icon" type="image/svg+xml" href="/static/{% if use_try %}favicon.svg{% else %}favicon-e.svg{% endif %}">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Photo Studio — easylisting</title>
+<title>{% if use_try %}Yapay Zeka Foto Stüdyosu — kolaylistele{% else %}AI Photo Studio — easylisting{% endif %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -162,7 +162,7 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 32px
 <body>
 {% include '_gtm_body.html' %}
 <nav>
-  <a href="/" class="nav-logo" id="navLogo">easy<span style="color:var(--text)">listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">{% if use_try %}<span style="color:var(--text)">kolay</span>listele{% else %}easy<span style="color:var(--text)">listing</span>{% endif %}</a>
   <div class="nav-links">
     <span style="font-size:13px;font-weight:600;color:var(--muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> {{ shop_name }}</span>
     <a href="/listings">My Listings</a>

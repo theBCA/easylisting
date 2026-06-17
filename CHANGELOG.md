@@ -9,7 +9,7 @@ Format: [version] — date — summary, then grouped Added / Changed / Fixed / S
 ## [Unreleased]
 
 ### Fixed
-- **Upgrade page branding on kolaylistele.com** (`templates/upgrade.html`): nav logo, page `<title>`, success banner text, and `<html lang>` were hardcoded as "EasyListing"/English — now set server-side via `use_try` Jinja variable so they render correctly on first load without a JS flash.
+- **Branding/language flash on kolaylistele.com across all pages** (`templates/index.html`, `bulk.html`, `connect.html`, `listings.html`, `photo_set.html`, `privacy.html`, `terms.html`, `upgrade.html`): `<html lang>`, `<title>`, nav logo, and active lang button were hardcoded in English/easylisting on every template and only corrected by JS after load — visible flash on first render. Now all set server-side via `use_try` Jinja variable (global context processor). `privacy.html` and `terms.html` nav logos were hardcoded "KolayListele" (wrong on easylisting.app); now conditional on both.
 
 ### Added
 - **GA4 Consent Mode v2 + cookie banner** (`templates/_gtag.html`, `templates/_consent_banner.html`, all public templates): `_gtag.html` now sets `analytics_storage: denied` by default and grants it only if the user previously accepted. A cookie consent banner (EN/DE/TR, matches app style) is included before `</body>` on all 8 public pages, updates consent via `gtag('consent','update',...)` on accept/decline, and stores the choice in `localStorage`. Required for EEA/GDPR compliance with GA4.

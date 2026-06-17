@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{% if use_try %}tr{% else %}en{% endif %}">
 <head>
 {% include '_gtag.html' %}
 {% include '_gtm_head.html' %}
@@ -10,7 +10,7 @@
 <link rel="alternate icon" href="/static/{% if use_try %}favicon.ico{% else %}favicon-e.svg{% endif %}">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>easylisting — Connect your shop</title>
+<title>{% if use_try %}kolaylistele — Mağazanı bağla{% else %}easylisting — Connect your shop{% endif %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -103,11 +103,11 @@ footer { text-align:center; padding:18px; font-size:11px; color:var(--muted); }
 <body>
 {% include '_gtm_body.html' %}
 <nav>
-  <div class="nav-logo" id="navLogo">easy<span>listing</span></div>
+  <div class="nav-logo" id="navLogo">{% if use_try %}<span>kolay</span>listele{% else %}easy<span>listing</span>{% endif %}</div>
   <div class="lang-switcher">
-    <button class="lang-btn" data-lang="en">EN</button>
+    <button class="lang-btn{% if not use_try %} active{% endif %}" data-lang="en">EN</button>
     <button class="lang-btn" data-lang="de">DE</button>
-    <button class="lang-btn" data-lang="tr">TR</button>
+    <button class="lang-btn{% if use_try %} active{% endif %}" data-lang="tr">TR</button>
   </div>
 </nav>
 

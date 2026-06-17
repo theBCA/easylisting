@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{% if use_try %}tr{% else %}en{% endif %}">
 <head>
 {% include '_gtag.html' %}
 {% include '_gtm_head.html' %}
@@ -34,7 +34,7 @@ footer { text-align:center; padding:32px; font-size:13px; color:var(--muted); bo
 <body>
 {% include '_gtm_body.html' %}
 <nav>
-  <a class="nav-logo" href="/">Kolay<span>Listele</span></a>
+  <a class="nav-logo" href="/">{% if use_try %}<span>kolay</span>listele{% else %}easy<span>listing</span>{% endif %}</a>
 </nav>
 <div class="container">
   <h1>Terms of Service</h1>
