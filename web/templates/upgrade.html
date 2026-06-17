@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{% if use_try %}tr{% else %}en{% endif %}">
 <head>
 <meta charset="UTF-8">
 <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -8,7 +8,7 @@
 <link rel="alternate icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Upgrade — EasyListing</title>
+<title>{% if use_try %}Yükselt — kolaylistele{% else %}Upgrade — EasyListing{% endif %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -105,30 +105,30 @@ nav { background: white; border-bottom: 1px solid var(--border); padding: 0 24px
 <body>
 
 <nav>
-  <a href="/" class="nav-logo" id="navLogo">Easy<span>Listing</span></a>
+  <a href="/" class="nav-logo" id="navLogo">{% if use_try %}<span>kolay</span>listele{% else %}Easy<span>Listing</span>{% endif %}</a>
   <div class="nav-right">
     <div class="lang-switcher">
-      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn{% if not use_try %} active{% endif %}" data-lang="en">EN</button>
       <button class="lang-btn" data-lang="de">DE</button>
-      <button class="lang-btn" data-lang="tr">TR</button>
+      <button class="lang-btn{% if use_try %} active{% endif %}" data-lang="tr">TR</button>
     </div>
-    <a href="/" class="btn-back" id="t-back" onclick="if(document.referrer && !document.referrer.includes('/upgrade')){event.preventDefault();history.back();}">← Back</a>
+    <a href="/" class="btn-back" id="t-back" onclick="if(document.referrer && !document.referrer.includes('/upgrade')){event.preventDefault();history.back();}">{% if use_try %}← Geri{% else %}← Back{% endif %}</a>
   </div>
 </nav>
 
 <div class="container">
 
   {% if request.args.get('success') %}
-  <div class="banner success" id="banner-success">🎉 Welcome to EasyListing! Your plan is now active.</div>
+  <div class="banner success" id="banner-success">{% if use_try %}🎉 kolaylistele'ye hoş geldin! Planın artık aktif.{% else %}🎉 Welcome to EasyListing! Your plan is now active.{% endif %}</div>
   {% elif request.args.get('cancelled') %}
-  <div class="banner info" id="banner-cancel">You cancelled — no charges were made.</div>
+  <div class="banner info" id="banner-cancel">{% if use_try %}İptal ettin — ücret alınmadı.{% else %}You cancelled — no charges were made.{% endif %}</div>
   {% elif request.args.get('bulk_required') %}
   <div class="banner info" id="banner-bulk">Bulk listing creation requires a paid plan. Upgrade to process multiple listings at once.</div>
   {% endif %}
 
   <div class="hero">
-    <h1 id="t-h1">Simple, Transparent Pricing</h1>
-    <p id="t-sub">Start free, upgrade when you need more AI generations for your shop.</p>
+    <h1 id="t-h1">{% if use_try %}Sade, Şeffaf Fiyatlandırma{% else %}Simple, Transparent Pricing{% endif %}</h1>
+    <p id="t-sub">{% if use_try %}Ücretsiz başla, mağazana daha fazla YZ üretimi gerektiğinde yükselt.{% else %}Start free, upgrade when you need more AI generations for your shop.{% endif %}</p>
     {% if current_plan == 'pro' %}
       <span class="usage-pill pro" id="usagePill">✓ <span id="t-pill">Pro — unlimited generations</span></span>
     {% elif current_plan == 'starter' %}
