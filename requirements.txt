@@ -11,4 +11,4 @@ stripe==15.1.0
 redis==5.2.1
 resend==2.10.0
 posthog==3.11.0
-PyJWT[crypto]==2.10.1
+PyJWT[crypto]==2.13.0
