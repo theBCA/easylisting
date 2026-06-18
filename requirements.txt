@@ -7,7 +7,7 @@ python-dotenv==1.2.2
 google-genai==2.5.0
 openai==2.37.0
 Pillow==12.2.0
-stripe==15.1.0
+stripe==15.2.0
 redis==5.2.1
 resend==2.10.0
 posthog==3.11.0
